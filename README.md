@@ -25,7 +25,28 @@ needed. The production monolith continues to use port `4200`.
 The current unit baseline is run with `npm test`. Cross-application smoke tests
 live under `cedar-development/ops/e2e`.
 
-## Preview image
+## Publication and native server deployment
+
+The package is published to the CEDAR Nexus npm repository through the explicit cedarcli command:
+
+```sh
+cedarcli deploy split-frontends --dry-run
+cedarcli deploy split-frontends
+```
+
+Publication is not runtime deployment. A native staging or production host checks out the approved
+Git commit and generates both environment-configured static trees with:
+
+```sh
+cedarcli build split-frontends --server-payload
+```
+
+That command requires `CEDAR_FRONTEND_BEHAVIOR=server` and exact
+`CEDAR_WORKSPACE_FRONTEND_URL`/`CEDAR_TEMPLATE_DESIGNER_FRONTEND_URL` values. It runs `npm ci`, runs
+Gulp, records `/config/build-info.json`, and exits; host nginx serves this repository's `app`
+directory directly. Docker is not required on staging or production.
+
+## Optional local preview image
 
 The repository builds directly from its checkout; it does not require a published npm tarball.
 Use the provenance-aware wrapper and image versions declared by `cedar-docker-build`:
@@ -39,9 +60,10 @@ service, navigation, and authentication origins before nginx starts. Override
 `CEDAR_WORKSPACE_FRONTEND_URL`, `CEDAR_TEMPLATE_DESIGNER_FRONTEND_URL`, or `CEDAR_AUTH_URL` for a
 nonstandard preview topology. This image is preview-only until the migration acceptance gate passes.
 
-Every running image exposes `/config/build-info.json` with its baked source commit, whether that
-checkout was dirty, and a SHA-256 over the exact environment-specific tree nginx serves. The file is
-served with `Cache-Control: no-store`; staging acceptance must record it and reject dirty images.
+Both native server payloads and preview images expose `/config/build-info.json` with the source
+commit, clean/dirty state, and a SHA-256 over the exact environment-specific tree nginx serves. The
+file is served with `Cache-Control: no-store`; staging acceptance must record it and reject dirty
+payloads.
 
 ## Migration constraints
 
