@@ -115,7 +115,7 @@ define([
       if ($routeParams.id) {
         // Fetch existing element and assign to $scope.element property
         AuthorizedBackendService.doCall(
-            TemplateElementService.getTemplateElement($routeParams.id),
+            TemplateElementService.getTemplateElement(FrontendUrlService.decodeRouteIdentifier($routeParams.id)),
             function (response) {
               $scope.element = response.data;
 

@@ -63,6 +63,22 @@ define([
       return getWorkspaceFallback(folderId);
     };
 
+    service.decodeRouteIdentifier = function (value) {
+      if (value === null || value === undefined) {
+        return value;
+      }
+
+      var decoded = value;
+      try {
+        decoded = decodeURIComponent(value);
+      } catch (error) {
+        // Leave malformed route values unchanged so the backend can reject them normally.
+      }
+
+      // AngularJS wildcard routes may decode the first slash but leave the second one absent.
+      return decoded.replace(/^(https?):\/([^/])/, '$1://$2');
+    };
+
     service.getTemplateEdit = function (id) {
       return '/templates/edit/' + id;
     };

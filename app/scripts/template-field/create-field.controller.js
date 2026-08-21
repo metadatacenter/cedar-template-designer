@@ -175,7 +175,7 @@ define([
       if ($routeParams.id) {
         // Fetch existing field and assign to $scope.field property
         AuthorizedBackendService.doCall(
-            TemplateFieldService.getTemplateField($routeParams.id),
+            TemplateFieldService.getTemplateField(FrontendUrlService.decodeRouteIdentifier($routeParams.id)),
             function (response) {
 
               $scope.field = response.data;

@@ -95,7 +95,7 @@ define([
           if ($routeParams.id) {
             // Fetch existing form and assign to $scope.form property
             AuthorizedBackendService.doCall(
-                TemplateService.getTemplate($routeParams.id),
+                TemplateService.getTemplate(FrontendUrlService.decodeRouteIdentifier($routeParams.id)),
                 function (response) {
 
                   $scope.form = response.data;

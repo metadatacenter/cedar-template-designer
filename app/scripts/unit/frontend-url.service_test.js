@@ -37,5 +37,21 @@ define([
       expect(FrontendUrlService.getWorkspaceReturn('https://example.org/phishing'))
           .toBe(workspaceBase + '/dashboard');
     });
+
+    it('decodes an encoded repository identifier from a route', function () {
+      expect(FrontendUrlService.decodeRouteIdentifier(
+          'https:%2F%2Frepo.example%2Ftemplates%2Ftemplate-1'))
+          .toBe('https://repo.example/templates/template-1');
+    });
+
+    it('repairs an identifier partially decoded by an AngularJS wildcard route', function () {
+      expect(FrontendUrlService.decodeRouteIdentifier(
+          'https:/repo.example/templates/template-1'))
+          .toBe('https://repo.example/templates/template-1');
+    });
+
+    it('leaves a malformed encoded identifier for normal backend rejection', function () {
+      expect(FrontendUrlService.decodeRouteIdentifier('%E0%A4%A')).toBe('%E0%A4%A');
+    });
   });
 });
