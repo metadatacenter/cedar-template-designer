@@ -3,10 +3,6 @@ ARG NGINX_VERSION
 FROM nginx:${NGINX_VERSION}
 
 ARG NODE_FRONTEND_VERSION
-ARG CEDAR_SOURCE_COMMIT=unknown
-ARG CEDAR_SOURCE_DIRTY=unknown
-LABEL org.opencontainers.image.revision="${CEDAR_SOURCE_COMMIT}"
-LABEL org.metadatacenter.cedar.source-dirty="${CEDAR_SOURCE_DIRTY}"
 USER root
 
 # Gulp still generates environment-specific AngularJS configuration when the container starts.
@@ -32,6 +28,13 @@ RUN set -eux; \
 WORKDIR /srv/cedar/cedar-template-designer
 COPY package.json package-lock.json .npmrc ./
 RUN npm ci
+
+# Keep source identity after the expensive, lockfile-keyed dependency layer so a
+# new commit does not force npm to reinstall an unchanged dependency graph.
+ARG CEDAR_SOURCE_COMMIT=unknown
+ARG CEDAR_SOURCE_DIRTY=unknown
+LABEL org.opencontainers.image.revision="${CEDAR_SOURCE_COMMIT}"
+LABEL org.metadatacenter.cedar.source-dirty="${CEDAR_SOURCE_DIRTY}"
 COPY . ./
 RUN printf '%s\n' "$CEDAR_SOURCE_COMMIT" > /usr/local/share/cedar-source-commit \
     && printf '%s\n' "$CEDAR_SOURCE_DIRTY" > /usr/local/share/cedar-source-dirty
