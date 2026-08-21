@@ -26,10 +26,6 @@ module.exports = function (config) {
 
       'scripts/keycloak/keycloak.min.js',
       'scripts/handlers/*.js',
-      'scripts/unit/httpData.js',
-      'scripts/unit/applicationData.js',
-      'scripts/unit/cedarUserData.js',
-
       // bower. Keep this catch-all after the explicitly included bootstrap
       // scripts: Karma 6 uses the first matching pattern for each file.
       {pattern: 'bower_components/**/*.js', included: false},
@@ -44,19 +40,6 @@ module.exports = function (config) {
 
       // RequireJS config for Karma tests
       'test-require-config.js',
-
-      // templates
-      'scripts/template-element/cedar-template-element.directive.html',
-      'scripts/form/form.directive.html',
-      'scripts/form/field.directive.html',
-      'scripts/form/field-create/checkbox.html',
-      'scripts/form/field-render/checkbox.html',
-      'scripts/form/partials/*.html',
-      'scripts/controlled-term/class-list.directive.html',
-      'scripts/controlled-term/controlled-term.directive.html',
-      'scripts/controlled-term/property-list.directive.html',
-      'scripts/dashboard/dashboard.html',
-
 
     ],
 

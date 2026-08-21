@@ -51,14 +51,6 @@ define([
           return !DataUtilService.isElement(schemaService.schemaOf(scope.field));
         };
 
-        scope.isListView = function () {
-          return UIUtilService.isListView(scope.viewState);
-        };
-
-        scope.isTabView = function () {
-          return UIUtilService.isTabView(scope.viewState);
-        };
-
         scope.isMultiple = function () {
           // We consider that checkboxes and multi-choice lists are not 'multiple'
           return (schemaService.isCardinalElement(
@@ -68,14 +60,6 @@ define([
 
         scope.isAttributeValueType = function () {
           return schemaService.isAttributeValueType(scope.field);
-        };
-
-        scope.isSpreadsheetView = function () {
-          return UIUtilService.isSpreadsheetView(scope.viewState);
-        };
-
-        scope.toggleView = function () {
-          return UIUtilService.toggleView(scope.viewState);
         };
 
         scope.cardinalityString = function () {
@@ -119,10 +103,6 @@ define([
             var minItems = schemaService.getMinItems(scope.field);
             return scope.remove && scope.isMultiple() && scope.model.length > minItems;
           }
-        };
-
-        scope.fullscreen = function () {
-          UIUtilService.fullscreen(scope.getLocator(0));
         };
 
 

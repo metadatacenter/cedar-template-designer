@@ -76,13 +76,8 @@ require.config({
       exports: 'CKEDITOR'
     },
 
-    'lib/ngHandsontable/dist/ngHandsontable.min'                                 : ['angular',
-                                                                                    'lib/handsontable/dist/handsontable.full.min'],
-    'lib/handsontable/dist/handsontable.full.min'                                : {'exports': 'Handsontable'},
     'lib/bootstrap/dist/js/bootstrap.min'                                        : ['jquery'],
     'lib/bootstrap-select/dist/js/bootstrap-select.min'                          : ['lib/bootstrap/dist/js/bootstrap.min'],
-    'cedar/template-editor/handsontable/SpreadsheetContext'                      : ['lib/handsontable/dist/handsontable.full.min'],
-    'cedar/template-editor/handsontable/MultiCheckboxEditor'                     : ['lib/handsontable/dist/handsontable.full.min'],
     'lib/ngprogress/build/ngprogress.min'                                        : ['angular'],
   },
   priority: [

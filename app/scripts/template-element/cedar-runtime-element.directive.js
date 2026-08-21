@@ -7,11 +7,10 @@ define([
       .directive('cedarRuntimeElement', cedarRuntimeElement);
 
   cedarRuntimeElement.$inject = ['$rootScope', '$timeout', '$window', 'UIUtilService', 'DataManipulationService',
-                                 'DataUtilService', 'schemaService',
-                                 'SpreadsheetService'];
+                                 'DataUtilService', 'schemaService'];
 
   function cedarRuntimeElement($rootScope, $timeout, $window, UIUtilService, DataManipulationService, DataUtilService,
-                               schemaService, SpreadsheetService) {
+                               schemaService) {
 
     var directive = {
       restrict   : 'EA',
@@ -131,128 +130,9 @@ define([
         return UIUtilService.cardinalityString(scope.element);
       };
 
-      // switch into full screen mode for a spreadsheet
-      scope.fullscreen = function () {
-        UIUtilService.fullscreen(scope.getLocator());
-      };
-
-
-      // turn on spreadsheet view
-      scope.switchToSpreadsheet = function () {
-        scope.setActive(0, true);
-        if (schemaService.getMaxItems(scope.element)) {
-          // create all the rows if the maxItems is a fixed number
-          scope.createExtraRows();
-        }
-        $timeout(function () {
-          SpreadsheetService.switchToSpreadsheet(scope, scope.element, 0, function () {
-            return false;
-          }, function () {
-            scope.addMoreInput();
-          }, function () {
-            scope.removeElement(scope.model.length - 1);
-          }, function () {
-            scope.createExtraRows();
-          }, function () {
-            scope.deleteExtraRows();
-          })
-        });
-      };
-
-      scope.cleanupSpreadsheet = function () {
-        scope.deleteExtraRows();
-        //scope.expanded[0] = false;
-        SpreadsheetService.destroySpreadsheet(scope);
-        // scope.setValueArray();
-      };
-
-
-      scope.isTabView = function () {
-        return UIUtilService.isTabView(scope.viewState);
-      };
-
-      scope.isListView = function () {
-        return UIUtilService.isListView(scope.viewState);
-      };
-
-      scope.isSpreadsheetView = function () {
-        return UIUtilService.isSpreadsheetView(scope.viewState);
-      };
-
-      // toggle through the list of view states
-      scope.toggleView = function () {
-        scope.viewState = UIUtilService.toggleView(scope.viewState);
-      };
-
-      scope.zeroedLocator = function (value) {
-        var result = '';
-        if (value) {
-          var result = value.replace(/-([^-]*)$/, '-0');
-        }
-        return result;
-      };
-
-      // watch for changes in the selection for spreadsheet view to get out of spreadsheet mode
-      scope.$watch(
-          function () {
-            return (UIUtilService.activeLocator);
-          },
-          function (newValue, oldValue) {
-
-            if (scope.zeroedLocator(newValue) != scope.zeroedLocator(oldValue) && scope.getLocator(
-                0) == scope.zeroedLocator(oldValue) && scope.isSpreadsheetView()) {
-              scope.toggleView();
-            }
-          }
-      );
-
-
-      // make sure there are at least 10 entries in the spreadsheet
-      scope.createExtraRows = function () {
-        var maxItems = schemaService.getMaxItems(scope.element);
-        var max = maxItems ? maxItems : 10;
-        while ((scope.model.length < max)) {
-          scope.addMoreInput();
-        }
-      };
-
       scope.addMoreInput = function () {
         scope.addElement();
         scope.pageMinMax();
-      };
-
-      scope.deleteExtraRows = function () {
-
-        if (angular.isArray(scope.model)) {
-
-          var min = schemaService.getMinItems(scope.element) || 1;
-
-          outer: for (var i = scope.model.length; i > min; i--) {
-            var valueElement = scope.model[i - 1];
-            // are all the fields empty for this cardinal element instance i?
-            var empty = true;
-            loop: for (var prop in valueElement) {
-              if (!DataUtilService.isSpecialKey(prop) && !prop.startsWith('$$')) {
-
-                var node = valueElement[prop];
-                if (Object.getOwnPropertyNames(node).length > 0) {
-                  if (node.hasOwnProperty(
-                      '@value') && (node['@value'] != null && node['@value'] != '') || (node.hasOwnProperty(
-                      '@id') && (node['@id'] != null && node['@id'] != ''))) {
-                    empty = false;
-                    break loop;
-                  }
-                }
-
-              }
-            }
-            if (empty) {
-              scope.removeElement(i - 1);
-            } else {
-              break outer;
-            }
-          }
-        }
       };
 
 
@@ -422,11 +302,7 @@ define([
       };
 
       scope.addRow = function () {
-        if (scope.isSpreadsheetView()) {
-          SpreadsheetService.addRow(scope);
-        } else {
-          scope.addElement();
-        }
+        scope.addElement();
       };
 
 
@@ -489,8 +365,7 @@ define([
 
       // is this index actively being edited?
       scope.isActive = function (idx) {
-        var index = scope.isSpreadsheetView() ? 0 : idx;
-        return UIUtilService.isActive(scope.getLocator(index));
+        return UIUtilService.isActive(scope.getLocator(idx));
       };
 
       // is this not being edited?
@@ -561,13 +436,11 @@ define([
       };
 
       scope.setActive = function (idx, value) {
-
-        var index = scope.isSpreadsheetView() ? 0 : idx;
-        UIUtilService.setActive(scope.element, index, scope.path, scope.uid, value);
+        UIUtilService.setActive(scope.element, idx, scope.path, scope.uid, value);
         if (value) {
-          scope.index = index;
+          scope.index = idx;
           scope.pageMinMax();
-          scope.expanded[index] = value;
+          scope.expanded[idx] = value;
         }
       };
 
@@ -644,8 +517,7 @@ define([
 
       scope.pageMinMax();
 
-      scope.viewState = UIUtilService.createViewState(scope.element, scope.switchToSpreadsheet,
-          scope.cleanupSpreadsheet);
+      scope.viewState = UIUtilService.createViewState();
 
     }
   };

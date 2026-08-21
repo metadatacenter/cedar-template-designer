@@ -232,22 +232,6 @@ var MetadataPage = function () {
 
   };
 
-  this.switchToSpreadsheet = function() {
-    var activateField = element(by.css('div.title.isInactive'));
-    browser.wait(EC.visibilityOf(activateField));
-    browser.wait(EC.elementToBeClickable(activateField));
-    activateField.click();
-
-    var spreadsheet = element(by.css('div.ht_master.handsontable'));
-    browser.wait(EC.visibilityOf(spreadsheet));
-
-    var firstCell = element(by.css('div.ht_master.handsontable > div > div > div > table > tbody > tr:nth-child(1) > td'));
-    browser.wait(EC.visibilityOf(firstCell));
-    browser.wait(EC.elementToBeClickable(firstCell));
-    firstCell.click().sendKeys('value').sendKeys(protractor.Key.ENTER);
-  };
-
-
   this.addFieldValue = function() {
   }
 

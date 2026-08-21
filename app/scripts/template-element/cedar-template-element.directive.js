@@ -7,9 +7,9 @@ define([
       .directive('cedarTemplateElement', cedarTemplateElementDirective);
 
   cedarTemplateElementDirective.$inject = ['$rootScope', 'DataManipulationService', 'schemaService','DataUtilService',
-                                           'SpreadsheetService', 'UIUtilService'];
+                                           'UIUtilService'];
 
-  function cedarTemplateElementDirective($rootScope, DataManipulationService, schemaService,DataUtilService, SpreadsheetService,
+  function cedarTemplateElementDirective($rootScope, DataManipulationService, schemaService,DataUtilService,
                                          UIUtilService) {
 
     var directive = {
@@ -332,10 +332,6 @@ define([
             scope.selectedTab = scope.model.length - 1;
           }
         }
-      };
-
-      scope.switchToSpreadsheet = function () {
-        SpreadsheetService.switchToSpreadsheetElement(scope, element);
       };
 
       scope.isExpanded = function () {

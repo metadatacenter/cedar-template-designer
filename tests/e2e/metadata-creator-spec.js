@@ -177,7 +177,7 @@ describe('metadata-creator', function () {
             expect(text === template + ' metadata').toBe(true);
           });
 
-          // TODO make sure the element is multi-instance and is clickable -> only works if spreadsheets are not the default view
+          // TODO make sure the element is multi-instance and is clickable.
           // metadataPage.checkMultiple();
           // metadataPage.addInstance();
           // metadataPage.isDirty();
@@ -240,34 +240,6 @@ describe('metadata-creator', function () {
     });
   });
 
-  xdescribe('create spreadsheets', function () {
-
-    it("should view a template as spreadsheet", function () {
-      var template = workspacePage.createTemplate('Src');
-      workspacePage.onWorkspace();
-      resources.push(createResource(template, 'template', testConfig.testUser1, testConfig.testPassword1));
-
-      workspacePage.doubleClickResource(template, 'template');
-      templatePage.addField('textfield', false, 'one', 'one');
-      templatePage.setMultiple();
-
-      templatePage.clickSave('template');
-      toastyModal.isSuccess();
-      templatePage.clickBackArrow();
-      workspacePage.onWorkspace();
-
-      workspacePage.populateResource(template, 'template');
-      resources.unshift(createResource(template, 'metadata', testConfig.testUser1, testConfig.testPassword1));
-
-      workspacePage.doubleClickResource(template, 'metadata');
-      metadataPage.switchToSpreadsheet();
-
-      metadataPage.clickBackArrow();
-      workspacePage.onWorkspace();
-    });
-  });
-
-
   describe('remove all created resources', function () {
 
     // clean up created resources
@@ -284,4 +256,3 @@ describe('metadata-creator', function () {
   });
 
 });
-

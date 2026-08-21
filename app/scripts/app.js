@@ -8,7 +8,6 @@ define([
   'lib/angucomplete-alt/angucomplete-alt',
   'lib/angular-animate/angular-animate.min',
   'lib/angular-bootstrap/ui-bootstrap-tpls.min',
-  // 'lib/ngHandsontable/dist/ngHandsontable.min',
   'lib/ng-tags-input/ng-tags-input.min',
   'lib/angular-route/angular-route.min',
   'lib/angular-sanitize/angular-sanitize.min',
@@ -25,7 +24,6 @@ define([
   'lib/bootstrap-select/dist/js/bootstrap-select.min',
   'lib/ng-ckeditor/ng-ckeditor.min',
   'ckeditor',
-  'lib/handsontable/dist/handsontable.full',
   'jquery',
   'lib/jquery-ui/jquery-ui.min',
   'lib/perfnow-polyfill/perfnow-polyfill',
@@ -38,8 +36,6 @@ define([
   'flow',
 
   // custom libraries
-  'cedar/template-editor/handsontable/SpreadsheetContext',
-  'cedar/template-editor/handsontable/MultiCheckboxEditor',
 
   // CEDAR Template Designer modules
   'cedar/template-editor/core/core.module',

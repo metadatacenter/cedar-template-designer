@@ -7,11 +7,11 @@ define([
       .directive('cedarRuntimeField', cedarRuntimeField);
 
 
-  cedarRuntimeField.$inject = ["$rootScope", "$sce", "$document", "$translate", "$filter", "$location", "$window", '$timeout', "SpreadsheetService",
+  cedarRuntimeField.$inject = ["$rootScope", "$sce", "$document", "$translate", "$filter", "$location", "$window", '$timeout',
     "UrlService", "DataManipulationService", "schemaService", "UIUtilService", "autocompleteService", "ValueRecommenderService",
     "uibDateParser", "TemporalRuntimeFieldService", "TemporalEditorFieldService", "CONST"];
 
-  function cedarRuntimeField($rootScope, $sce, $document, $translate, $filter, $location, $window, $timeout, SpreadsheetService,
+  function cedarRuntimeField($rootScope, $sce, $document, $translate, $filter, $location, $window, $timeout,
                              UrlService, DataManipulationService, schemaService, UIUtilService, autocompleteService, ValueRecommenderService,
                              uibDateParser, TemporalRuntimeFieldService, TemporalEditorFieldService, CONST) {
 
@@ -389,48 +389,8 @@ define([
       $scope.expandAll = function () {
       };
 
-      // show this field as a spreadsheet
-      $scope.switchToSpreadsheet = function () {
-        $scope.setActive(0, true);
-        if (schemaService.getMaxItems($scope.field)) {
-          // create all the rows if the maxItems is a fixed number
-          $scope.createExtraRows();
-        }
-
-        SpreadsheetService.switchToSpreadsheet($scope, $scope.field, 0, function () {
-          return true;
-        }, function () {
-          $scope.addMoreInput();
-        }, function () {
-          $scope.removeInput($scope.model.length - 1);
-        }, function () {
-          $scope.createExtraRows();
-        }, function () {
-          $scope.deleteExtraRows();
-        })
-      };
-
-      $scope.cleanupSpreadsheet = function () {
-        $scope.deleteExtraRows();
-        SpreadsheetService.destroySpreadsheet($scope);
-        $scope.setValueArray();
-      };
-
-      $scope.isTabView = function () {
-        return UIUtilService.isTabView($scope.viewState);
-      };
-
       $scope.isListView = function () {
         return UIUtilService.isListView($scope.viewState);
-      };
-
-      $scope.isSpreadsheetView = function () {
-        return UIUtilService.isSpreadsheetView($scope.viewState);
-      };
-
-      // toggle through the list of view states
-      $scope.toggleView = function () {
-        $scope.viewState = UIUtilService.toggleView($scope.viewState, $scope.setActive);
       };
 
       $scope.toggleActive = function (index) {
@@ -441,15 +401,11 @@ define([
         $scope.setActive(index, false);
       };
 
-      $scope.fullscreen = function () {
-        UIUtilService.fullscreen($scope.getLocator(0));
-      };
-
       // set this field and index active
       $scope.setActive = function (idx, value) {
 
         var active = (typeof value === "undefined") ? true : value;
-        var index = $scope.isSpreadsheetView() ? 0 : idx;
+        var index = idx;
 
         // if zero cardinality,  add a new item
         if (active && $scope.isMultipleCardinality() && $scope.model.length <= 0) {
@@ -478,21 +434,18 @@ define([
             $scope.$parent.setIndex(parseInt(last));
           }
 
-          if (!$scope.isSpreadsheetView()) {
-            var zeroedIndex = $scope.isSpreadsheetView() ? 0 : index;
-            var zeroedLocator = $scope.getLocator(zeroedIndex);
+          var locator = $scope.getLocator(index);
 
-            // scroll it into the center of the screen and listen for shift-enter
-            $scope.scrollToLocator(zeroedLocator, ' .select');
-            $document.unbind('keypress');
-            $document.bind('keypress', function (e) {
-              $scope.isSubmit(e, index);
-            });
-            $document.unbind('keyup');
-            $document.bind('keyup', function (e) {
-              $scope.isSubmit(e, index);
-            });
-          }
+          // scroll it into the center of the screen and listen for shift-enter
+          $scope.scrollToLocator(locator, ' .select');
+          $document.unbind('keypress');
+          $document.bind('keypress', function (e) {
+            $scope.isSubmit(e, index);
+          });
+          $document.unbind('keyup');
+          $document.bind('keyup', function (e) {
+            $scope.isSubmit(e, index);
+          });
         }
       };
 
@@ -574,14 +527,6 @@ define([
         //   keyEvent.preventDefault();
         //   $scope.onSubmit(index);
         // }
-      };
-
-      $scope.addRow = function () {
-        if ($scope.isSpreadsheetView()) {
-          SpreadsheetService.addRow($scope);
-        } else {
-          $scope.addMoreInput();
-        }
       };
 
 //
@@ -1256,54 +1201,6 @@ define([
         }
       });
 
-// spreadsheet view will use the 0th instance
-      $scope.zeroedLocator = function (value) {
-        var result = '';
-        if (value) {
-          var result = value.replace(/-([^-]*)$/, '-0');
-        }
-        return result;
-      };
-
-// watch for changes in the selection for spreadsheet view to get out of spreadsheet mode
-      $scope.$watch(
-          function () {
-            return (UIUtilService.activeLocator);
-          },
-          function (newValue, oldValue) {
-
-            if ($scope.zeroedLocator(newValue) != $scope.zeroedLocator(oldValue) && $scope.getLocator(
-                0) == $scope.zeroedLocator(oldValue) && $scope.isSpreadsheetView()) {
-              $scope.toggleView();
-            }
-          }
-      );
-
-// make sure there are at least 10 entries in the spreadsheet
-      $scope.createExtraRows = function () {
-        var maxItems = schemaService.getMaxItems($scope.field);
-        while (($scope.model.length < 10 || $scope.model.length < maxItems)) {
-          $scope.addMoreInput();
-        }
-      };
-
-// delete extra blank rows
-      $scope.deleteExtraRows = function () {
-        var location = dms.getValueLocation($scope.field);
-        var min = schemaService.getMinItems($scope.field) || 0;
-        if (angular.isArray($scope.model)) {
-
-          loop:for (var i = $scope.model.length; i > min; i--) {
-            var valueElement = $scope.model[i - 1];
-            if (valueElement[location] == null || valueElement[location].length === 0) {
-              $scope.removeInput(i - 1);
-            } else {
-              break loop;
-            }
-          }
-        }
-      };
-
       $scope.isHidden = function () {
         return schemaService.isHidden($scope.field);
       };
@@ -1414,8 +1311,7 @@ define([
 
       $scope.setValueArray();
       $scope.setAttributeValueArray();
-      $scope.viewState = UIUtilService.createViewState($scope.field, $scope.switchToSpreadsheet,
-          $scope.cleanupSpreadsheet);
+      $scope.viewState = UIUtilService.createViewState();
     };
 
 
