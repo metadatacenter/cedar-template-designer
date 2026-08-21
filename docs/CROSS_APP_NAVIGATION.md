@@ -13,8 +13,8 @@ not AngularJS services or in-memory route state.
 
 The CEE Web Component remains independently developed and released from
 `cedar-embeddable-editor`. Workspace owns the thin authenticated route shell that loads
-the component, supplies templates and instances, and persists its output. The retired
-`cedar-artifacts` application is not part of this topology.
+the component, supplies templates and instances, and persists its output. Archived
+legacy artifact frontends are not part of this topology.
 
 No coordinating `cedar-workbench` runtime is required for the initial split.
 Deployment coordination belongs in `cedar-development`, build/deploy repositories,

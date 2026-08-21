@@ -31,7 +31,7 @@ authoring workflow and do not make Designer an owner of the Workspace dashboard.
 - The CEE host and the `cedar-embeddable-editor` package; Workspace owns the thin host
   shell and consumes the independently released component
 - Spreadsheet mode, Handsontable, ngHandsontable, and their adapters and styles
-- `cedar-artifacts` and the retired `cedar-artifact-viewer`
+- Archived legacy artifact frontends
 - The inherited Protractor/Selenium harness and broad legacy unit suite
 
 ## Cross-application boundary
