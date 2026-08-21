@@ -1,6 +1,6 @@
 'use strict';
 
-define(['app', 'angular'], function (app) {
+define(['app', 'angularMocks'], function (app) {
 
   describe('cedar-template-element.directive_test.js:', function () {
 

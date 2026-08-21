@@ -18,7 +18,7 @@ define([
 
     // configure routes
     $routeProvider.otherwise({
-      redirectTo: '/'
+      redirectTo: '/templates/create'
     });
 
     // configure translations

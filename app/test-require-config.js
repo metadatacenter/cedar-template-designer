@@ -109,7 +109,7 @@ require([
         'angular',
         'app',
       ], function (angular, app) {
-        angular.bootstrap(document, ['cedar.templateEditor']);
+        angular.bootstrap(document, ['cedar.templateDesigner']);
 
       });
     }

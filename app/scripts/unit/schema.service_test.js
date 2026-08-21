@@ -1,6 +1,6 @@
 'use strict';
 
-define(['app', 'angular'], function (app) {
+define(['app', 'angularMocks'], function (app) {
   describe('schemaService multiple-choice cardinality', function () {
     var schemaService;
 

@@ -41,22 +41,18 @@ define([
   'cedar/template-editor/handsontable/SpreadsheetContext',
   'cedar/template-editor/handsontable/MultiCheckboxEditor',
 
-  // cedar template editor modules
+  // CEDAR Template Designer modules
   'cedar/template-editor/core/core.module',
-  'cedar/template-editor/dashboard/dashboard.module',
   'cedar/template-editor/layout/layout.module',
   'cedar/template-editor/service/service.module',
   'cedar/template-editor/template/template.module',
   'cedar/template-editor/template-element/template-element.module',
   'cedar/template-editor/template-field/template-field.module',
-  'cedar/template-editor/template-instance/template-instance.module',
-  'cedar/template-editor/profile/profile.module',
-  'cedar/template-editor/messaging/messaging.module',
 
   // classic javascript, app data
   'cedar/template-editor/classic/app-data'
 ], function (angular, jsonld, flow) {
-  return angular.module('cedar.templateEditor', [
+  return angular.module('cedar.templateDesigner', [
     'ui.bootstrap',
     'ui.keypress',
     'ngRoute',
@@ -74,17 +70,11 @@ define([
     'flow',
 
     'cedar.templateEditor.core',
-    'cedar.templateEditor.dashboard',
     'cedar.templateEditor.layout',
     'cedar.templateEditor.service',
     'cedar.templateEditor.template',
     'cedar.templateEditor.templateElement',
     'cedar.templateEditor.templateField',
-    'cedar.templateEditor.templateInstance',
-    'cedar.templateEditor.profile',
-    'cedar.templateEditor.messaging',
-    'cedar.templateEditor.profile',
-
   ])
       .config(['flowFactoryProvider', function (flowFactoryProvider) {
         flowFactoryProvider.defaults = {

@@ -2,7 +2,7 @@
 
 define(['app', 'angularMocks'], function(app) {
   describe('create-template.controller_test.js', function() {
-    beforeEach(module('cedar.templateEditor'));
+    beforeEach(module('cedar.templateDesigner'));
 
     var $rootScope;
     var $compile;

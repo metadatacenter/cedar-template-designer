@@ -105,12 +105,11 @@ require([
     function continueWithAngularApp() {
       require([
         'angular',
-        'cedar-embeddable-editor',
         'artifact-selector',
         'app',
         'ngFlow'
-      ], function (angular, app, ngFlow) {
-        angular.bootstrap(document, ['cedar.templateEditor']);
+      ], function (angular, artifactSelector, app, ngFlow) {
+        angular.bootstrap(document, ['cedar.templateDesigner']);
 
         // Set the ng-app class for Angular Protractor tests
         const root = document.documentElement;
