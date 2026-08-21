@@ -8,30 +8,23 @@
   "main": "app/scripts/app.js",
   "scripts": {
     "start": "gulp",
-    "test": "node_modules/karma/bin/karma start karma.conf.js --browsers Chrome --single-run",
-    "protractor": "node_modules/protractor/bin/protractor protractor.config.js",
-    "webdrivermanager:update": "node node_modules/protractor/bin/webdriver-manager update --versions.chrome=110.0.5481.77",
-    "webdrivermanager:clean": "node node_modules/protractor/bin/webdriver-manager clean",
-    "install": "#npm run webdrivermanager:clean && npm run webdrivermanager:update"
+    "test": "node_modules/karma/bin/karma start karma.conf.js --browsers Chrome --single-run"
   },
   "author": "Metadatacenter.org",
   "license": "BSD-2-Clause",
   "devDependencies": {
     "bower": "1.8.14",
-    "chai": "4.1.1",
     "colors": "1.1.2",
     "connect-history-api-fallback": "1.1.0",
     "gulp": "4.0.0",
     "gulp-autoprefixer": "2.3.1",
     "gulp-connect": "5.7.0",
-    "gulp-connect-proxy": "0.3.1",
     "gulp-html-replace": "1.6.2",
     "gulp-jshint": "1.12.0",
     "gulp-less": "3.3.2",
     "gulp-minify-css": "1.2.4",
     "gulp-ng-annotate": "0.5.3",
     "gulp-plumber": "1.1.0",
-    "gulp-protractor": "4.1.1",
     "gulp-rename": "1.2.2",
     "gulp-replace": "0.5.4",
     "gulp-uglify": "1.5.4",
@@ -40,7 +33,6 @@
     "jasmine-core": "2.7.0",
     "jshint-stylish": "1.0.2",
     "karma": "^6.4.1",
-    "karma-chai": "0.1.0",
     "karma-chrome-launcher": "0.2.3",
     "karma-firefox-launcher": "0.1.7",
     "karma-jasmine": "0.3.8",
@@ -50,11 +42,7 @@
     "karma-notify-send-reporter": "0.0.3",
     "karma-requirejs": "0.2.6",
     "karma-spec-reporter": "0.0.31",
-    "protractor": "5.1.2",
-    "requirejs": "2.1.22",
-    "selenium-standalone": "6.6.0",
-    "selenium-webdriver": "3.5.0",
-    "sync-request": "2.2.0"
+    "requirejs": "2.1.22"
   },
   "dependencies": {
     "angular-animate": "1.6.3",

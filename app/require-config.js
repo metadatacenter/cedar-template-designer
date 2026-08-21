@@ -105,12 +105,6 @@ require([
         'ngFlow'
       ], function (angular, artifactSelector, app, ngFlow) {
         angular.bootstrap(document, ['cedar.templateDesigner']);
-
-        // Set the ng-app class for Angular Protractor tests
-        const root = document.documentElement;
-
-        angular.element(root).addClass('ng-app');
-
       });
     }
 
