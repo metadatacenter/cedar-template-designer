@@ -1,6 +1,7 @@
 window.cedarVersion = "cedarVersionValue";
 window.cedarVersionModifier = "cedarVersionModifierValue";
 window.cedarCacheControl = window.cedarVersion + window.cedarVersionModifier;
+window.cedarAuthUrl = "cedarAuthUrlValue";
 window.versioningEnabled = true;
 window.makeOpenEnabled = true;
 window.categoryTreeEnabled = true;

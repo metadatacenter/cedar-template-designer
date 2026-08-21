@@ -1,8 +1,16 @@
+function getCedarAuthUrl() {
+  var configuredUrl = window.cedarAuthUrl;
+  if (configuredUrl) {
+    return configuredUrl.replace(/\/$/, '');
+  }
+  return window.location.origin.replace('/cedar.', '/auth.');
+}
+
 function KeycloakUserHandler() {
 
   const keycloak = Keycloak({
     "realm"   : "CEDAR",
-    "url"     : window.location.origin.replaceAll('/cedar.', '/auth.'),
+    "url"     : getCedarAuthUrl(),
     "clientId": "cedar-angular-app"
   });
 
