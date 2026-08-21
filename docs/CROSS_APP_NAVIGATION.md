@@ -1,21 +1,20 @@
-# Cross-application navigation contract (draft 0.1)
+# Cross-application navigation contract (draft 0.2)
 
-This contract lets Workspace, Template Designer, and the canonical CEE host evolve
-and deploy independently. It is intentionally small: applications exchange URLs and
-opaque artifact identifiers, not AngularJS services or in-memory route state.
+This contract lets Workspace and Template Designer evolve and deploy independently.
+It is intentionally small: applications exchange URLs and opaque artifact identifiers,
+not AngularJS services or in-memory route state.
 
 ## Applications and ownership
 
 | Application | Owned routes | Provisional local port |
 | --- | --- | --- |
-| `cedar-workspace` | `/`, `/dashboard`, `/profile`, `/settings`, `/privacy`, `/messaging`, `/logout` | 4201 |
+| `cedar-workspace` | `/`, `/dashboard`, `/profile`, `/settings`, `/privacy`, `/messaging`, `/logout`, `/instances/*` | 4201 |
 | `cedar-template-designer` | `/templates/*`, `/elements/*`, `/fields/*` | 4202 |
-| canonical CEE host | `/instances/create/:templateId`, `/instances/edit/:instanceId` | existing host |
 
-`cedar-artifacts` currently implements the guarded instance routes and is therefore
-the integration target during extraction. This is not a decision to retain that
-repository forever. The CEE host may change later without changing Workspace or
-Designer routes, provided the configured CEE base URL keeps this contract.
+The CEE Web Component remains independently developed and released from
+`cedar-embeddable-editor`. Workspace owns the thin authenticated route shell that loads
+the component, supplies templates and instances, and persists its output. The retired
+`cedar-artifacts` application is not part of this topology.
 
 No coordinating `cedar-workbench` runtime is required for the initial split.
 Deployment coordination belongs in `cedar-development`, build/deploy repositories,
@@ -27,7 +26,6 @@ Each environment must provide these absolute HTTPS origins:
 
 - `workspaceFrontend`
 - `templateDesignerFrontend`
-- `artifactsFrontend` (the current CEE host; rename only in a later contract version)
 
 Preview origins must not replace production values. Production, staging, and local
 configuration are generated independently. Root-relative assets must either be
@@ -44,9 +42,9 @@ allowed.
 | Workspace | edit template | `{designer}/templates/edit/{artifactId}?returnTo=...` |
 | Workspace | edit element | `{designer}/elements/edit/{artifactId}?returnTo=...` |
 | Workspace | edit field | `{designer}/fields/edit/{artifactId}?returnTo=...` |
-| Workspace | create instance | `{cee}/instances/create/{templateId}?folderId=...&returnTo=...` |
-| Workspace | edit instance | `{cee}/instances/edit/{instanceId}?returnTo=...` |
-| Designer or CEE | return | validated `returnTo`, otherwise `{workspace}/dashboard` |
+| Workspace | create instance | `{workspace}/instances/create/{templateId}?folderId=...&returnTo=...` |
+| Workspace | edit instance | `{workspace}/instances/edit/{instanceId}?returnTo=...` |
+| Designer or Workspace CEE shell | return | validated `returnTo`, otherwise `{workspace}/dashboard` |
 
 Rules:
 
@@ -77,7 +75,7 @@ Treat `returnTo` as untrusted input.
 
 ## Authentication
 
-- All three applications use the `CEDAR` Keycloak realm and rely on SSO; tokens are
+- Both applications use the `CEDAR` Keycloak realm and rely on SSO; tokens are
   not passed between applications.
 - Preview may temporarily reuse the legacy `cedar-angular-app` client only after its
   exact redirect URIs and web origins are configured.
@@ -103,7 +101,4 @@ Treat `returnTo` as untrusted input.
 - Final production origins and whether Workspace retains the current
   `cedar.metadatacenter.org` origin.
 - Final Keycloak client IDs and redirect URI lists.
-- Whether CEE opens in the same tab for all actions or preserves an explicit
-  user-selected new-tab flow.
-- Long-term CEE host repository after the current `cedar-artifacts` integration
-  phase.
+- Whether metadata instance routes preserve an explicit user-selected new-tab flow.
