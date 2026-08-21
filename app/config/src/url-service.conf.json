@@ -8,12 +8,6 @@
   "bioontologyRestAPI": "https://data.bioontology.org/",
   "submissionRestAPI": "submissionServerUrl",
   "messagingRestAPI": "messagingServerUrl",
-  "openViewBase": "openViewBaseUrl",
   "impexRestAPI": "impexServerUrl",
-  "artifactsFrontend": "artifactsFrontendUrl",
-  "workspaceFrontend": "workspaceFrontendUrl",
-  "templateDesignerFrontend": "templateDesignerFrontendUrl",
-  "monitoringFrontend": "monitoringFrontendUrl",
-  "dataciteDOIBase": "dataciteDOIBaseUrl",
-  "downloadBase": "downloadBaseUrl"
+  "workspaceFrontend": "workspaceFrontendUrl"
 }

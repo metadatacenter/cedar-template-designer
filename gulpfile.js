@@ -57,12 +57,6 @@ gulp.task('copy:resources', function () {
   return gulp.src(glyphiconsGlob).pipe(gulp.dest('app/fonts/'));
 });
 
-gulp.task('copy:cee', function () {
-  return gulp.src('node_modules/cedar-embeddable-editor/cedar-embeddable-editor.js')
-      .pipe(gulp.dest('app/third_party_components/cedar-embeddable-editor/'));
-});
-
-
 gulp.task('server-development', function (done) {
   var frontendPort = parseInt(process.env.CEDAR_FRONTEND_PORT || '4202', 10);
   var liveReloadPort = parseInt(process.env.CEDAR_LIVERELOAD_PORT || '35731', 10);
@@ -87,8 +81,6 @@ gulp.task('html', function (done) {
 gulp.task('replace-url', function (done) {
   var workspaceFrontendUrl = process.env.CEDAR_WORKSPACE_FRONTEND_URL ||
       (cedarFrontendTarget === 'local' ? 'http://localhost:4201' : 'https://workspace-next.' + cedarUIHost);
-  var templateDesignerFrontendUrl = process.env.CEDAR_TEMPLATE_DESIGNER_FRONTEND_URL ||
-      (cedarFrontendTarget === 'local' ? 'http://localhost:4202' : 'https://designer-next.' + cedarUIHost);
   gulp.src(['app/config/src/url-service.conf.json'])
       .pipe(replace('templateServerUrl', 'https://template.' + cedarRestHost))
       .pipe(replace('resourceServerUrl', 'https://resource.' + cedarRestHost))
@@ -100,15 +92,8 @@ gulp.task('replace-url', function (done) {
       .pipe(replace('schemaServerUrl', 'https://schema.' + cedarRestHost))
       .pipe(replace('submissionServerUrl', 'https://submission.' + cedarRestHost))
       .pipe(replace('messagingServerUrl', 'https://messaging.' + cedarRestHost))
-      .pipe(replace('openViewBaseUrl', 'https://openview.' + cedarRestHost))
       .pipe(replace('impexServerUrl', 'https://impex.' + cedarRestHost))
-      .pipe(replace('artifactsFrontendUrl', 'https://artifacts.' + cedarRestHost))
       .pipe(replace('workspaceFrontendUrl', workspaceFrontendUrl))
-      .pipe(replace('templateDesignerFrontendUrl', templateDesignerFrontendUrl))
-      // The monitoring dashboard is a sibling frontend (not a REST service), so it hangs off the UI host.
-      .pipe(replace('monitoringFrontendUrl', 'https://monitoring.' + cedarUIHost))
-      .pipe(replace('dataciteDOIBaseUrl', 'https://bridging.' + cedarRestHost + '/doi/datacite'))
-      .pipe(replace('downloadBaseUrl', 'https://bridging.' + cedarRestHost + '/resources/download'))
       .pipe(gulp.dest('app/config/'));
   done();
   gulp.src(['app/config/src/embeddable-editor-config.json'])
@@ -262,7 +247,7 @@ if (cedarFrontendBehavior === 'develop') {
   exitWithError("Invalid CEDAR_FRONTEND_BEHAVIOR value. Please set to 'develop' or 'server'!");
 }
 
-taskNameList.push('lint', 'less', 'copy:resources', 'copy:cee', 'replace-url', 'replace-tracking', 'replace-version');
+taskNameList.push('lint', 'less', 'copy:resources', 'replace-url', 'replace-tracking', 'replace-version');
 // Launch tasks
 gulp.task('default', gulp.series(taskNameList, function (done) {
   done();
