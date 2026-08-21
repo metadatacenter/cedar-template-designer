@@ -80,7 +80,8 @@ The current inter-application boundary is documented in
 - [ ] Remove Workspace, profile, messaging, and instance routes and source
 - [ ] Retain the embedded artifact finder without importing the whole Workspace
 - [ ] Namespace or separately host root-relative static assets
-- [ ] Build and serve independently
+- [x] Serve the unpruned baseline independently on port 4202 (LiveReload 35731)
+- [ ] Produce a Designer-only build after pruning
 - [ ] Add Designer-focused unit and browser smoke tests
 - [ ] Pass preview routing, auth, deep-link, and rollback tests
 - [ ] Pass staging parity before any production routing changes

@@ -4,9 +4,10 @@
   "publishConfig": {
     "registry": "https://nexus.bmir.stanford.edu/repository/npm-cedar/"
   },
-  "description": "Form building application built with AngularJS",
+  "description": "CEDAR Template Designer frontend",
   "main": "app/scripts/app.js",
   "scripts": {
+    "start": "gulp",
     "test": "node_modules/karma/bin/karma start karma.conf.js --browsers Chrome --single-run",
     "protractor": "node_modules/protractor/bin/protractor protractor.config.js",
     "webdrivermanager:update": "node node_modules/protractor/bin/webdriver-manager update --versions.chrome=110.0.5481.77",

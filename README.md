@@ -1,28 +1,35 @@
-# cedar-template-editor
+# cedar-template-designer
 
-This is an AngularJS web application to create and fill in Metadata Templates. It is part of the CEDAR application.
+CEDAR's Template Designer frontend for creating and editing templates, elements,
+and fields, including controlled-term constraints and the embedded artifact
+finder used during authoring.
 
-To access the documentation, [click here](https://github.com/metadatacenter/cedar-docs/wiki).
+This repository is being extracted from the legacy `cedar-template-editor`
+AngularJS monolith. It is not in the production release path yet. See
+[`MIGRATION.md`](MIGRATION.md) for the frozen source commit, current boundary,
+baseline test debt, and extraction gates.
 
+## Local development
 
-#### Running the End-to-End Tests
+Export `CEDAR_HOME`, source the normal CEDAR development profile, and run:
 
-Instructions for running the end-to-end tests in this repo can be found 
-[here](https://github.com/metadatacenter/cedar-conf/wiki/Running-CEDAR-End-to-End-Tests).
+```sh
+cd "$CEDAR_HOME/cedar-template-designer"
+npm start
+```
 
-The end-to-end tests are controlled by Protractor.
+The default development and LiveReload ports are `4202` and `35731`.
+Override them with `CEDAR_FRONTEND_PORT` and `CEDAR_LIVERELOAD_PORT` when
+needed. The production monolith continues to use port `4200`.
 
-Note that there are currently no unit tests in this project so the Karma configuration is not used.
+The current unit baseline is run with `npm test`. Cross-application smoke tests
+live under `cedar-development/ops/e2e`.
 
-#### Travis
+## Migration constraints
 
-The process for configuring the end-to-end tests associated with the repo to work with Travis is documented
-[here](https://github.com/metadatacenter/cedar-conf/wiki/Setting-up-CEDAR-E2E-tests-on-Travis).
-
-#### Questions
-
-If you have questions about this repository, please subscribe to the [CEDAR Developer Support
-mailing list](https://mailman.stanford.edu/mailman/listinfo/cedar-developers).
-After subscribing, send messages to cedar-developers at lists.stanford.edu.
-
-
+- Do not route production traffic here until preview and staging gates pass.
+- Do not copy metadata instance editing into this repository; use the canonical
+  CEE host.
+- Cross-application navigation follows
+  [`docs/CROSS_APP_NAVIGATION.md`](docs/CROSS_APP_NAVIGATION.md).
+- Framework modernization is intentionally separate from the extraction.

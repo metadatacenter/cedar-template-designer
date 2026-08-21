@@ -69,11 +69,13 @@ gulp.task('copy:cee', function () {
 
 
 gulp.task('server-development', function (done) {
-  console.log("Server development");
+  var frontendPort = parseInt(process.env.CEDAR_FRONTEND_PORT || '4202', 10);
+  var liveReloadPort = parseInt(process.env.CEDAR_LIVERELOAD_PORT || '35731', 10);
+  console.log("CEDAR Template Designer development server on port " + frontendPort);
   connect.server({
     root      : 'app',
-    port      : 4200,
-    livereload: true,
+    port      : frontendPort,
+    livereload: {port: liveReloadPort},
     fallback  : 'app/index.html',
     host: '0.0.0.0' // Listen on all interfaces
   });
