@@ -19,12 +19,22 @@ define([
 
     var service = {};
 
+    function createAppData() {
+      var appData = {
+        cedarUserProfile: null,
+        authUserProfile: null,
+        navigation: {}
+      };
+      Object.preventExtensions(appData);
+      return appData;
+    }
+
     function getAppData() {
       return $rootScope.appData;
     };
 
     service.init = function () {
-      $rootScope.appData = new AppData();
+      $rootScope.appData = createAppData();
     };
 
     service.setAuthProfile = function (parsedToken) {
