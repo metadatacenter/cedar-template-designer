@@ -224,10 +224,6 @@ define([
       $scope.moreIsOpen = !$scope.moreIsOpen;
     };
 
-    $scope.backToFolder = function () {
-      $location.url(FrontendUrlService.getFolderContents(QueryParamUtilsService.getFolderId()));
-    };
-
     // Reverts to empty form and removes all previously added fields/elements
     $scope.reset = function () {
       UIMessageService.confirmedExecution(

@@ -12,7 +12,7 @@ define([
                                         'DataManipulationService', 'FieldTypeService', 'UrlService',
                                         'UserService', 'RichTextConfigService',
                                         'provisionalClassService', 'CedarUser', 'UISettingsService', 'FrontendUrlService',
-                                        'TrackingService', 'MessagingService',
+                                        'TrackingService',
                                         '$httpParamSerializer', '$location', 'UIMessageService'];
 
 
@@ -20,7 +20,7 @@ define([
                                       DataManipulationService, FieldTypeService, UrlService,
                                       UserService, RichTextConfigService,
                                       provisionalClassService, CedarUser, UISettingsService, FrontendUrlService,
-                                      TrackingService, MessagingService,
+                                      TrackingService,
                                       $httpParamSerializer, $location, UIMessageService) {
 
     // A confirmation the previous page could not show, because it navigated away from itself.
@@ -62,16 +62,11 @@ define([
     DataManipulationService.init();
     UISettingsService.init();
     TrackingService.init();
-    MessagingService.init();
 
     // Make objects available through rootScope
     //$rootScope.cts = ControlledTermService;
     //$rootScope.vrs = ValueRecommenderService;
     $rootScope.editorOptions = RichTextConfigService.getConfig("default");
-
-    // Monitoring dashboard link in the user menu. The menu markup lives outside any controller
-    // (bottom of index.html), so the environment-specific URL is published on the root scope.
-    $rootScope.monitoringUrl = FrontendUrlService.getMonitoring();
 
     $rootScope.util = {
       buildUrl: function (url, params) {
@@ -92,14 +87,10 @@ define([
       var a = jQuery("#rootElement");
       var e = jQuery("#top-navigation");
 
-      a.removeClass('metadata').removeClass('template').removeClass('dashboard').removeClass('element').removeClass('field');
-      e.removeClass('metadata').removeClass('template').removeClass('dashboard').removeClass('element').removeClass('field');
+      a.removeClass('template').removeClass('element').removeClass('field');
+      e.removeClass('template').removeClass('element').removeClass('field');
 
-      if ($location.path().startsWith("/dashboard")) {
-        a.addClass('dashboard');
-        e.addClass('dashboard');
-
-      } else if ($location.path().startsWith("/elements")) {
+      if ($location.path().startsWith("/elements")) {
         a.addClass('element');
         e.addClass('element');
 
@@ -111,9 +102,6 @@ define([
         a.addClass('field');
         e.addClass('field');
 
-      } else if ($location.path().startsWith("/instances")) {
-        a.addClass('metadata');
-        e.addClass('metadata');
       }
 
 

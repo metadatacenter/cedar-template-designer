@@ -69,7 +69,6 @@ require.config({
 
     'lib/bootstrap/dist/js/bootstrap.min'                   : ['jquery'],
     'lib/bootstrap-select/dist/js/bootstrap-select.min'     : ['lib/bootstrap/dist/js/bootstrap.min'],
-    'lib/ngprogress/build/ngprogress.min'                   : ['angular'],
     'cedar-embeddable-editor': {
       deps: ['angular'],
       exports: 'cedar-embeddable-editor'

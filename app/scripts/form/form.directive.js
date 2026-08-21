@@ -10,13 +10,13 @@ define([
 
 
   formDirective.$inject = ['$rootScope', '$document', '$timeout', '$translate', '$http', 'DataManipulationService',
-                           'schemaService','FieldTypeService', 'DataUtilService', 'SubmissionService',
+                           'schemaService','FieldTypeService', 'DataUtilService',
                            'UIMessageService', 'UrlService', 'AuthorizedBackendService', 'HttpBuilderService',
                            "ValidationService", "UIUtilService"];
 
 
   function formDirective($rootScope, $document, $timeout, $translate, $http, DataManipulationService, schemaService,
-                         FieldTypeService,DataUtilService, SubmissionService, UIMessageService, UrlService, AuthorizedBackendService,
+                         FieldTypeService,DataUtilService, UIMessageService, UrlService, AuthorizedBackendService,
                          HttpBuilderService, ValidationService, UIUtilService) {
     return {
       templateUrl: 'scripts/form/form.directive.html',
