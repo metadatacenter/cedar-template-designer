@@ -33,6 +33,18 @@ them as baseline debt, and require every newly introduced or migrated test to pa
 | Source commit | Disposition |
 | --- | --- |
 | `fc083f78` - take CEE `2.0.0-dev.20260820.a8cc4cc` | Ported into the extraction worktree on 2026-08-20 |
+| `a6b29576` - remove legacy artifact frontend routing | Equivalent dead routing and references are absent from Designer |
+
+## Current extraction checkpoint
+
+- Independent AngularJS bootstrap and package identity on port 4202
+- Template, element, and field create/edit routes with finder-only Workspace support
+- Exact-origin Workspace return navigation with hostile-host rejection tests
+- Focused URL/auth contract suite: 4 passing tests
+- Spreadsheet mode, Workspace/account routes, CEE host, obsolete broad tests, and unreachable code removed
+- Local-source nginx image and opt-in Compose preview verified by the split frontend smoke
+- CLI repository/process registration is preview-only and excluded from release operations
+- Authentication base configuration is complete; Keycloak redirect/web-origin authorization remains a reviewed security gate
 
 ## Product boundary
 
@@ -74,21 +86,22 @@ The current inter-application boundary is documented in
 - [x] Give the package a distinct repository identity
 - [x] Draft versioned cross-app URL, authentication, and `returnTo` contracts
 - [ ] Ratify contract decisions and production origins
-- [ ] Replace Workspace and CEE route changes with full-document navigation
-- [ ] Validate `returnTo` against configured CEDAR origins
-- [ ] Split the eager service module so only Designer dependencies load
-- [ ] Remove Workspace, profile, messaging, and instance routes and source
-- [ ] Retain the embedded artifact finder without importing the whole Workspace
-- [ ] Namespace or separately host root-relative static assets
+- [x] Replace Workspace route changes with full-document navigation and remove CEE routes
+- [x] Validate `returnTo` against the configured Workspace origin
+- [x] Split the eager service module so only Designer dependencies load
+- [x] Remove Workspace, profile, messaging, and instance routes and source
+- [x] Retain the embedded artifact finder without importing the whole Workspace
+- [x] Separately host root-relative static assets on the Designer origin
 - [x] Serve the unpruned baseline independently on port 4202 (LiveReload 35731)
-- [ ] Produce a Designer-only build after pruning
-- [ ] Add Designer-focused unit and browser smoke tests
+- [x] Produce a Designer-only build after pruning
+- [x] Add Designer-focused unit and credential-free cross-application smoke tests
+- [x] Build and run a local-source preview image without a published frontend tarball
 - [ ] Pass preview routing, auth, deep-link, and rollback tests
 - [ ] Pass staging parity before any production routing changes
 
 ## Change discipline
 
-- Do not commit or push migration changes unless explicitly requested.
+- Make coherent local commits as migration checkpoints; do not push until remote ownership is agreed.
 - Keep the legacy production repository unchanged.
 - Record every ambiguous shared file here before deleting it.
 - Prefer copy-and-subtract to a framework rewrite; modernization is a later project.
