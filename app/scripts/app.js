@@ -43,10 +43,7 @@ define([
   'cedar/template-editor/service/service.module',
   'cedar/template-editor/template/template.module',
   'cedar/template-editor/template-element/template-element.module',
-  'cedar/template-editor/template-field/template-field.module',
-
-  // classic javascript, app data
-  'cedar/template-editor/classic/app-data'
+  'cedar/template-editor/template-field/template-field.module'
 ], function (angular, jsonld, flow) {
   return angular.module('cedar.templateDesigner', [
     'ui.bootstrap',

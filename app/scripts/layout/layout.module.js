@@ -2,7 +2,6 @@
 
 define([
   'angular',
-  'cedar/template-editor/modal/modal.module',
   'cedar/template-editor/layout/cedar-sticky-left-menu.directive',
   'cedar/template-editor/layout/close-navbar.directive',
   'cedar/template-editor/layout/header.controller',
