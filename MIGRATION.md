@@ -40,13 +40,16 @@ them as baseline debt, and require every newly introduced or migrated test to pa
 - Independent AngularJS bootstrap and package identity on port 4202
 - Template, element, and field create/edit routes with finder-only Workspace support
 - Exact-origin Workspace return navigation with hostile-host rejection tests
-- Focused URL/auth contract suite: 4 passing tests
+- Focused URL/auth/runtime contract suite: 5 passing tests
 - Spreadsheet mode, Workspace/account routes, CEE host, obsolete broad tests, and unreachable code removed
 - Local-source nginx image and opt-in Compose preview verified by the split frontend smoke
 - Runtime build identity exposes the clean source commit and exact served-tree SHA-256 with no-store caching
 - CLI repository/process registration is preview-only and excluded from release operations
 - The full authenticated smoke is split-origin aware and includes exact Workspace-to-Designer return navigation
-- Authentication base configuration is complete; executing that smoke still requires the reviewed Keycloak redirect/web-origin gate
+- The approved local Keycloak callbacks and exact Web Origins pass their credential-free preflight
+- The authenticated split journey passes login/SSO, exact Workspace return, authoring, Workspace CEE
+  create/save/edit, JSON/YAML serialization, OpenView, teardown, and folder-clear verification
+- Designer owns its minimal user application state; the runtime fix is recorded by `c712841f`
 
 ## Product boundary
 
@@ -100,7 +103,7 @@ The current inter-application boundary is documented in
 - [x] Build and run a local-source preview image without a published frontend tarball
 - [x] Prove and record clean source identity plus the exact environment-generated served bundle
 - [x] Add a split-aware authenticated browser journey without changing the production-monolith smoke
-- [ ] Pass preview routing, auth, deep-link, and rollback tests
+- [x] Pass local preview routing, auth, deep-link, and route-only rollback tests
 - [ ] Pass staging parity before any production routing changes
 
 ## Change discipline
