@@ -20,10 +20,6 @@ module.exports = function (config) {
       // 'bower_components/angular-ui/build/angular-ui.js',
       // 'bower_components/angular-ui-bootstrap/angular-ui-bootstrap.js',
 
-      // flow
-      'bower_components/flow.js/dist/flow.js',
-      'bower_components/ng-flow/dist/ng-flow-standalone.js',
-
       'scripts/keycloak/keycloak.min.js',
       'scripts/handlers/*.js',
       // bower. Keep this catch-all after the explicitly included bootstrap

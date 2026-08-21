@@ -21,8 +21,6 @@ require.config({
 
     'ckeditor': 'bower_components/ng-ckeditor/libs/ckeditor/ckeditor',
     'jsonld'  : 'bower_components/jsonld/js/jsonld',
-    'ngFlow'  : 'bower_components/ng-flow/dist/ng-flow-standalone',
-    'flow'    : 'bower_components/flow.js/dist/flow',
 
     'CedarModelTypescriptLibrary': 'third_party_components/cedar-model-typescript-library/index.umd',
     'artifact-selector': 'third_party_components/artifact-selector/artifact-selector'
@@ -37,7 +35,6 @@ require.config({
       deps     : ['angular'],
       'exports': 'angular.mock'
     },
-    'lib/angucomplete-alt/angulcomplete-alt'                                             : ['angular'],
     'lib/angular-animate/angular-animate.min'                                            : ['angular'],
     'lib/angular-bootstrap/ui-bootstrap.min'                                             : ['angular'],
     'lib/angular-bootstrap/ui-bootstrap-tpls.min'                                        : ['angular'],
@@ -49,17 +46,10 @@ require.config({
     'lib/angular-ui-select/dist/select.min'                                              : ['angular'],
     'lib/angular-ui-sortable/sortable.min'                                               : ['angular'],
     'lib/angulartics/dist/angulartics.min'                                               : ['angular'],
-    'ngFlow'                                                                             : ['angular'],
-    'flow'                                                                               : ['angular'],
     'moment'                                                                             : {
       'exports': 'moment'
     },
 
-
-    '3rdparty/angular-fitvids/angular-fitvids': {
-      deps   : ['angular', 'jquery'],
-      exports: 'fitVids'
-    },
 
     'lib/ng-ckeditor/ng-ckeditor.min': ['angular', 'ckeditor'],
     'ckeditor'                       : {
@@ -95,9 +85,8 @@ require([
       require([
         'angular',
         'artifact-selector',
-        'app',
-        'ngFlow'
-      ], function (angular, artifactSelector, app, ngFlow) {
+        'app'
+      ], function (angular, artifactSelector, app) {
         angular.bootstrap(document, ['cedar.templateDesigner']);
       });
     }

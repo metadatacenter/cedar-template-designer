@@ -5,7 +5,6 @@
 define([
   // angular modules
   'angular',
-  'lib/angucomplete-alt/angucomplete-alt',
   'lib/angular-animate/angular-animate.min',
   'lib/angular-bootstrap/ui-bootstrap-tpls.min',
   'lib/ng-tags-input/ng-tags-input.min',
@@ -14,7 +13,6 @@ define([
   'lib/angular-ui-select/dist/select.min',
   'lib/angular-ui-sortable/sortable.min',
   'lib/angular-ui-switch/angular-ui-switch.min',
-  'lib/angular-ui-keypress/keypress.min',
   'lib/angular-translate/angular-translate.min',
   'lib/angular-translate-loader-static-files/angular-translate-loader-static-files.min',
   'lib/angular-toasty/dist/angular-toasty.min',
@@ -26,13 +24,10 @@ define([
   'ckeditor',
   'jquery',
   'lib/jquery-ui/jquery-ui.min',
-  'lib/perfnow-polyfill/perfnow-polyfill',
   'lib/sweetalert/dist/sweetalert.min',
-  '3rdparty/angular-fitvids/angular-fitvids',
   'lib/angulartics/dist/angulartics.min',
   'lib/angulartics-google-analytics/dist/angulartics-google-analytics.min',
   'jsonld',
-  'flow',
 
   // custom libraries
 
@@ -43,10 +38,14 @@ define([
   'cedar/template-editor/template/template.module',
   'cedar/template-editor/template-element/template-element.module',
   'cedar/template-editor/template-field/template-field.module'
-], function (angular, jsonld, flow) {
+], function (angular) {
+  // angular-translate 2.8 still calls this helper, which AngularJS 1.7 removed.
+  angular.lowercase = function (text) {
+    return text.toLowerCase();
+  };
+
   return angular.module('cedar.templateDesigner', [
     'ui.bootstrap',
-    'ui.keypress',
     'ngRoute',
     'ngAnimate',
     'ngSanitize',
@@ -55,10 +54,8 @@ define([
     'pascalprecht.translate',
     'angular-toasty',
     'ngCkeditor',
-    'fitVids',
     'angulartics',
     'angulartics.google.analytics',
-    'flow',
 
     'cedar.templateEditor.core',
     'cedar.templateEditor.layout',
@@ -67,28 +64,6 @@ define([
     'cedar.templateEditor.templateElement',
     'cedar.templateEditor.templateField',
   ])
-      .config(['flowFactoryProvider', function (flowFactoryProvider) {
-        flowFactoryProvider.defaults = {
-          target: 'https://httpbin.org/post',
-          permanentErrors: [404, 500, 501],
-          testChunks:false,
-          maxChunkRetries: 1,
-          chunkRetryInterval: 5000,
-          simultaneousUploads: 4,
-          singleFile: false
-        };
-        flowFactoryProvider.on('catchAll', function (event) {
-          //console.log('catchAll', arguments);
-        });
-        // Can be used with different implementations of Flow.js
-        // flowFactoryProvider.factory = fustyFlowFactory;
-
-        //migrating from angular v1.5.8 to 1.7.0 angular.lowercase is not supported anymore
-        //following redefinition is used as a workaround
-        angular.lowercase = function(text) {
-          return text.toLowerCase();
-        };
-      }])
       .config(['$httpProvider', function ($httpProvider) {
         // Cache-bust our own .html template partials the same way the JS and
         // JSON resources already are (window.cedarCacheControl comes from

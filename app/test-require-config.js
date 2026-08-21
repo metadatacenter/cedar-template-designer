@@ -48,7 +48,6 @@ require.config({
       exports: 'angular.mock'
     },
 
-    'lib/angucomplete-alt/angulcomplete-alt'                                             : ['angular'],
     'lib/angular-animate/angular-animate.min'                                            : ['angular'],
     'lib/angular-bootstrap/ui-bootstrap.min'                                             : ['angular'],
     'lib/angular-bootstrap/ui-bootstrap-tpls.min'                                        : ['angular'],
@@ -62,14 +61,8 @@ require.config({
     'lib/angulartics/dist/angulartics.min'                                               : ['angular'],
     'lib/angular-ui-switch/angular-ui-switch.min'                                        : ['angular'],
     'lib/ng-tags-input/ng-tags-input.min'                                                : ['angular'],
-    'lib/angular-ui-keypress/keypress.min'                                               : ['angular'],
     'lib/angulartics-google-analytics/dist/angulartics-google-analytics.min'             : ['angular'],
     'lib/angular-ui-tree/dist/angular-ui-tree'                                           : ['angular'],
-
-    '3rdparty/angular-fitvids/angular-fitvids': {
-      deps   : ['angular', 'jquery'],
-      exports: 'fitVids'
-    },
 
     'lib/ng-ckeditor/ng-ckeditor.min': ['angular', 'ckeditor'],
     'ckeditor'                       : {
