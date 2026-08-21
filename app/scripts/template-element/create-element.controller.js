@@ -7,7 +7,7 @@ define([
   angular.module('cedar.templateEditor.templateElement.createElementController', [])
       .controller('CreateElementController', CreateElementController);
 
-  CreateElementController.$inject = ["$rootScope", "$scope", "$routeParams", "$timeout", "$location", "$translate",
+  CreateElementController.$inject = ["$rootScope", "$scope", "$routeParams", "$timeout", "$location", "$window", "$translate",
                                      "$filter", "HeaderService", "StagingService", "DataTemplateService",
                                      "FieldTypeService", "TemplateElementService", "resourceService", "ValidationService","UIMessageService",
                                      "DataManipulationService", "schemaService","DataUtilService", "UIUtilService", "AuthorizedBackendService",
@@ -15,7 +15,7 @@ define([
                                      "CedarModelTypescriptLibrary"];
 
 
-  function CreateElementController($rootScope, $scope, $routeParams, $timeout, $location, $translate, $filter,
+  function CreateElementController($rootScope, $scope, $routeParams, $timeout, $location, $window, $translate, $filter,
                                    HeaderService, StagingService, DataTemplateService, FieldTypeService,
                                    TemplateElementService, resourceService, ValidationService,UIMessageService,
                                    DataManipulationService,schemaService,
@@ -528,7 +528,9 @@ define([
     };
 
     $scope.cancelElement = function () {
-      $location.url(FrontendUrlService.getFolderContents(QueryParamUtilsService.getFolderId()));
+      UIUtilService.setDirty(false);
+      $window.location.assign(FrontendUrlService.getWorkspaceReturn(
+          QueryParamUtilsService.getReturnTo(), QueryParamUtilsService.getFolderId()));
     };
 
     $scope.elementSearch = function () {

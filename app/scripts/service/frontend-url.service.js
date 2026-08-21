@@ -7,12 +7,13 @@ define([
   angular.module('cedar.templateEditor.service.frontendUrlService', [])
       .service('FrontendUrlService', FrontendUrlService);
 
-  FrontendUrlService.$inject = [];
+  FrontendUrlService.$inject = ['$window'];
 
-  function FrontendUrlService() {
+  function FrontendUrlService($window) {
 
     let openViewBase = null;
     let embeddableEditorBase = null;
+    let workspaceBase = null;
     let dataciteDOIBase = null
     let downloadBase = null
     let monitoringBase = null
@@ -23,10 +24,53 @@ define([
 
     service.init = function () {
       openViewBase = config.openViewBase;
-      embeddableEditorBase = config.artifactsFrontend;
+      embeddableEditorBase = withoutTrailingSlash(config.artifactsFrontend);
+      workspaceBase = withoutTrailingSlash(config.workspaceFrontend);
       dataciteDOIBase = config.dataciteDOIBase;
       downloadBase = config.downloadBase;
       monitoringBase = config.monitoringFrontend;
+    };
+
+    function withoutTrailingSlash(url) {
+      return (url || '').replace(/\/$/, '');
+    }
+
+    function isLoopback(hostname) {
+      return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
+    }
+
+    function isSecureOrLocal(url) {
+      return url.protocol === 'https:' || (url.protocol === 'http:' && isLoopback(url.hostname));
+    }
+
+    function getWorkspaceFallback(folderId) {
+      var fallback = workspaceBase + '/dashboard';
+      return folderId ? fallback + '?folderId=' + encodeURIComponent(folderId) : fallback;
+    }
+
+    service.getWorkspaceReturn = function (returnTo, folderId) {
+      var configuredWorkspace;
+      try {
+        configuredWorkspace = new $window.URL(workspaceBase);
+      } catch (error) {
+        throw new Error('Invalid workspaceFrontend configuration');
+      }
+      if (!isSecureOrLocal(configuredWorkspace)) {
+        throw new Error('workspaceFrontend must use HTTPS except on loopback hosts');
+      }
+
+      if (returnTo) {
+        try {
+          var candidate = new $window.URL(returnTo, configuredWorkspace.href);
+          if (candidate.origin === configuredWorkspace.origin && isSecureOrLocal(candidate) &&
+              !candidate.username && !candidate.password) {
+            return candidate.href;
+          }
+        } catch (error) {
+          // Invalid and cross-origin return URLs deliberately fall through to the safe fallback.
+        }
+      }
+      return getWorkspaceFallback(folderId);
     };
 
     service.getTemplateEdit = function (id) {

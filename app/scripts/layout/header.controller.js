@@ -98,9 +98,8 @@ define([
       vm.searchTerm = null;
       UIUtilService.activeLocator = null;
       UIUtilService.activeZeroLocator = null;
-      // Return the user to wherever they came from (folder + search + sharing preserved), falling
-      // back to the dashboard when there is no in-app history.
-      PreviousRouteService.goBack();
+      $window.location.assign(FrontendUrlService.getWorkspaceReturn(
+          QueryParamUtilsService.getReturnTo(), QueryParamUtilsService.getFolderId()));
     };
 
     vm.goToHome = function () {

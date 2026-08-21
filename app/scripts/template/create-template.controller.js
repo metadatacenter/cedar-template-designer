@@ -7,7 +7,7 @@ define([
       angular.module('cedar.templateEditor.template.createTemplateController', [])
           .controller('CreateTemplateController', CreateTemplateController);
 
-      CreateTemplateController.$inject = ["$rootScope", "$scope", "$routeParams", "$timeout", "$location", "$translate",
+      CreateTemplateController.$inject = ["$rootScope", "$scope", "$routeParams", "$timeout", "$location", "$window", "$translate",
                                           "$filter", "TrackingService", "HeaderService", "StagingService",
                                           "DataTemplateService", "FieldTypeService",
                                           "TemplateService", "resourceService", "UIMessageService", "UIUtilService",
@@ -17,7 +17,7 @@ define([
                                           "FrontendUrlService", "QueryParamUtilsService", "CONST", "CedarUser",
                                           "CedarModelTypescriptLibrary"];
 
-      function CreateTemplateController($rootScope, $scope, $routeParams, $timeout, $location, $translate, $filter,
+      function CreateTemplateController($rootScope, $scope, $routeParams, $timeout, $location, $window, $translate, $filter,
                                         TrackingService, HeaderService, StagingService, DataTemplateService,
                                         FieldTypeService, TemplateService, resourceService, UIMessageService,
                                         UIUtilService, DataManipulationService, schemaService, ValidationService,
@@ -551,7 +551,9 @@ define([
 
         // cancel the form and go back to the current folder
         $scope.cancelTemplate = function () {
-          $location.url(FrontendUrlService.getFolderContents(QueryParamUtilsService.getFolderId()));
+          UIUtilService.setDirty(false);
+          $window.location.assign(FrontendUrlService.getWorkspaceReturn(
+              QueryParamUtilsService.getReturnTo(), QueryParamUtilsService.getFolderId()));
         };
 
 

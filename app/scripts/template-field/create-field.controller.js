@@ -10,7 +10,7 @@ define([
       })
       .controller('CreateFieldController', CreateFieldController);
 
-  CreateFieldController.$inject = ["$rootScope", "$scope", "$routeParams", "$timeout", "$location", "$translate",
+  CreateFieldController.$inject = ["$rootScope", "$scope", "$routeParams", "$timeout", "$location", "$window", "$translate",
                                    "$filter", "HeaderService", "StagingService", "DataTemplateService", "schemaService",
                                    "FieldTypeService", "TemplateFieldService", "resourceService", "ValidationService","UIMessageService",
                                    "DataManipulationService", "UIUtilService", "AuthorizedBackendService",
@@ -18,7 +18,7 @@ define([
                                    "CedarModelTypescriptLibrary"];
 
 
-  function CreateFieldController($rootScope, $scope, $routeParams, $timeout, $location, $translate, $filter,
+  function CreateFieldController($rootScope, $scope, $routeParams, $timeout, $location, $window, $translate, $filter,
                                  HeaderService, StagingService, DataTemplateService, schemaService,FieldTypeService,
                                  TemplateFieldService, resourceService, ValidationService,UIMessageService,
                                  DataManipulationService,
@@ -458,7 +458,9 @@ define([
     };
 
     $scope.cancelField = function () {
-      $location.url(FrontendUrlService.getFolderContents(QueryParamUtilsService.getFolderId()));
+      UIUtilService.setDirty(false);
+      $window.location.assign(FrontendUrlService.getWorkspaceReturn(
+          QueryParamUtilsService.getReturnTo(), QueryParamUtilsService.getFolderId()));
     };
 
     $scope.addFieldFromPicker = function () {

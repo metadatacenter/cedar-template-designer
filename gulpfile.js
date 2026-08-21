@@ -90,6 +90,10 @@ gulp.task('html', function (done) {
 
 // Task to replace service URLs
 gulp.task('replace-url', function (done) {
+  var workspaceFrontendUrl = process.env.CEDAR_WORKSPACE_FRONTEND_URL ||
+      (cedarFrontendTarget === 'local' ? 'http://localhost:4201' : 'https://workspace-next.' + cedarUIHost);
+  var templateDesignerFrontendUrl = process.env.CEDAR_TEMPLATE_DESIGNER_FRONTEND_URL ||
+      (cedarFrontendTarget === 'local' ? 'http://localhost:4202' : 'https://designer-next.' + cedarUIHost);
   gulp.src(['app/config/src/url-service.conf.json'])
       .pipe(replace('templateServerUrl', 'https://template.' + cedarRestHost))
       .pipe(replace('resourceServerUrl', 'https://resource.' + cedarRestHost))
@@ -104,6 +108,8 @@ gulp.task('replace-url', function (done) {
       .pipe(replace('openViewBaseUrl', 'https://openview.' + cedarRestHost))
       .pipe(replace('impexServerUrl', 'https://impex.' + cedarRestHost))
       .pipe(replace('artifactsFrontendUrl', 'https://artifacts.' + cedarRestHost))
+      .pipe(replace('workspaceFrontendUrl', workspaceFrontendUrl))
+      .pipe(replace('templateDesignerFrontendUrl', templateDesignerFrontendUrl))
       // The monitoring dashboard is a sibling frontend (not a REST service), so it hangs off the UI host.
       .pipe(replace('monitoringFrontendUrl', 'https://monitoring.' + cedarUIHost))
       .pipe(replace('dataciteDOIBaseUrl', 'https://bridging.' + cedarRestHost + '/doi/datacite'))
