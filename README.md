@@ -28,20 +28,20 @@ live under `cedar-development/ops/e2e`.
 ## Preview image
 
 The repository builds directly from its checkout; it does not require a published npm tarball.
-Use the image versions declared by `cedar-docker-build`:
+Use the provenance-aware wrapper and image versions declared by `cedar-docker-build`:
 
 ```sh
-source "$CEDAR_HOME/cedar-docker-build/bin/cedar-images-base.sh"
-docker build \
-  --build-arg NGINX_VERSION="$NGINX_VERSION" \
-  --build-arg NODE_FRONTEND_VERSION="$NODE_FRONTEND_VERSION" \
-  -t metadatacenter/cedar-frontend-template-designer:"$IMAGE_VERSION" .
+"$CEDAR_HOME/cedar-docker-build/bin/build-split-preview-frontends.sh" designer
 ```
 
 The image requires `CEDAR_HOST` at runtime and serves port `4202`. It generates environment-specific
 service, navigation, and authentication origins before nginx starts. Override
 `CEDAR_WORKSPACE_FRONTEND_URL`, `CEDAR_TEMPLATE_DESIGNER_FRONTEND_URL`, or `CEDAR_AUTH_URL` for a
 nonstandard preview topology. This image is preview-only until the migration acceptance gate passes.
+
+Every running image exposes `/config/build-info.json` with its baked source commit, whether that
+checkout was dirty, and a SHA-256 over the exact environment-specific tree nginx serves. The file is
+served with `Cache-Control: no-store`; staging acceptance must record it and reject dirty images.
 
 ## Migration constraints
 
