@@ -43,8 +43,10 @@ them as baseline debt, and require every newly introduced or migrated test to pa
 - Focused URL/auth contract suite: 4 passing tests
 - Spreadsheet mode, Workspace/account routes, CEE host, obsolete broad tests, and unreachable code removed
 - Local-source nginx image and opt-in Compose preview verified by the split frontend smoke
+- Runtime build identity exposes the clean source commit and exact served-tree SHA-256 with no-store caching
 - CLI repository/process registration is preview-only and excluded from release operations
-- Authentication base configuration is complete; Keycloak redirect/web-origin authorization remains a reviewed security gate
+- The full authenticated smoke is split-origin aware and includes exact Workspace-to-Designer return navigation
+- Authentication base configuration is complete; executing that smoke still requires the reviewed Keycloak redirect/web-origin gate
 
 ## Product boundary
 
@@ -96,6 +98,8 @@ The current inter-application boundary is documented in
 - [x] Produce a Designer-only build after pruning
 - [x] Add Designer-focused unit and credential-free cross-application smoke tests
 - [x] Build and run a local-source preview image without a published frontend tarball
+- [x] Prove and record clean source identity plus the exact environment-generated served bundle
+- [x] Add a split-aware authenticated browser journey without changing the production-monolith smoke
 - [ ] Pass preview routing, auth, deep-link, and rollback tests
 - [ ] Pass staging parity before any production routing changes
 
