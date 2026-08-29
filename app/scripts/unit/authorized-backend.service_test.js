@@ -88,5 +88,34 @@ define([
       }).catch(angular.noop);
       $httpBackend.flush();
     });
+
+    it('applies the representation ETag to PATCH and DELETE as well as PUT', function () {
+      var artifact = {$$cedarEtag: '"9"'};
+
+      $httpBackend.expectPATCH('/templates/conditional', {}, function (headers) {
+        return headers['If-Match'] === '"9"';
+      }).respond(200, {}, {'ETag': '"10"'});
+      service.getHttpPromise({
+        method: 'PATCH', url: '/templates/conditional', data: {}, cedarArtifact: artifact
+      });
+      $httpBackend.flush();
+      expect(artifact.$$cedarEtag).toBe('"10"');
+
+      $httpBackend.expectDELETE('/templates/conditional', function (headers) {
+        return headers['If-Match'] === '"10"';
+      }).respond(204);
+      service.getHttpPromise({
+        method: 'DELETE', url: '/templates/conditional', cedarArtifact: artifact
+      });
+      $httpBackend.flush();
+    });
+
+    it('does not add If-Match to an ordinary POST merely because it has a payload', function () {
+      $httpBackend.expectPOST('/templates', {}, function (headers) {
+        return headers['If-Match'] == null;
+      }).respond(201, {}, {'ETag': '"1"'});
+      service.getHttpPromise({method: 'POST', url: '/templates', data: {}});
+      $httpBackend.flush();
+    });
   });
 });

@@ -400,7 +400,7 @@ define([
             DataManipulationService.stripTmps(copiedForm);
 
             AuthorizedBackendService.doCall(
-                TemplateElementService.updateTemplateElement(id, copiedForm),
+                TemplateElementService.updateTemplateElement(id, copiedForm, $scope.element),
                 function (response) {
                   doUpdate(response);
                   $scope.handleInclusion(id);
