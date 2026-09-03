@@ -366,6 +366,7 @@ define([
             if ($routeParams.id == undefined) {
 
               DataManipulationService.stripTmps($scope.form);
+              DataManipulationService.stripClearedConstraints($scope.form);
               DataManipulationService.updateKeys($scope.form);
 
               AuthorizedBackendService.doCall(
@@ -402,6 +403,7 @@ define([
               if (copiedForm) {
                 // strip the temps from the copied form only and save the copy
                 DataManipulationService.stripTmps(copiedForm);
+                DataManipulationService.stripClearedConstraints(copiedForm);
                 AuthorizedBackendService.doCall(
                     TemplateService.checkUpdateTemplate(id, copiedForm),
                     function (response) {
@@ -529,6 +531,7 @@ define([
           var copiedForm = jQuery.extend(true, {}, $rootScope.jsonToSave);
           if (copiedForm) {
             DataManipulationService.stripTmps(copiedForm);
+            DataManipulationService.stripClearedConstraints(copiedForm);
             DataManipulationService.updateKeys(copiedForm);
           }
           return copiedForm;
@@ -538,6 +541,7 @@ define([
           let copiedForm = jQuery.extend(true, {}, $rootScope.jsonToSave);
           if (copiedForm) {
             DataManipulationService.stripTmps(copiedForm);
+            DataManipulationService.stripClearedConstraints(copiedForm);
             DataManipulationService.updateKeys(copiedForm);
           }
           let jsonTemplateReaderResult = $scope.templateReader.readFromObject(copiedForm);
