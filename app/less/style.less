@@ -71,6 +71,8 @@
 
 @button-ok: #0ab831;
 @button-warning: #dfbd00;
+// The header's dot while the document has unsaved changes: solid and bright, so it is seen.
+@unsaved-indicator: #ffe600;
 @button-error: #FF5722;
 @button-dirty: #5cb85c;
 @button-pause: #f0ad4e;
@@ -538,8 +540,11 @@ a.share {
       i {
         font-size: 18px;
       }
-      i.fa.fa-lock, i.fa.fa-exclamation-triangle, i.fa.fa-circle-o {
+      i.fa.fa-lock, i.fa.fa-exclamation-triangle {
         color: @button-warning;
+      }
+      i.fa.fa-circle.unsaved {
+        color: @unsaved-indicator;
       }
     }
   }
