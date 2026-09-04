@@ -227,33 +227,11 @@ envConfig[cedarUIHostVarName] = null;
 var cedarRestHostVarName = getFrontendEnvVar('REST_HOST');
 envConfig[cedarRestHostVarName] = null;
 
-var cedarUser1LoginVarName = getFrontendEnvVar('USER1_LOGIN');
-envConfig[cedarUser1LoginVarName] = null;
-var cedarUser1PasswordVarName = getFrontendEnvVar('USER1_PASSWORD');
-envConfig[cedarUser1PasswordVarName] = null;
-var cedarUser1NameVarName = getFrontendEnvVar('USER1_NAME');
-envConfig[cedarUser1NameVarName] = null;
-
-var cedarUser2LoginVarName = getFrontendEnvVar('USER2_LOGIN');
-envConfig[cedarUser2LoginVarName] = null;
-var cedarUser2PasswordVarName = getFrontendEnvVar('USER2_PASSWORD');
-envConfig[cedarUser2PasswordVarName] = null;
-var cedarUser2NameVarName = getFrontendEnvVar('USER2_NAME');
-envConfig[cedarUser2NameVarName] = null;
-
 readAllEnvVarsOrFail();
 
 var cedarUIHost = envConfig[cedarUIHostVarName];
 var cedarRestHost = envConfig[cedarRestHostVarName];
 var cedarAuthUrl = process.env.CEDAR_AUTH_URL || 'https://auth.' + cedarUIHost;
-
-var cedarTestUser1Login = envConfig[cedarUser1LoginVarName];
-var cedarTestUser1Password = envConfig[cedarUser1PasswordVarName];
-var cedarTestUser1Name = envConfig[cedarUser1NameVarName];
-
-var cedarTestUser2Login = envConfig[cedarUser2LoginVarName];
-var cedarTestUser2Name = envConfig[cedarUser2NameVarName];
-var cedarTestUser2Password = envConfig[cedarUser2PasswordVarName];
 
 console.log(
     "-------------------------------------------- ************* --------------------------------------------".red);
