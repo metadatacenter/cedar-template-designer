@@ -145,8 +145,8 @@
     "FilterBy": "Filter by",
     "Untitled": "Untitled",
     "SelectToViewDetails": "Select a resource to view its details",
-    "canRead": "can read",
-    "canWrite": "can write",
+    "canRead": "Viewer",
+    "canWrite": "Manager",
     "isOwner": "owner",
     "midnight": "12:00 AM",
     "OrCtrlEnter": "or Ctrl-Enter",
@@ -561,8 +561,8 @@
       "Permissions": "Permissions",
       "Version": "Version",
       "Categories": "Categories",
-      "ReadPermission": "read",
-      "WritePermission": "write",
+      "ReadPermission": "Viewer",
+      "WritePermission": "Manager",
       "OwnerPermission": "owner",
       "TrustedBy": "Trusted by"
     },
@@ -618,7 +618,7 @@
     "hasMetadataWarning": "The template has metadata and should not be modified.",
     "lock": {
       "published": "This resource is published and cannot be modified. To change it, create a draft of a new version.",
-      "noWritePermission": "You do not have permission to modify this resource.",
+      "noEditPermission": "You do not have permission to edit this resource.",
       "generic": "This resource is locked and cannot be modified.",
       "unlocked": "This resource can be modified."
     }

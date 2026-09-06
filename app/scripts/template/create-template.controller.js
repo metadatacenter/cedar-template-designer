@@ -46,7 +46,7 @@ define([
 
         // template details
         $scope.details;
-        $scope.cannotWrite;
+        $scope.cannotEdit;
         $scope.lockReason = null;
 
         $scope.isTemplate = true;
@@ -61,19 +61,19 @@ define([
         $scope.checkLocking = function () {
           if ($scope.details) {
             var published = schemaService.isPublished($scope.details);
-            var noWritePermission = !resourceService.canWrite($scope.details);
-            $scope.cannotWrite = noWritePermission || published;
+            var noEditPermission = !resourceService.canEdit($scope.details);
+            $scope.cannotEdit = noEditPermission || published;
             $scope.lockReason = published ? 'TEMPLATEEDITOR.lock.published'
-                : (noWritePermission ? 'TEMPLATEEDITOR.lock.noWritePermission' : null);
-            $scope.saveButtonDisabled = $scope.cannotWrite;
-            return !$scope.cannotWrite;
+                : (noEditPermission ? 'TEMPLATEEDITOR.lock.noEditPermission' : null);
+            $scope.saveButtonDisabled = $scope.cannotEdit;
+            return !$scope.cannotEdit;
           }
           return false;
         };
 
         // This function watches for changes in the _ui.title field and autogenerates the schema title and description fields
-        $scope.$watch('cannotWrite', function () {
-          UIUtilService.setLocked($scope.cannotWrite, $scope.lockReason);
+        $scope.$watch('cannotEdit', function () {
+          UIUtilService.setLocked($scope.cannotEdit, $scope.lockReason);
         });
 
         var getReport = function (id) {
@@ -642,7 +642,7 @@ define([
             'termType': null,
             'term': null,
             "advanced": false,
-            "permission": ["read", "write"]
+            "capabilities": ["readResource", "updateResource"]
           };
           UIUtilService.showModal(options);
         };
