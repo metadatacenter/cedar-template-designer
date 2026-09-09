@@ -63,7 +63,7 @@ define([
     vm.stageValueConstraintAction = null;
     vm.stageValueSetValueConstraint = stageValueSetValueConstraint;
     vm.startOver = startOver;
-    vm.hasPermission = hasPermission;
+    vm.hasCapability = hasCapability;
     vm.treeVisible = false;
     vm.valueConstraint = {
       'ontologies'    : [],
@@ -388,12 +388,19 @@ define([
       });
 
       if (!existed) {
-        vm.stagedOntologyValueConstraints.push({
-          'numTerms': vm.currentOntology.info.details.numberOfClasses,
-          'acronym' : vm.currentOntology.info.id,
-          'name'    : vm.currentOntology.info.name,
-          'uri'     : vm.currentOntology.info['@id']
-        });
+        var ontologyConstraint = {
+          'acronym': vm.currentOntology.info.id,
+          'name'   : vm.currentOntology.info.name,
+          'uri'    : vm.currentOntology.info['@id']
+        };
+        // Left out entirely when the count is unknown, rather than set to a value
+        // the meta-schema would read as a quantity.
+        var ontologyTermCount = DataManipulationService.termCountOrUnknown(
+            vm.currentOntology.info.details && vm.currentOntology.info.details.numberOfClasses);
+        if (ontologyTermCount !== undefined) {
+          ontologyConstraint.numTerms = ontologyTermCount;
+        }
+        vm.stagedOntologyValueConstraints.push(ontologyConstraint);
       }
 
       vm.stageValueConstraintAction = "add_ontology";
@@ -422,8 +429,8 @@ define([
       }, 500);
     }
 
-    function hasPermission(perm) {
-      return vm.permission.includes(perm);
+    function hasCapability(capability) {
+      return vm.capabilities.includes(capability);
     }
 
     /**
@@ -523,12 +530,16 @@ define([
 
     function stageValueSetValueConstraint() {
       vm.stagedValueSetValueConstraints = [];
-      vm.stagedValueSetValueConstraints.push({
+      var valueSetConstraint = {
         'name'        : vm.currentOntology.vs.prefLabel,
         'vsCollection': vm.currentOntology.info.id,
-        'uri'         : vm.currentOntology.vs['@id'],
-        'numTerms'    : vm.currentOntology.tree.length
-      });
+        'uri'         : vm.currentOntology.vs['@id']
+      };
+      var valueSetTermCount = DataManipulationService.termCountOrUnknown(vm.currentOntology.tree.length);
+      if (valueSetTermCount !== undefined) {
+        valueSetConstraint.numTerms = valueSetTermCount;
+      }
+      vm.stagedValueSetValueConstraints.push(valueSetConstraint);
       vm.stageValueConstraintAction = "add_entire_value_set";
     }
 
@@ -552,7 +563,7 @@ define([
       vm.filterSelection = vm.options.filterSelection;
       vm.q = vm.options.q;
       vm.modalId = vm.options.modalId;
-      vm.permission = vm.options.permission;
+      vm.capabilities = vm.options.capabilities;
       vm.advanced = vm.options.advanced;
       vm.selectedOntologies = [];
       vm.searchScope = vm.options.searchScope;

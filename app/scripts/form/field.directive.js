@@ -1183,7 +1183,7 @@ define([
           'termType'       : termType,
           'term'           : term,
           "advanced"       : true,
-          "permission"     : ["read"]
+          "capabilities"   : ["readResource"]
         };
         UIUtilService.showModal(options);
       };
@@ -1202,7 +1202,7 @@ define([
           'termType'       : null,
           'term'           : null,
           "advanced"       : false,
-          "permission"     : ["read", "write"]
+          "capabilities"   : ["readResource", "updateResource"]
         };
         UIUtilService.showModal(options);
       };

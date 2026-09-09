@@ -46,7 +46,8 @@ define([
 
         // template details
         $scope.details;
-        $scope.cannotWrite;
+        $scope.cannotEdit;
+        $scope.lockReason = null;
 
         $scope.isTemplate = true;
 
@@ -59,16 +60,20 @@ define([
 
         $scope.checkLocking = function () {
           if ($scope.details) {
-            $scope.cannotWrite = !resourceService.canWrite($scope.details) || schemaService.isPublished($scope.details)
-            $scope.saveButtonDisabled = $scope.cannotWrite;
-            return !$scope.cannotWrite;
+            var published = schemaService.isPublished($scope.details);
+            var noEditPermission = !resourceService.canEdit($scope.details);
+            $scope.cannotEdit = noEditPermission || published;
+            $scope.lockReason = published ? 'TEMPLATEEDITOR.lock.published'
+                : (noEditPermission ? 'TEMPLATEEDITOR.lock.noEditPermission' : null);
+            $scope.saveButtonDisabled = $scope.cannotEdit;
+            return !$scope.cannotEdit;
           }
           return false;
         };
 
         // This function watches for changes in the _ui.title field and autogenerates the schema title and description fields
-        $scope.$watch('cannotWrite', function () {
-          UIUtilService.setLocked($scope.cannotWrite);
+        $scope.$watch('cannotEdit', function () {
+          UIUtilService.setLocked($scope.cannotEdit, $scope.lockReason);
         });
 
         var getReport = function (id) {
@@ -319,7 +324,8 @@ define([
             // Reload page with template id
             DataManipulationService.createDomIds(response.data);
             var newId = response.data['@id'];
-            $location.path(FrontendUrlService.getTemplateEdit(newId));
+            // Replace, don't stack: the create route is dead once saved and renders identically to this one.
+            $location.path(FrontendUrlService.getTemplateEdit(newId)).replace();
 
             UIUtilService.setDirty(false);
           };
@@ -360,6 +366,7 @@ define([
             if ($routeParams.id == undefined) {
 
               DataManipulationService.stripTmps($scope.form);
+              DataManipulationService.stripClearedConstraints($scope.form);
               DataManipulationService.updateKeys($scope.form);
 
               AuthorizedBackendService.doCall(
@@ -396,13 +403,14 @@ define([
               if (copiedForm) {
                 // strip the temps from the copied form only and save the copy
                 DataManipulationService.stripTmps(copiedForm);
+                DataManipulationService.stripClearedConstraints(copiedForm);
                 AuthorizedBackendService.doCall(
                     TemplateService.checkUpdateTemplate(id, copiedForm),
                     function (response) {
                       var canBeUpdated = response.data['canBeUpdated'];
                       if (canBeUpdated) {
                         AuthorizedBackendService.doCall(
-                            TemplateService.updateTemplate(id, copiedForm),
+                            TemplateService.updateTemplate(id, copiedForm, $scope.form),
                             function (response) {
                               doUpdate(response);
                             },
@@ -493,10 +501,9 @@ define([
           if (!angular.isUndefined($scope.form)) {
             var title = schemaService.getTitle($scope.form);
             if (title && title.length > 0) {
-              var capitalizedTitle = $filter('capitalizeFirst')(title);
-              $scope.form.title = $translate.instant("GENERATEDVALUE.templateTitle", {title: capitalizedTitle});
+              $scope.form.title = $translate.instant("GENERATEDVALUE.templateTitle", {title: title});
               $scope.form.description = $translate.instant("GENERATEDVALUE.templateDescription",
-                  {title: capitalizedTitle, version: window.cedarVersion});
+                  {title: title, version: window.cedarVersion});
             } else {
               schemaService.setTitle($scope.form, "");
               schemaService.setDescription($scope.form, "");
@@ -523,6 +530,7 @@ define([
           var copiedForm = jQuery.extend(true, {}, $rootScope.jsonToSave);
           if (copiedForm) {
             DataManipulationService.stripTmps(copiedForm);
+            DataManipulationService.stripClearedConstraints(copiedForm);
             DataManipulationService.updateKeys(copiedForm);
           }
           return copiedForm;
@@ -532,6 +540,7 @@ define([
           let copiedForm = jQuery.extend(true, {}, $rootScope.jsonToSave);
           if (copiedForm) {
             DataManipulationService.stripTmps(copiedForm);
+            DataManipulationService.stripClearedConstraints(copiedForm);
             DataManipulationService.updateKeys(copiedForm);
           }
           let jsonTemplateReaderResult = $scope.templateReader.readFromObject(copiedForm);
@@ -633,7 +642,7 @@ define([
             'termType': null,
             'term': null,
             "advanced": false,
-            "permission": ["read", "write"]
+            "capabilities": ["readResource", "updateResource"]
           };
           UIUtilService.showModal(options);
         };

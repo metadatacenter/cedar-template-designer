@@ -54,10 +54,10 @@ define([
     $scope.otherFieldTypes = FieldTypeService.getOtherFieldTypes();
     $scope.moreIsOpen = false;
 
-    // field details - can read or write
+    // field details and edit capability
     $scope.details;
-    $scope.cannotWrite;
-    $scope.lockReason = '';
+    $scope.cannotEdit;
+    $scope.lockReason = null;
 
     $scope.inclusionModalVisible = false;
 
@@ -65,32 +65,33 @@ define([
     $scope.fieldReader = jsonReaders.getTemplateFieldReader();
     $scope.yamlWriters = CedarModelTypescriptLibrary.CedarYamlWriters.getStrict();
 
-    $scope.canWrite = function () {
+    $scope.canEdit = function () {
       if (!$scope.details) {
         return true;
       }
       else {
-        // Check write permission
-        var writePermission = resourceService.canWrite($scope.details);
+        var editPermission = resourceService.canEdit($scope.details);
 
         // Check publication status
         var isPublished = schemaService.isPublished($scope.details);
 
         // Result
-        var canWrite = writePermission && !isPublished;
-        $scope.cannotWrite = !canWrite;
-        return canWrite;
+        var canEdit = editPermission && !isPublished;
+        $scope.cannotEdit = !canEdit;
+        $scope.lockReason = isPublished ? 'TEMPLATEEDITOR.lock.published'
+            : (!editPermission ? 'TEMPLATEEDITOR.lock.noEditPermission' : null);
+        return canEdit;
       }
     };
 
     // is this field locked?
     $scope.checkLocking = function () {
-      return $scope.canWrite();
+      return $scope.canEdit();
     };
 
     // This function watches for changes in the _ui.title field and autogenerates the schema title and description fields
-    $scope.$watch('cannotWrite', function () {
-      UIUtilService.setLocked($scope.cannotWrite, $scope.lockReason);
+    $scope.$watch('cannotEdit', function () {
+      UIUtilService.setLocked($scope.cannotEdit, $scope.lockReason);
     });
 
     $scope.setClean = function () {
@@ -103,7 +104,7 @@ define([
           id, CONST.resourceType.FIELD,
           function (response) {
             $scope.details = response;
-            $scope.canWrite();
+            $scope.canEdit();
           },
           function (error) {
             UIMessageService.showBackendError('SERVER.' + 'FIELD' + '.load.error', error);
@@ -282,7 +283,8 @@ define([
         // Reload page with field id
         var newId = response.data['@id'];
         dms.createDomIds(response.data);
-        $location.path(FrontendUrlService.getFieldEdit(newId));
+        // Replace, don't stack: the create route is dead once saved and renders identically to this one.
+        $location.path(FrontendUrlService.getFieldEdit(newId)).replace();
         $scope.setClean();
       };
 
@@ -305,6 +307,7 @@ define([
         // Check if the field is already stored into the DB
         if ($routeParams.id == undefined) {
           dms.stripTmps($scope.field);
+          dms.stripClearedConstraints($scope.field);
           //dms.updateKeys($scope.field);
 
           AuthorizedBackendService.doCall(
@@ -342,9 +345,10 @@ define([
           if (copiedForm) {
             // strip the temps from the copied form only, and save the copy
             dms.stripTmps(copiedForm);
+            dms.stripClearedConstraints(copiedForm);
 
             AuthorizedBackendService.doCall(
-                TemplateFieldService.updateTemplateField(id, copiedForm),
+                TemplateFieldService.updateTemplateField(id, copiedForm, $scope.field),
                 function (response) {
 
                   ValidationService.logValidation(response.headers("CEDAR-Validation-Status"));
@@ -438,6 +442,7 @@ define([
       var copiedForm = jQuery.extend(true, {}, $rootScope.jsonToSave);
       if (copiedForm) {
         dms.stripTmps(copiedForm);
+        dms.stripClearedConstraints(copiedForm);
         //dms.updateKeys(copiedForm);
       }
       return copiedForm;
@@ -447,6 +452,7 @@ define([
       let copiedForm = jQuery.extend(true, {}, $rootScope.jsonToSave);
       if (copiedForm) {
         dms.stripTmps(copiedForm);
+        dms.stripClearedConstraints(copiedForm);
       }
       let jsonTemplateFieldReaderResult = $scope.fieldReader.readFromObject(copiedForm);
       let fieldWriter = $scope.yamlWriters.getFieldWriterForField(jsonTemplateFieldReaderResult.field);
@@ -485,7 +491,7 @@ define([
     //
 
     $scope.showModal = function (type, searchScope) {
-      var options = {"filterSelection":type, "searchScope": searchScope, "modalId":"controlled-term-modal", "model": $scope.form, "id":schemaService.getId($scope.form), "q": schemaService.getTitle($scope.form),'source': null,'termType': null, 'term': null, "advanced": false, "permission": ["read","write"]};
+      var options = {"filterSelection":type, "searchScope": searchScope, "modalId":"controlled-term-modal", "model": $scope.form, "id":schemaService.getId($scope.form), "q": schemaService.getTitle($scope.form),'source': null,'termType': null, 'term': null, "advanced": false, "capabilities": ["readResource","updateResource"]};
       UIUtilService.showModal(options);
     };
 

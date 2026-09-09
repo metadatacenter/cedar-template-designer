@@ -4,11 +4,9 @@ var gulp = require('gulp'),
     less = require('gulp-less'),
     stylish = require('jshint-stylish'),
     autoprefixer = require('gulp-autoprefixer'),
-    gutil = require('gulp-util'),
     plumber = require('gulp-plumber'),
     rename = require('gulp-rename'),
     uglify = require('gulp-uglify'),
-    minifyCSS = require('gulp-minify-css'),
     connect = require('gulp-connect'),
     htmlreplace = require('gulp-html-replace'),
     ngAnnotate = require('gulp-ng-annotate'),
@@ -17,12 +15,13 @@ var gulp = require('gulp'),
     replace = require('gulp-replace'),
     wait = require('gulp-wait'),
     colors = require('colors');
+var execFileSync = require('child_process').execFileSync;
 
 /**
- * Create error handling exception using gulp-util.
+ * Create error handling exception.
  */
 var onError = function (err) {
-  gutil.beep();
+  process.stdout.write('\x07');
   console.log(err.red);
   this.emit('end'); //added so that gulp will end the task on error, and won't hang.
 };
@@ -42,7 +41,7 @@ gulp.task('less', function (done) {
       .pipe(plumber({
         errorHandler: onError
       }))
-      .pipe(less().on('error', gutil.log))
+      .pipe(less().on('error', console.error))
       .pipe(autoprefixer({
         browsers: ['> 1%', 'last 2 versions', 'Firefox ESR', 'Opera 12.1', 'IE 9'],
         cascade : true
@@ -116,6 +115,8 @@ gulp.task('replace-version', function (done) {
   gulp.src(['app/config/src/version.js'])
       .pipe(replace('cedarVersionValue', cedarVersion))
       .pipe(replace('cedarVersionModifierValue', cedarVersionModifier))
+      .pipe(replace('cedarSourceCommitValue', cedarSourceCommit))
+      .pipe(replace('cedarDevelopmentModeValue', cedarFrontendBehavior === 'develop'))
       .pipe(replace('cedarAuthUrlValue', cedarAuthUrl))
       .pipe(replace('dataciteEnabledValue', dataciteEnabled))
       .pipe(replace('cedarGA4TrackingIdValue', cedarGA4TrackingId))
@@ -177,6 +178,22 @@ function getFrontendEnvVar(varNameSuffix) {
   return 'CEDAR_FRONTEND_' + cedarFrontendTarget + '_' + varNameSuffix;
 }
 
+function resolveSourceCommit() {
+  var supplied = process.env.CEDAR_SOURCE_COMMIT;
+  if (supplied && /^[0-9a-f]{40}$/.test(supplied)) {
+    return supplied;
+  }
+  try {
+    var commit = execFileSync('git', ['rev-parse', '--verify', 'HEAD'], {
+      cwd: __dirname,
+      encoding: 'utf8'
+    }).trim();
+    return /^[0-9a-f]{40}$/.test(commit) ? commit : '';
+  } catch (error) {
+    return '';
+  }
+}
+
 // Get environment variables
 let envConfig = {
   'CEDAR_ANALYTICS_KEY'       : null,
@@ -200,39 +217,21 @@ const cedarFrontendTarget = envConfig['CEDAR_FRONTEND_TARGET'];
 const cedarVersion = envConfig['CEDAR_VERSION'];
 const cedarVersionModifier = envConfig['CEDAR_VERSION_MODIFIER'];
 const dataciteEnabled = envConfig['CEDAR_DATACITE_ENABLED'];
+const cedarSourceCommit = resolveSourceCommit();
+if (cedarFrontendBehavior === 'server' && !cedarSourceCommit) {
+  exitWithError('Server payload generation requires a Git source commit');
+}
 
 var cedarUIHostVarName = getFrontendEnvVar('UI_HOST');
 envConfig[cedarUIHostVarName] = null;
 var cedarRestHostVarName = getFrontendEnvVar('REST_HOST');
 envConfig[cedarRestHostVarName] = null;
 
-var cedarUser1LoginVarName = getFrontendEnvVar('USER1_LOGIN');
-envConfig[cedarUser1LoginVarName] = null;
-var cedarUser1PasswordVarName = getFrontendEnvVar('USER1_PASSWORD');
-envConfig[cedarUser1PasswordVarName] = null;
-var cedarUser1NameVarName = getFrontendEnvVar('USER1_NAME');
-envConfig[cedarUser1NameVarName] = null;
-
-var cedarUser2LoginVarName = getFrontendEnvVar('USER2_LOGIN');
-envConfig[cedarUser2LoginVarName] = null;
-var cedarUser2PasswordVarName = getFrontendEnvVar('USER2_PASSWORD');
-envConfig[cedarUser2PasswordVarName] = null;
-var cedarUser2NameVarName = getFrontendEnvVar('USER2_NAME');
-envConfig[cedarUser2NameVarName] = null;
-
 readAllEnvVarsOrFail();
 
 var cedarUIHost = envConfig[cedarUIHostVarName];
 var cedarRestHost = envConfig[cedarRestHostVarName];
 var cedarAuthUrl = process.env.CEDAR_AUTH_URL || 'https://auth.' + cedarUIHost;
-
-var cedarTestUser1Login = envConfig[cedarUser1LoginVarName];
-var cedarTestUser1Password = envConfig[cedarUser1PasswordVarName];
-var cedarTestUser1Name = envConfig[cedarUser1NameVarName];
-
-var cedarTestUser2Login = envConfig[cedarUser2LoginVarName];
-var cedarTestUser2Name = envConfig[cedarUser2NameVarName];
-var cedarTestUser2Password = envConfig[cedarUser2PasswordVarName];
 
 console.log(
     "-------------------------------------------- ************* --------------------------------------------".red);

@@ -90,9 +90,9 @@ define([
           vm.selectResource = selectResource;
           vm.isResourceSelected = isResourceSelected;
           vm.getResourceDetails = getResourceDetails;
-          vm.canRead = canRead;
-          vm.canWrite = canWrite;
-          vm.canChangeOwner = canChangeOwner;
+          vm.canView = canView;
+          vm.canEdit = canEdit;
+          vm.canTransferOwnership = canTransferOwnership;
           vm.isPublished = isPublished;
           vm.getResourceVersion = getResourceVersion;
           vm.getTitle = getTitle;
@@ -731,16 +731,16 @@ define([
             );
           };
 
-          function canRead() {
-            return resourceService.canRead(vm.selectedResource);
+          function canView() {
+            return resourceService.canView(vm.selectedResource);
           };
 
-          function canWrite() {
-            return resourceService.canWrite(vm.selectedResource);
+          function canEdit() {
+            return resourceService.canEdit(vm.selectedResource);
           };
 
-          function canChangeOwner() {
-            return resourceService.canChangeOwner(vm.selectedResource);
+          function canTransferOwnership() {
+            return resourceService.canTransferOwnership(vm.selectedResource);
           };
 
           function isPublished(resource) {

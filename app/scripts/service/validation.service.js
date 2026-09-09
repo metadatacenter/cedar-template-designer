@@ -54,6 +54,7 @@ define([
       let node = jQuery.extend(true, {}, $rootScope.jsonToSave);
       if (node) {
         dms.stripTmps(node);
+        dms.stripClearedConstraints(node);
         dms.updateKeys(node);
 
         if (node['@type'] && resourceType[node['@type']]) {
