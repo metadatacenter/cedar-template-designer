@@ -248,6 +248,9 @@ define([
     };
 
     $scope.saveField = function () {
+      if ($scope.saveButtonDisabled) {
+        return;
+      }
 
       populateCreatingFieldOrElement();
       if (dontHaveCreatingFieldOrElement()) {
@@ -271,6 +274,9 @@ define([
 
     // Saves the field in the database
     $scope.doSaveField = function () {
+      if ($scope.saveButtonDisabled) {
+        return;
+      }
 
       var doSave = function(response) {
         ValidationService.logValidation(response.headers("CEDAR-Validation-Status"));

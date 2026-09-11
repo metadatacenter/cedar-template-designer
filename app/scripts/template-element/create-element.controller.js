@@ -295,6 +295,9 @@ define([
     };
 
     $scope.saveElement = function () {
+      if ($scope.saveButtonDisabled) {
+        return;
+      }
       populateCreatingFieldOrElement();
       if (dontHaveCreatingFieldOrElement()) {
         UIMessageService.conditionalOrConfirmedExecution(
@@ -311,6 +314,9 @@ define([
 
     // Stores the element into the database
     $scope.doSaveElement = function () {
+      if ($scope.saveButtonDisabled) {
+        return;
+      }
 
       var doSave = function(response) {
         ValidationService.logValidation(response.headers("CEDAR-Validation-Status"));
