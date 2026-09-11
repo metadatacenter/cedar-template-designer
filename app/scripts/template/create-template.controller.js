@@ -294,6 +294,9 @@ define([
         };
 
         $scope.saveTemplate = function () {
+          if ($scope.saveButtonDisabled) {
+            return;
+          }
           populateCreatingFieldOrElement();
           if (dontHaveCreatingFieldOrElement()) {
             UIMessageService.conditionalOrConfirmedExecution(
@@ -311,6 +314,9 @@ define([
 
         // Stores the template into the database
         $scope.doSaveTemplate = function () {
+          if ($scope.saveButtonDisabled) {
+            return;
+          }
 
 
           var doSave = function (response) {
