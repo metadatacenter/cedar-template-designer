@@ -57,7 +57,6 @@ require.config({
     },
 
     'lib/bootstrap/dist/js/bootstrap.min'                   : ['jquery'],
-    'lib/bootstrap-select/dist/js/bootstrap-select.min'     : ['lib/bootstrap/dist/js/bootstrap.min'],
     'artifact-selector': {
       deps: ['angular'],
       exports: 'artifact-selector'

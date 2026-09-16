@@ -70,7 +70,6 @@ require.config({
     },
 
     'lib/bootstrap/dist/js/bootstrap.min'                                        : ['jquery'],
-    'lib/bootstrap-select/dist/js/bootstrap-select.min'                          : ['lib/bootstrap/dist/js/bootstrap.min'],
     'lib/ngprogress/build/ngprogress.min'                                        : ['angular'],
   },
   priority: [

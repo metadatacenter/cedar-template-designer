@@ -16,12 +16,8 @@ define([
       serviceId             : "UIUtilService",
       showOutput            : false,
       showOutputTab         : 0,
-      metaToRDF             : null,
-      metaToRDFError        : null,
-      instance              : null,
       modalType             : null,
       selectedFieldOrElement: null,
-      instanceToSave        : null,
       documentState         : {
         form           : null,
         valid          : true,
@@ -37,7 +33,6 @@ define([
       }
     };
 
-    var jsonld = require('jsonld');
     var dms = DataManipulationService;
 
     //
@@ -148,76 +143,9 @@ define([
 
 
     //
-    //  json and rdf output
-    //
-
-    // create the RDF from the current metadata instance
-    service.toRDF = function () {
-      var instance = service.instanceToSave;
-      var copiedForm = jQuery.extend(true, {}, instance);
-      if (copiedForm) {
-        jsonld.toRDF(copiedForm, {format: 'application/nquads'}, function (err, nquads) {
-          service.metaToRDFError = err;
-          service.metaToRDF = nquads;
-          service.instance = instance;
-          return service.metaToRDF;
-        });
-      }
-    };
-
-    // get the RDF
-    service.getRDF = function () {
-      return service.metaToRDF;
-    };
-
-    // get any RDF conversion errors
-    service.getRDFError = function () {
-      var result = $translate.instant('SERVER.RDF.SaveFirst');
-      if (service.metaToRDFError) {
-        result = service.metaToRDFError.details.cause.message;
-      }
-      return result;
-    };
-
-
-    // View state helpers retained for the standard tabbed/list renderers.
-
-    service.isListView = function (viewState) {
-      return (viewState && viewState.selected === 'list');
-    };
-
-    service.isTabView = function (viewState) {
-      return (viewState && viewState.selected === 'tab');
-    };
-
-    // is this an element that can be expanded?
-    service.isExpandable = function (node) {
-      var result = false;
-      if (DataUtilService.isElement(dms.schemaOf(node))) {
-        var props = dms.propertiesOf(node);
-        angular.forEach(props, function (value, key) {
-          if (DataUtilService.isElement(dms.schemaOf(value))) {
-            result = true;
-          }
-        });
-      }
-      return result;
-    };
-
-    service.createViewState = function () {
-      return {
-        views   : ['tab'],
-        selected: 'tab'
-      };
-    };
-
-    //
     //  basics
     //
 
-    service.isRuntime = function () {
-      return $rootScope.pageId == 'RUNTIME';
-    };
 
     service.formatTitle = function (node) {
       if (node) {
