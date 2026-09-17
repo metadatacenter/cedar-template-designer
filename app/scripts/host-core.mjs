@@ -1,7 +1,7 @@
 export function routeFor(pathname) {
   const match = /^\/(templates|elements|fields)\/(create|edit)(?:\/(.+))?\/?$/.exec(pathname);
   if (!match || (match[2] === 'edit' && !match[3]) || (match[2] === 'create' && match[3])) {
-    throw new Error('Unknown designer route. Open a template or element from Workspace.');
+    throw new Error('Unknown designer route. Open a template, element or field from Workspace.');
   }
   return {
     kind: { templates: 'template', elements: 'element', fields: 'field' }[match[1]],

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { routeFor, workspaceReturn, canEdit, createBackend, saveArtifact, storageArtifact, childSource } from '../app/scripts/host-core.mjs';
+import { BackendError, routeFor, workspaceReturn, canEdit, createBackend, saveArtifact, storageArtifact, childSource } from '../app/scripts/host-core.mjs';
 const base = 'https://resource.example';
 const route = { kind: 'template', collection: 'templates', id: 'https://repo.example/templates/a' };
 const artifact = { '@id': route.id, 'schema:name': 'Changed', properties: {} };
@@ -102,4 +102,22 @@ test('storage metadata fills only typed artifacts, preserves provenance and does
   assert.deepEqual(stored.properties['@id'], { type: 'string' });
   assert.equal(source['@id'], 'minted');
   assert.equal(field['schema:description'], null);
+});
+
+test('standalone field creation and updates use the field collection and original ETag', async () => {
+  const h = harness([{ data: artifact }, { data: artifact }]);
+  const route = routeFor('/fields/create');
+  await saveArtifact({ ...h.options, route });
+  assert.equal(h.calls[0].url, base + '/template-fields?folder_id=folder');
+  assert.equal(h.calls[0].method, 'POST');
+  await saveArtifact({ ...h.options, route: routeFor('/fields/edit/' + encodeURIComponent('https://example.org/fields/one')) });
+  assert.equal(h.calls[1].method, 'PUT');
+  assert.equal(h.calls[1].etag, '"v1"');
+  assert.equal(h.calls.length, 2, 'field saves do not invoke template version commands');
+});
+test('standalone stale field update propagates the conflict without retrying', async () => {
+  const conflict = new BackendError(412);
+  const h = harness([conflict]);
+  await assert.rejects(saveArtifact({ ...h.options, route: { kind: 'field', collection: 'template-fields', id: 'field-id' } }), error => error === conflict);
+  assert.equal(h.calls.length, 1);
 });

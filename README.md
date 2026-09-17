@@ -63,9 +63,12 @@ uses the same source snapshot for version allocation and conditional publication
 a concurrent change returns 412 before any draft is created. The host retains
 edits on that response and does not refresh the validator behind the user's back.
 
-Standalone `/fields/*` routes show an explicit unsupported message for now. CED
-supports fields *inside* templates/elements and reusable repository children, but
-not standalone field-document authoring. There is no legacy fallback.
+Standalone `/fields/*` routes use CEFD from the CED bundle. The host owns the
+same ETag and permission checks as element editing. CEFD provides a type chooser
+and edits one field definition using CED’s shared controls. A CED snapshot with
+CEFD registration is required; during development stage it with `CEDAR_CED_BUNDLE`.
+
+CED continues to support fields inside templates/elements and reusable repository children.
 
 ## Verification
 

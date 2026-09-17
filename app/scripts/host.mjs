@@ -59,7 +59,6 @@ try {
   folderId = params.get('folderId');
   returnUrl = workspaceReturn(config.workspaceFrontend, params.get('returnTo'), folderId);
   route = routeFor(location.pathname === '/' ? '/templates/create' : location.pathname);
-  if (route.kind === 'field') throw new Error('Standalone field editing is not yet supported by CED. Fields can be designed inside templates and elements.');
   const auth = new window.KeycloakUserHandler();
   const authenticated = await new Promise((resolve, reject) => auth.initUserHandler(resolve, () => reject(new Error('Sign-in could not be initialized. Reload to try again.'))));
   if (!authenticated) { auth.doLogin(); } else {
@@ -70,8 +69,10 @@ try {
     for (const name of ['cedar-embeddable-editor', 'cedar-embeddable-term-picker', 'cedar-embeddable-designer']) {
       await loadScript(name, manifest[name].sha256);
     }
+    const elementName = route.kind === 'field' ? 'cedar-embeddable-field-designer' : 'cedar-embeddable-designer';
     await customElements.whenDefined('cedar-embeddable-designer');
-    designer = document.createElement('cedar-embeddable-designer');
+    if (!customElements.get(elementName)) throw new Error('This Designer bundle does not include CEFD. Stage a current CED bundle and reload.');
+    designer = document.createElement(elementName);
     designer.config = { terminologyBaseUrl: config.terminologyBaseUrl, bridgeBaseUrl: config.bridgeBaseUrl };
     designer.childSource = childSource(request, config.resourceRestAPI);
     // Connecting initializes Angular's public methods. Keep the editor inert until load and permissions succeed.
@@ -86,7 +87,7 @@ try {
       etag = loaded.etag;
       writable = canEdit(report.data, loaded.data);
     } else {
-      designer.newArtifact(route.kind);
+      designer.newArtifact(route.kind === 'field' ? undefined : route.kind);
       writable = true;
     }
     ui.editor.hidden = false;
