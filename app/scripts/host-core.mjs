@@ -127,9 +127,6 @@ export async function saveArtifact({ request, base, route, artifact, etag, folde
     const { data: impact } = await request(`${base}/command/check-update-template/${encodedId}`, { method: 'POST', body: artifact });
     if (!impact.canBeUpdated) {
       if (!await confirmVersion(impact)) return null;
-      // The versioning command predates conditional writes. Catch already-stale editors before invoking it.
-      const current = await request(`${url}/${encodedId}`);
-      if (current.etag !== etag) throw new BackendError(412);
       return request(`${base}/command/publish-create-draft-template/${encodedId}`, { method: 'POST', body: artifact, etag });
     }
   }

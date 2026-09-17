@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.DS_Store
+.github/
+.gitignore
+test/
+app/config/version.js
+app/config/host.json
+app/config/build-info.json

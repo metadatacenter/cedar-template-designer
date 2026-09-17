@@ -41,14 +41,13 @@ test('declining versioning makes no write and keeps the edit', async () => {
   assert.equal(await saveArtifact({ ...h.options, confirmVersion: async () => false }), null);
   assert.equal(h.calls.length, 1);
 });
-test('accepted versioning checks for stale edits and never requests instance copying', async () => {
-  const h = harness([{ data: { canBeUpdated: false } }, { etag: '"v1"' }, { data: artifact }]);
+test('accepted versioning sends the original validator without refreshing it or copying instances', async () => {
+  const h = harness([{ data: { canBeUpdated: false } }, { data: artifact }]);
   await saveArtifact(h.options);
-  assert.equal(h.calls[2].url, base + '/command/publish-create-draft-template/' + encodeURIComponent(route.id));
-  assert.equal(h.calls[2].method, 'POST');
-  const stale = harness([{ data: { canBeUpdated: false } }, { etag: '"v2"' }]);
-  await assert.rejects(saveArtifact(stale.options), { status: 412 });
-  assert.equal(stale.calls.length, 2);
+  assert.equal(h.calls[1].url, base + '/command/publish-create-draft-template/' + encodeURIComponent(route.id));
+  assert.equal(h.calls[1].method, 'POST');
+  assert.equal(h.calls[1].etag, '"v1"');
+  assert.equal(h.calls.length, 2);
 });
 test('failed impact requests never fall through to writing', async () => {
   const h = harness([new Error('Offline')]);

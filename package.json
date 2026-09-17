@@ -9,7 +9,8 @@
   "scripts": {
     "start": "gulp",
     "prepare:components": "node scripts/stage-components.mjs",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "prepack": "npm run prepare:components"
   },
   "allowScripts": {
     "fsevents@1.2.13 || 2.3.2": true
@@ -20,5 +21,9 @@
     "gulp": "4.0.0",
     "gulp-connect": "5.7.0"
   },
-  "dependencies": {}
+  "dependencies": {
+    "cedar-embeddable-designer": "npm:@org.metadatacenter/cedar-embeddable-designer@0.1.0-dev.20260916.2593d382",
+    "cedar-embeddable-term-picker": "npm:@org.metadatacenter/cedar-embeddable-term-picker@0.1.0-dev.20260915.0ec47d9c",
+    "cedar-embeddable-editor": "2.0.15"
+  }
 }

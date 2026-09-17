@@ -11,31 +11,37 @@ contains no AngularJS authoring UI or legacy designer dependencies.
 
 ## Local development
 
-Build the sibling components, then stage and start the host using the CEDAR profile:
+Install the locked packages and start the host using the CEDAR profile:
 
 ```sh
 export CEDAR_HOME="$HOME/CEDAR" CEDAR_PROFILE=develop
 source "$CEDAR_HOME/cedar-development/bin/templates/cedar-profile-native.sh"
-cd "$CEDAR_HOME/cedar-embeddable-designer" && npm run dist
-cd "$CEDAR_HOME/cedar-embeddable-editor" && npm run build:production
-cd "$CEDAR_HOME/cedar-embeddable-editor/visual" && npm run bundle
-cd "$CEDAR_HOME/cedar-embeddable-term-picker" && npm run dist
 cd "$CEDAR_HOME/cedar-template-designer" && npm ci
 cedarcli native restart frontend designer
 ```
 
 The development server uses port 4202 (`CEDAR_FRONTEND_PORT` overrides it).
 `npm start` runs the same host directly. `npm run prepare:components` or
-`npx gulp copy:ced` refreshes its local bundles without restarting the server.
-Reload the page after staging. Bundle SHA-256s in `app/components/manifest.json`
-cache-bust each component independently.
+`npx gulp copy:ced` stages the installed packages without restarting the server.
+Reload the page after staging.
 
-CED is not fetched from npmjs. By default staging reads sibling build outputs.
-`CEDAR_CED_BUNDLE`, `CEDAR_CEE_BUNDLE` and `CEDAR_CETP_BUNDLE` can point to explicit
-bundle files, including files extracted from future immutable Nexus packages.
-Missing bundles fail startup. Generated components and configuration are ignored
-by Git. Distribution builders must stage these components before assembling a
-payload; publishing the host source alone does not produce a self-contained app.
+| Component | Pinned package |
+| --- | --- |
+| CED | `@org.metadatacenter/cedar-embeddable-designer@0.1.0-dev.20260916.2593d382` (Nexus) |
+| CETP | `@org.metadatacenter/cedar-embeddable-term-picker@0.1.0-dev.20260915.0ec47d9c` (Nexus) |
+| CEE/CEF | `cedar-embeddable-editor@2.0.15` (npmjs) |
+
+The npm aliases and scoped registry in `.npmrc` route only the development
+components to Nexus. No sibling checkouts are needed. Staging checks each
+bundle's bytes against its published manifest, then records package name,
+version and SHA-256 in `app/components/manifest.json`. Those hashes also
+cache-bust the component scripts. `npm pack` stages and includes these components;
+environment configuration is generated separately by Gulp.
+
+For local component development, build a sibling and explicitly set
+`CEDAR_CED_BUNDLE`, `CEDAR_CEE_BUNDLE` or `CEDAR_CETP_BUNDLE` to its bundle path
+when staging. There is no implicit fallback to a sibling. Server payloads reject
+these overrides and require the locked packages. Generated files stay out of Git.
 
 ## Routes and saving
 
@@ -52,10 +58,10 @@ original and save a new draft without copying instances. Cancellation and failur
 keep the edits. Successful saves return to Workspace. Published artifacts and
 artifacts without `updateResource` capability are inert and cannot be saved.
 
-The versioning command has no atomic conditional-write contract yet. The host
-re-reads and compares the original ETag before invoking it and also sends
-`If-Match`; the backend must eventually enforce that header atomically to close
-the remaining race between that read and the command.
+The versioning command requires the original `If-Match` validator. The backend
+uses the same source snapshot for version allocation and conditional publication;
+a concurrent change returns 412 before any draft is created. The host retains
+edits on that response and does not refresh the validator behind the user's back.
 
 Standalone `/fields/*` routes show an explicit unsupported message for now. CED
 supports fields *inside* templates/elements and reusable repository children, but
