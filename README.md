@@ -1,70 +1,69 @@
-# cedar-template-designer
+# CEDAR Template Designer host
 
-CEDAR's Template Designer frontend for creating and editing templates, elements,
-and fields, including controlled-term constraints and the embedded artifact
-finder used during authoring.
+Workspace opens this authenticated frontend on the Designer hostname. It embeds
+`<cedar-embeddable-designer>` (CED) for template and element authoring, CEE/CEF for
+preview and field values, and CETP for controlled-term constraints. The combined
+`cedar-template-editor` application is independent and unchanged.
 
-This repository is being extracted from the legacy `cedar-template-editor`
-AngularJS monolith. It is not in the production release path yet. See
-[`MIGRATION.md`](MIGRATION.md) for the frozen source commit, current boundary,
-baseline test debt, and extraction gates.
+The host owns Keycloak SSO, permission checks, repository child search, persistence,
+conditional writes, dirty-navigation warnings and safe return to Workspace. It
+contains no AngularJS authoring UI or legacy designer dependencies.
 
 ## Local development
 
-Export `CEDAR_HOME`, source the normal CEDAR development profile, and run:
+Build the sibling components, then stage and start the host using the CEDAR profile:
 
 ```sh
-cd "$CEDAR_HOME/cedar-template-designer"
-npm start
+export CEDAR_HOME="$HOME/CEDAR" CEDAR_PROFILE=develop
+source "$CEDAR_HOME/cedar-development/bin/templates/cedar-profile-native.sh"
+cd "$CEDAR_HOME/cedar-embeddable-designer" && npm run dist
+cd "$CEDAR_HOME/cedar-embeddable-editor" && npm run build:production
+cd "$CEDAR_HOME/cedar-embeddable-editor/visual" && npm run bundle
+cd "$CEDAR_HOME/cedar-embeddable-term-picker" && npm run dist
+cd "$CEDAR_HOME/cedar-template-designer" && npm ci
+cedarcli native restart frontend designer
 ```
 
-The default development and LiveReload ports are `4202` and `35731`.
-Override them with `CEDAR_FRONTEND_PORT` and `CEDAR_LIVERELOAD_PORT` when
-needed. The production monolith continues to use port `4200`.
+The development server uses port 4202 (`CEDAR_FRONTEND_PORT` overrides it).
+`npm start` runs the same host directly. `npm run prepare:components` or
+`npx gulp copy:ced` refreshes its local bundles without restarting the server.
+Reload the page after staging. Bundle SHA-256s in `app/components/manifest.json`
+cache-bust each component independently.
 
-The current unit baseline is run with `npm test`. Cross-application smoke tests
-live under `cedar-development/ops/e2e`.
+CED is not fetched from npmjs. By default staging reads sibling build outputs.
+`CEDAR_CED_BUNDLE`, `CEDAR_CEE_BUNDLE` and `CEDAR_CETP_BUNDLE` can point to explicit
+bundle files, including files extracted from future immutable Nexus packages.
+Missing bundles fail startup. Generated components and configuration are ignored
+by Git. Distribution builders must stage these components before assembling a
+payload; publishing the host source alone does not produce a self-contained app.
 
-## Publication and native server deployment
+## Routes and saving
 
-The package is published to the CEDAR Nexus npm repository through the explicit cedarcli command:
+The existing `/templates/create`, `/templates/edit/{id}`, `/elements/create` and
+`/elements/edit/{id}` routes accept `folderId` and `returnTo`. Identifiers remain
+opaque. `returnTo` accepts only the configured Workspace origin.
 
-```sh
-cedarcli deploy split-frontends --dry-run
-cedarcli deploy split-frontends
-```
+New documents start empty. Save validates CED's complete artifact and supplies
+the storage API's required empty provenance keys and descriptions for new children,
+preserving existing values. Existing artifacts use their original
+ETag on PUT. Templates run the backend's `check-update-template` command first;
+when instances prevent an in-place update, a confirmation offers to publish the
+original and save a new draft without copying instances. Cancellation and failures
+keep the edits. Successful saves return to Workspace. Published artifacts and
+artifacts without `updateResource` capability are inert and cannot be saved.
 
-Because npm package versions are immutable, the command stages a unique version derived from the
-commit timestamp and ID (for example `2.9.2-dev.20260822003012.gabcdef123456`) without changing this
-working tree. Publication is not runtime deployment. A native staging or production host checks out the approved
-Git commit and generates both environment-configured static trees with:
+The versioning command has no atomic conditional-write contract yet. The host
+re-reads and compares the original ETag before invoking it and also sends
+`If-Match`; the backend must eventually enforce that header atomically to close
+the remaining race between that read and the command.
 
-```sh
-cedarcli build split-frontends --server-payload
-```
+Standalone `/fields/*` routes show an explicit unsupported message for now. CED
+supports fields *inside* templates/elements and reusable repository children, but
+not standalone field-document authoring. There is no legacy fallback.
 
-That command requires `CEDAR_FRONTEND_BEHAVIOR=server` and exact
-`CEDAR_WORKSPACE_FRONTEND_URL`/`CEDAR_TEMPLATE_DESIGNER_FRONTEND_URL` values. It runs `npm ci`, runs
-Gulp, records `/config/build-info.json`, and exits; host nginx serves this repository's `app`
-directory directly. Docker is not required on staging or production.
+## Verification
 
-## Docker deployment
-
-Docker construction is deliberately outside this application repository. `cedar-docker-build`
-owns the image recipe, nginx configuration, and entrypoint; it consumes one exact immutable npm
-version from Nexus. `cedar-docker-deploy` owns the service, network, health check, and runtime
-environment. This repository contains no Docker-specific files.
-
-Both native server payloads and Docker images expose `/config/build-info.json` with the source
-commit and a SHA-256 over the exact environment-specific tree served. Docker payloads additionally
-record the immutable npm version and tarball digest. The file is served with `Cache-Control:
-no-store`; deployment acceptance must record it and reject provenance-unknown payloads.
-
-## Migration constraints
-
-- Do not route production traffic here until preview and staging gates pass.
-- Do not copy metadata instance editing into this repository; use the canonical
-  CEE host.
-- Cross-application navigation follows
-  [`docs/CROSS_APP_NAVIGATION.md`](docs/CROSS_APP_NAVIGATION.md).
-- Framework modernization is intentionally separate from the extraction.
+`npm test` exercises navigation, permission checks, conditional saving, versioning,
+error retention, token refresh and repository child search without the stack.
+The live CED host smoke covers create/update, stale-save rejection, versioning
+with metadata instances, cancellation and return to Workspace. It is in `cedar-development/ops/e2e/ced-host-smoke.mjs`.
