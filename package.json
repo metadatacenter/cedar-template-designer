@@ -9,8 +9,7 @@
   "scripts": {
     "start": "gulp",
     "prepare:components": "node scripts/stage-components.mjs",
-    "test": "node --test test/*.test.mjs",
-    "prepack": "npm run prepare:components"
+    "test": "node --test test/*.test.mjs"
   },
   "allowScripts": {
     "es5-ext@0.10.62": false,
