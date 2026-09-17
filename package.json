@@ -13,6 +13,7 @@
     "prepack": "npm run prepare:components"
   },
   "allowScripts": {
+    "es5-ext@0.10.62": false,
     "fsevents@1.2.13 || 2.3.2": true
   },
   "author": "Metadatacenter.org",
