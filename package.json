@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "cedar-embeddable-designer": "npm:@org.metadatacenter/cedar-embeddable-designer@0.1.0-dev.20260917.d79431e0",
-    "cedar-embeddable-term-picker": "npm:@org.metadatacenter/cedar-embeddable-term-picker@0.1.0-dev.20260917.55cb50c3",
-    "cedar-embeddable-editor": "2.0.15"
+    "cedar-embeddable-editor": "2.0.16",
+    "cedar-embeddable-term-picker": "npm:@org.metadatacenter/cedar-embeddable-term-picker@0.1.0-dev.20260917.55cb50c3"
   }
 }
