@@ -1,0 +1,15 @@
+:root { font-family: system-ui, sans-serif; color: #233546; background: #f8fafc; }
+body { margin: 0; }
+header { display: flex; align-items: center; gap: 1rem; padding: .7rem 1rem; background: #fff; border-bottom: 1px solid #dbe2e8; }
+#title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#state { margin-left: auto; font-size: .85rem; }
+button { font: inherit; padding: .5rem .9rem; border: 1px solid #aebfce; border-radius: 5px; cursor: pointer; background: white; color: #17364b; }
+#save, button[value=confirm] { background: #176e91; color: white; border-color: #176e91; }
+button:disabled { opacity: .5; cursor: default; }
+#message { padding: .6rem 1rem; margin: 0; background: #edf5fa; }
+#message:empty { display: none; }
+#message[data-error=true] { background: #fff0ed; color: #9f2f20; }
+cedar-embeddable-designer { display: block; height: calc(100dvh - 100px); }
+dialog { max-width: 34rem; border: 1px solid #aebfce; border-radius: 8px; padding: 1.5rem; }
+dialog::backdrop { background: #14273880; }
+dialog form { display: flex; justify-content: flex-end; gap: .7rem; }

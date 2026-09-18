@@ -11,6 +11,10 @@ not AngularJS services or in-memory route state.
 | `cedar-workspace` | `/`, `/dashboard`, `/profile`, `/settings`, `/privacy`, `/messaging`, `/logout`, `/instances/*` | 4201 |
 | `cedar-template-designer` | `/templates/*`, `/elements/*`, `/fields/*` | 4202 |
 
+The Designer host embeds CED for template and element routes. Standalone field
+routes currently report that CED does not support field documents; they do not
+fall back to the retired editor.
+
 The CEE Web Component remains independently developed and released from
 `cedar-embeddable-editor`. Workspace owns the thin authenticated route shell that loads
 the component, supplies templates and instances, and persists its output. Archived
@@ -57,8 +61,8 @@ Rules:
 4. Cross-application navigation uses `window.location.assign` (same tab) unless a
    user action explicitly requests a new tab. Angular `$location` is never used for
    another application's route.
-5. Save redirects stay within the application that owns the artifact type. Cancel,
-   close, and explicit “Back to Workspace” actions use the return rule above.
+5. Successful Designer saves, cancel, close, and explicit “Back to Workspace”
+   actions use the return rule above.
 
 ## `returnTo` security
 
