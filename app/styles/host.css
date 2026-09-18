@@ -11,9 +11,9 @@ button:disabled { opacity: .5; cursor: default; }
 #message:empty { display: none; }
 #message[data-error=true] { background: #fff0ed; color: #9f2f20; }
 cedar-embeddable-designer { display: block; height: calc(100dvh - 100px); }
-dialog { max-width: 34rem; border: 1px solid #aebfce; border-radius: 8px; padding: 1.5rem; }
-dialog::backdrop { background: #14273880; }
-dialog form { display: flex; justify-content: flex-end; gap: .7rem; }
+dialog { max-width: 34rem; border: 1px solid var(--cedar-overlay-border); border-radius: var(--cedar-dialog-radius); padding: var(--cedar-dialog-padding); background: var(--cedar-overlay-surface); box-shadow: var(--cedar-dialog-shadow); }
+dialog::backdrop { background: var(--cedar-dialog-backdrop); }
+dialog form { display: flex; justify-content: flex-end; gap: var(--cedar-dialog-action-gap); }
 
 #back { display: inline-flex; align-items: center; gap: .5rem; }
 #back-icon, #back-icon svg { display: block; width: var(--cedar-icon-size-default); height: var(--cedar-icon-size-default); }
