@@ -1,3 +1,4 @@
+@import '../components/custom-properties.css';
 :root { font-family: system-ui, sans-serif; color: #233546; background: #f8fafc; }
 body { margin: 0; }
 header { display: flex; align-items: center; gap: 1rem; padding: .7rem 1rem; background: #fff; border-bottom: 1px solid #dbe2e8; }
@@ -13,3 +14,6 @@ cedar-embeddable-designer { display: block; height: calc(100dvh - 100px); }
 dialog { max-width: 34rem; border: 1px solid #aebfce; border-radius: 8px; padding: 1.5rem; }
 dialog::backdrop { background: #14273880; }
 dialog form { display: flex; justify-content: flex-end; gap: .7rem; }
+
+#back { display: inline-flex; align-items: center; gap: .5rem; }
+#back-icon, #back-icon svg { display: block; width: var(--cedar-icon-size-default); height: var(--cedar-icon-size-default); }

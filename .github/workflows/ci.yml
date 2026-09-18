@@ -40,3 +40,15 @@ jobs:
 
       - name: Run host contract tests
         run: npm test
+
+      - name: Stage the shared icon registry
+        run: node scripts/stage-design.mjs
+
+      - uses: actions/checkout@v4
+        with:
+          repository: metadatacenter/cedar-design-tokens
+          ref: develop
+          path: shared-design-checks
+
+      - name: Reject independent icon sources
+        run: python3 shared-design-checks/tools/check_icons.py --repo .

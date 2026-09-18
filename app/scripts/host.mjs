@@ -1,3 +1,5 @@
+import {iconSvg} from '../components/icons.js';
+document.getElementById('back-icon').innerHTML = iconSvg('back');
 const version = encodeURIComponent(window.cedarCacheControl || 'local');
 const { routeFor, workspaceReturn, canEdit, createBackend, childSource, saveArtifact } = await import(`./host-core.mjs?v=${version}`);
 const ui = Object.fromEntries(['back', 'save', 'title', 'state', 'message', 'editor', 'version-dialog', 'version-message'].map(id => [id, document.getElementById(id)]));
