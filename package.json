@@ -25,6 +25,6 @@
   "dependencies": {
     "cedar-embeddable-designer": "npm:@org.metadatacenter/cedar-embeddable-designer@0.1.0-dev.20260918.8a9d6c8d",
     "cedar-embeddable-editor": "2.0.16",
-    "cedar-embeddable-term-picker": "npm:@org.metadatacenter/cedar-embeddable-term-picker@0.1.0-dev.20260918.ee1753ea"
+    "cedar-embeddable-term-picker": "npm:@org.metadatacenter/cedar-embeddable-term-picker@0.1.0-dev.20260918.1cba1bcd"
   }
 }
