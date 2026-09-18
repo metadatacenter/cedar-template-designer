@@ -18,6 +18,9 @@ env:
   NPM_CONFIG_STRICT_ALLOW_SCRIPTS: "true"
 
 jobs:
+  design-token-adoption:
+    uses: metadatacenter/cedar-design-tokens/.github/workflows/adoption.yml@develop
+
   package:
     runs-on: ubuntu-24.04
     timeout-minutes: 20

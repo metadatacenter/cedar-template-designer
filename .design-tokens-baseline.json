@@ -1,0 +1,76 @@
+{
+  "schema": 1,
+  "findings": {
+    "02d6d62fcbe6d361d899": {
+      "file": "app/styles/host.css",
+      "rule": "spacing",
+      "property": "gap",
+      "value": ".5rem",
+      "count": 1
+    },
+    "11eeee743bab364b7fdc": {
+      "file": "app/styles/host.css",
+      "rule": "geometry",
+      "property": "border-radius",
+      "value": "5px",
+      "count": 1
+    },
+    "51468b1467e3c9bd8e8a": {
+      "file": "app/styles/host.css",
+      "rule": "color",
+      "property": "color",
+      "value": "white",
+      "count": 1
+    },
+    "6dbded4596acfb400a4c": {
+      "file": "app/styles/host.css",
+      "rule": "typography",
+      "property": "font-size",
+      "value": ".85rem",
+      "count": 1
+    },
+    "7171791166e79e41ddb5": {
+      "file": "app/styles/host.css",
+      "rule": "spacing",
+      "property": "padding",
+      "value": ".6rem 1rem",
+      "count": 1
+    },
+    "801ba7bcf3299cb91872": {
+      "file": "app/styles/host.css",
+      "rule": "color",
+      "property": "background",
+      "value": "white",
+      "count": 1
+    },
+    "8695fb2df48d7b87338b": {
+      "file": "app/styles/host.css",
+      "rule": "spacing",
+      "property": "gap",
+      "value": "1rem",
+      "count": 1
+    },
+    "b5cbebd9db4324db0ee8": {
+      "file": "app/styles/host.css",
+      "rule": "geometry",
+      "property": "height",
+      "value": "calc(100dvh - 100px)",
+      "count": 1
+    },
+    "ecddd44b7ad55cd766bb": {
+      "file": "app/styles/host.css",
+      "rule": "spacing",
+      "property": "padding",
+      "value": ".7rem 1rem",
+      "count": 1
+    },
+    "ef1d82148155c66373ea": {
+      "file": "app/styles/host.css",
+      "rule": "spacing",
+      "property": "padding",
+      "value": ".5rem .9rem",
+      "count": 1
+    }
+  },
+  "exceptions": {}
+}
