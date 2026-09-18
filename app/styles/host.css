@@ -1,3 +1,4 @@
+@import '../components/motion.css';
 @import '../components/custom-properties.css';
 :root { font-family: var(--cedar-font-family); color: var(--cedar-text-primary); background: var(--cedar-surface-canvas); }
 body { margin: 0; }

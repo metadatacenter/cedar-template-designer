@@ -9,9 +9,9 @@ test('stages shared icon geometry and size tokens together', async t => {
   t.after(() => rm(root, {recursive: true, force: true}));
   const source = join(root, 'node_modules/@org.metadatacenter/cedar-design-tokens/dist');
   await mkdir(source, {recursive: true});
-  for (const name of ['icons.js', 'custom-properties.css']) await writeFile(join(source, name), name);
+  for (const name of ['icons.js', 'custom-properties.css', 'motion.css']) await writeFile(join(source, name), name);
   await stageDesign(root);
-  for (const name of ['icons.js', 'custom-properties.css']) assert.equal(await readFile(join(root, 'app/components', name), 'utf8'), name);
+  for (const name of ['icons.js', 'custom-properties.css', 'motion.css']) assert.equal(await readFile(join(root, 'app/components', name), 'utf8'), name);
 });
 test('a missing token package fails before replacing served assets', async t => {
   const root = await mkdtemp(join(tmpdir(), 'ced-design-'));
