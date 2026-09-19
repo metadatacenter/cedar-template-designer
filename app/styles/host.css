@@ -18,3 +18,8 @@ dialog form { display: flex; justify-content: flex-end; gap: var(--cedar-dialog-
 
 #back { display: inline-flex; align-items: center; gap: .5rem; }
 #back-icon, #back-icon svg { display: block; width: var(--cedar-icon-size-default); height: var(--cedar-icon-size-default); }
+
+/* Manual field resizing is forbidden; automatic content sizing remains available. */
+textarea {
+  resize: none;
+}
