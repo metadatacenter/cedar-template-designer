@@ -4,7 +4,22 @@
 body { margin: 0; }
 header { display: flex; align-items: center; gap: 1rem; padding: .7rem 1rem; background: var(--cedar-surface-raised); border-bottom: 1px solid var(--cedar-border-rule); }
 #title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#state { margin-left: auto; font-size: .85rem; }
+#state {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cedar-space-2);
+  font-size: var(--cedar-font-size);
+  font-weight: var(--cedar-font-weight-regular);
+  color: var(--cedar-text-muted);
+}
+#state[data-dirty=true]::before {
+  content: '';
+  flex: 0 0 var(--cedar-space-2);
+  height: var(--cedar-space-2);
+  border-radius: 50%;
+  background: currentColor;
+}
 button { font: inherit; padding: .5rem .9rem; border: 1px solid var(--cedar-control-border-default); border-radius: 5px; cursor: pointer; background: white; color: var(--cedar-color-primary); }
 #save, button[value=confirm] { background: var(--cedar-action-primary-surface); color: white; border-color: var(--cedar-action-primary-surface); }
 button:disabled { opacity: var(--cedar-control-disabled-opacity); cursor: default; }

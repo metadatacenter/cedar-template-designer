@@ -8,7 +8,8 @@ function message(text, error = false) { ui.message.textContent = text; ui.messag
 function dirty() { return !leaving && Boolean(designer?.isDirty); }
 function update() {
   ui.save.disabled = !writable || saving || !designer?.canSave;
-  ui.state.textContent = saving ? 'Saving…' : !writable ? 'Read only' : dirty() ? 'Unsaved changes' : 'Ready';
+  ui.state.dataset.dirty = String(!saving && writable && dirty());
+  ui.state.textContent = saving ? 'Saving…' : !writable ? 'Read only' : dirty() ? 'Unsaved changes' : 'No unsaved changes';
   if (designer) designer.inert = !writable || saving;
 }
 window.addEventListener('beforeunload', event => {
