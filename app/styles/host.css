@@ -18,7 +18,7 @@ header { display: flex; align-items: center; gap: 1rem; padding: .7rem 1rem; bac
   flex: 0 0 var(--cedar-space-2);
   height: var(--cedar-space-2);
   border-radius: 50%;
-  background: currentColor;
+  background: var(--designer-unsaved-color, #eab308);
 }
 button { font: inherit; padding: .5rem .9rem; border: 1px solid var(--cedar-control-border-default); border-radius: 5px; cursor: pointer; background: white; color: var(--cedar-color-primary); }
 #save, button[value=confirm] { background: var(--cedar-action-primary-surface); color: white; border-color: var(--cedar-action-primary-surface); }

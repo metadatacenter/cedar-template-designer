@@ -95,7 +95,7 @@ try {
     }
     ui.editor.hidden = false;
     for (const event of ['artifactChange', 'validationChange', 'dirtyChange']) designer.addEventListener(event, update);
-    ui.title.textContent = route.id ? `Edit ${route.kind}` : `New ${route.kind}`;
+    ui.title.textContent = `${route.kind[0].toUpperCase()}${route.kind.slice(1)} Designer`;
     message(writable ? '' : 'This artifact is read only. Create a draft or change permissions in Workspace to edit it.');
     update();
   }
