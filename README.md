@@ -9,6 +9,9 @@ The host owns Keycloak SSO, permission checks, repository child search, persiste
 conditional writes, dirty-navigation warnings and safe return to Workspace. It
 contains no AngularJS authoring UI or legacy designer dependencies.
 
+The unsaved indicator is a filled yellow dot beside the status text. Hosts may
+override its color with `--designer-unsaved-color`; the default is `#eab308`.
+
 ## Local development
 
 Install the locked packages and start the host using the CEDAR profile:

@@ -1,3 +1,5 @@
+import {iconSvg} from '../components/icons.js';
+document.getElementById('back-icon').innerHTML = iconSvg('back');
 const version = encodeURIComponent(window.cedarCacheControl || 'local');
 const { routeFor, workspaceReturn, canEdit, createBackend, childSource, saveArtifact } = await import(`./host-core.mjs?v=${version}`);
 const ui = Object.fromEntries(['back', 'save', 'title', 'state', 'message', 'editor', 'version-dialog', 'version-message'].map(id => [id, document.getElementById(id)]));
@@ -6,7 +8,8 @@ function message(text, error = false) { ui.message.textContent = text; ui.messag
 function dirty() { return !leaving && Boolean(designer?.isDirty); }
 function update() {
   ui.save.disabled = !writable || saving || !designer?.canSave;
-  ui.state.textContent = saving ? 'Saving…' : !writable ? 'Read only' : dirty() ? 'Unsaved changes' : 'Ready';
+  ui.state.dataset.dirty = String(!saving && writable && dirty());
+  ui.state.textContent = saving ? 'Saving…' : !writable ? 'Read only' : dirty() ? 'Unsaved changes' : 'No unsaved changes';
   if (designer) designer.inert = !writable || saving;
 }
 window.addEventListener('beforeunload', event => {
@@ -92,7 +95,7 @@ try {
     }
     ui.editor.hidden = false;
     for (const event of ['artifactChange', 'validationChange', 'dirtyChange']) designer.addEventListener(event, update);
-    ui.title.textContent = route.id ? `Edit ${route.kind}` : `New ${route.kind}`;
+    ui.title.textContent = `${route.kind[0].toUpperCase()}${route.kind.slice(1)} Designer`;
     message(writable ? '' : 'This artifact is read only. Create a draft or change permissions in Workspace to edit it.');
     update();
   }

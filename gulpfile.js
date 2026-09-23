@@ -33,6 +33,7 @@ gulp.task('replace-version', configure);
 gulp.task('replace-tracking', (done) => done()); // Older payload builders call this task.
 gulp.task('copy:ced', (done) => {
   execFileSync(process.execPath, ['scripts/stage-components.mjs'], { stdio: 'inherit' });
+  execFileSync(process.execPath, ['scripts/stage-design.mjs'], { stdio: 'inherit' });
   done();
 });
 gulp.task('default', gulp.series(configure, 'copy:ced', (done) => {

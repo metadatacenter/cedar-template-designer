@@ -18,6 +18,9 @@ env:
   NPM_CONFIG_STRICT_ALLOW_SCRIPTS: "true"
 
 jobs:
+  design-token-adoption:
+    uses: metadatacenter/cedar-design-tokens/.github/workflows/adoption.yml@develop
+
   package:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -40,3 +43,15 @@ jobs:
 
       - name: Run host contract tests
         run: npm test
+
+      - name: Stage the shared icon registry
+        run: node scripts/stage-design.mjs
+
+      - uses: actions/checkout@v4
+        with:
+          repository: metadatacenter/cedar-design-tokens
+          ref: develop
+          path: shared-design-checks
+
+      - name: Reject independent icon sources
+        run: python3 shared-design-checks/tools/check_icons.py --repo .
