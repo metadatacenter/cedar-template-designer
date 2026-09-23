@@ -13,7 +13,7 @@ function update() {
   if (designer) designer.inert = !writable || saving;
 }
 window.addEventListener('beforeunload', event => {
-  if (dirty() || saving) { event.preventDefault(); event.returnValue = ''; }
+  if (!leaving && (dirty() || saving)) { event.preventDefault(); event.returnValue = ''; }
 });
 ui.back.addEventListener('click', () => {
   if (!returnUrl || saving || (dirty() && !window.confirm('Discard your unsaved changes and return to Workspace?'))) return;
