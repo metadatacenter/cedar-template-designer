@@ -59,6 +59,7 @@ async function host(isDirty = true) {
       saveArtifact: () => saved,
     });
   assert.equal(node('save').disabled, false);
+  assert.equal(node('state').textContent, isDirty ? 'Unsaved changes' : 'Not saved yet');
   return { unload, navigations, resolveSave, rejectSave, save: () => events.get('save:click')(), node };
 }
 

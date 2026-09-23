@@ -115,6 +115,10 @@ export function storageArtifact(source, creating = false) {
 
 /** Validators belong to the loaded representation, never a URL cache. */
 export async function saveArtifact({ request, base, route, artifact, etag, folderId, confirmVersion }) {
+  const name = artifact?.['schema:name'];
+  if (typeof name !== 'string' || !name.trim()) {
+    throw new Error(`Enter a ${route.kind} name before saving.`);
+  }
   artifact = storageArtifact(artifact, !route.id);
   const url = `${base}/${route.collection}`;
   if (!route.id) {

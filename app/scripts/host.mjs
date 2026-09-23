@@ -9,7 +9,7 @@ function dirty() { return !leaving && Boolean(designer?.isDirty); }
 function update() {
   ui.save.disabled = !writable || saving || !designer?.canSave;
   ui.state.dataset.dirty = String(!saving && writable && dirty());
-  ui.state.textContent = saving ? 'Saving…' : !writable ? 'Read only' : dirty() ? 'Unsaved changes' : 'No unsaved changes';
+  ui.state.textContent = saving ? 'Saving…' : !writable ? 'Read only' : dirty() ? 'Unsaved changes' : !route.id ? 'Not saved yet' : 'No unsaved changes';
   if (designer) designer.inert = !writable || saving;
 }
 window.addEventListener('beforeunload', event => {

@@ -9,6 +9,19 @@ function harness(responses) {
   const request = async (url, options = {}) => { calls.push({ url, ...options }); const next = responses.shift(); if (next instanceof Error) throw next; return next; };
   return { calls, options: { request, base, route, artifact, etag: '"v1"', folderId: 'folder', confirmVersion: async () => true } };
 }
+for (const kind of ['template', 'element', 'field']) {
+  test(`${kind} saves reject missing or blank names before any request`, async () => {
+    for (const id of [null, route.id]) {
+      for (const name of [undefined, null, '', ' \t\n']) {
+        const h = harness([]);
+        await assert.rejects(saveArtifact({ ...h.options,
+          route: { ...route, kind, id }, artifact: { ...artifact, 'schema:name': name },
+        }), { message: `Enter a ${kind} name before saving.` });
+        assert.equal(h.calls.length, 0);
+      }
+    }
+  });
+}
 test('route identifiers remain opaque through encoded and historical raw URLs', () => {
   assert.equal(routeFor('/templates/edit/' + encodeURIComponent(route.id)).id, route.id);
   assert.equal(routeFor('/templates/edit/https:/repo.example/templates/a').id, route.id);
