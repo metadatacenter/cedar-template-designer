@@ -76,6 +76,8 @@ try {
     await customElements.whenDefined('cedar-embeddable-designer');
     if (!customElements.get(elementName)) throw new Error('This Designer bundle does not include CEFD. Stage a current CED bundle and reload.');
     designer = document.createElement(elementName);
+    // Suppress authoring UI (including the field chooser) until loading and permissions finish.
+    designer.readOnly = true;
     designer.config = { terminologyBaseUrl: config.terminologyBaseUrl, bridgeBaseUrl: config.bridgeBaseUrl };
     designer.childSource = childSource(request, config.resourceRestAPI);
     // Connecting initializes Angular's public methods. Keep the editor inert until load and permissions succeed.
@@ -93,6 +95,7 @@ try {
       designer.newArtifact(route.kind === 'field' ? undefined : route.kind);
       writable = true;
     }
+    designer.readOnly = !writable;
     ui.editor.hidden = false;
     for (const event of ['artifactChange', 'validationChange', 'dirtyChange']) designer.addEventListener(event, update);
     ui.title.textContent = `${route.kind[0].toUpperCase()}${route.kind.slice(1)} Designer`;
