@@ -12,14 +12,13 @@
     "test": "node --test test/*.test.mjs"
   },
   "allowScripts": {
-    "es5-ext@0.10.64": false,
-    "fsevents@1.2.13 || 2.3.2": true
+    "fsevents@2.3.3": true
   },
   "author": "Metadatacenter.org",
   "license": "BSD-2-Clause",
   "devDependencies": {
     "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20260924.ef34ac69",
-    "gulp": "4.0.0",
+    "gulp": "^5.0.1",
     "gulp-connect": "5.7.0"
   },
   "dependencies": {
