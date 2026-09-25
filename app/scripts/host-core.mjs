@@ -1,7 +1,11 @@
+// Loading the maps with this module's query string keeps one shared instance with host.mjs,
+// which imports the same versioned URL and sets the active language on it.
+const { t } = await import(`./i18n.mjs${new URL(import.meta.url).search}`);
+
 export function routeFor(pathname) {
   const match = /^\/(templates|elements|fields)\/(create|edit)(?:\/(.+))?\/?$/.exec(pathname);
   if (!match || (match[2] === 'edit' && !match[3]) || (match[2] === 'create' && match[3])) {
-    throw new Error('Unknown designer route. Open a template, element or field from Workspace.');
+    throw new Error(t('Error.UnknownRoute'));
   }
   return {
     kind: { templates: 'template', elements: 'element', fields: 'field' }[match[1]],
@@ -14,7 +18,7 @@ export function workspaceReturn(base, requested, folderId) {
   const workspace = new URL(base);
   const local = ['localhost', '127.0.0.1', '[::1]'].includes(workspace.hostname);
   if (workspace.username || workspace.password || !(workspace.protocol === 'https:' || (local && workspace.protocol === 'http:'))) {
-    throw new Error('Invalid Workspace URL in frontend configuration.');
+    throw new Error(t('Error.InvalidWorkspaceUrl'));
   }
   const fallback = new URL('/dashboard', workspace);
   if (folderId) fallback.searchParams.set('folderId', folderId);
@@ -32,10 +36,11 @@ export function canEdit(report, artifact) {
 
 export class BackendError extends Error {
   constructor(status, data) {
-    super(status === 412 ? 'This artifact changed since you opened it. Your edits have been kept; reopen the latest version before saving.' :
-      status === 401 ? 'Your session has expired. Sign in again before saving.' :
-      status === 403 ? 'You do not have permission to save this artifact.' :
-      `Request failed (${status}). ${data?.message || data?.errorMessage || 'Your edits have been kept.'}`);
+    // A server-supplied message is shown as the server wrote it; only the host's own text is translated.
+    super(status === 412 ? t('Error.Conflict') :
+      status === 401 ? t('Error.SessionExpired') :
+      status === 403 ? t('Error.Forbidden') :
+      t('Error.RequestFailed', { status, detail: data?.message || data?.errorMessage || t('Error.EditsKept') }));
     this.status = status;
     this.data = data;
   }
@@ -73,7 +78,7 @@ export function childSource(request, base) {
   return {
     async search(query, { signal, cursor = '0' }) {
       const offset = Number(cursor);
-      if (!Number.isSafeInteger(offset) || offset < 0) throw new Error('Invalid repository search cursor.');
+      if (!Number.isSafeInteger(offset) || offset < 0) throw new Error(t('Error.InvalidSearchCursor'));
       const params = new URLSearchParams({ q: query, resource_types: 'field,element', limit: '25', offset: String(offset) });
       const { data } = await request(`${base}/search?${params}`, { signal });
       const rows = data.resources || [];
@@ -85,7 +90,7 @@ export function childSource(request, base) {
     },
     async load(result, { signal }) {
       const collection = { field: 'template-fields', element: 'template-elements' }[result.type];
-      if (!collection) throw new Error('Choose a reusable field or element.');
+      if (!collection) throw new Error(t('Error.ChooseReusable'));
       return (await request(`${base}/${collection}/${encodeURIComponent(result.id)}`, { signal })).data;
     },
   };
@@ -117,15 +122,15 @@ export function storageArtifact(source, creating = false) {
 export async function saveArtifact({ request, base, route, artifact, etag, folderId, confirmVersion }) {
   const name = artifact?.['schema:name'];
   if (typeof name !== 'string' || !name.trim()) {
-    throw new Error(`Enter a ${route.kind} name before saving.`);
+    throw new Error(t(`Error.NameRequired.${route.kind}`));
   }
   artifact = storageArtifact(artifact, !route.id);
   const url = `${base}/${route.collection}`;
   if (!route.id) {
-    if (!folderId) throw new Error('No destination folder is available. Open Create from a Workspace folder.');
+    if (!folderId) throw new Error(t('Error.NoFolder'));
     return request(`${url}?${new URLSearchParams({ folder_id: folderId })}`, { method: 'POST', body: artifact });
   }
-  if (!etag) throw new Error('The server did not provide a version validator. Reopen this artifact before saving.');
+  if (!etag) throw new Error(t('Error.NoValidator'));
   const encodedId = encodeURIComponent(route.id);
   if (route.kind === 'template') {
     const { data: impact } = await request(`${base}/command/check-update-template/${encodedId}`, { method: 'POST', body: artifact });

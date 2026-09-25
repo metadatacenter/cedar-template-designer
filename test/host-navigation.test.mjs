@@ -2,10 +2,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import * as core from '../app/scripts/host-core.mjs';
+import * as i18n from '../app/scripts/i18n.mjs';
 
 // Exercise the real DOM wiring and navigation order with controlled I/O. In particular,
 // location.assign fires beforeunload synchronously, before save's finally block runs.
-async function host(isDirty = true) {
+async function host(isDirty = true, languages = ['en-US']) {
   const events = new Map(), nodes = new Map(), navigations = [];
   let resolveSave, rejectSave;
   const saved = new Promise((resolve, reject) => { resolveSave = resolve; rejectSave = reject; });
@@ -40,6 +41,8 @@ async function host(isDirty = true) {
   };
   const document = {
     getElementById: node,
+    documentElement: {},
+    querySelectorAll: () => [],
     createElement: tag => tag === 'script' ? {} : designer,
     head: { append: script => script.onload() },
   };
@@ -49,18 +52,20 @@ async function host(isDirty = true) {
   ) });
   const source = (await readFile(new URL('../app/scripts/host.mjs', import.meta.url), 'utf8'))
     .replace(/^import \{iconSvg\} from [^;]+;/m, 'const iconSvg = () => "";')
-    .replace(/await import\(`\.\/host-core\.mjs\?v=\$\{version\}`\)/, 'core');
+    .replace(/await import\(`\.\/host-core\.mjs\?v=\$\{version\}`\)/, 'core')
+    .replace(/await import\(`\.\/i18n\.mjs\?v=\$\{version\}`\)/, 'i18n');
   const run = new (Object.getPrototypeOf(async function() {}).constructor)(
-    'window', 'document', 'location', 'fetch', 'customElements', 'crypto', 'core', source,
+    'window', 'document', 'location', 'fetch', 'customElements', 'crypto', 'navigator', 'core', 'i18n', source,
   );
   await run(window, document, location, fetch, { whenDefined: async () => {}, get: () => true },
-    { randomUUID: () => 'session' }, { ...core,
+    { randomUUID: () => 'session' }, { languages }, { ...core,
       createBackend: () => async () => ({ data: { homeFolderId: 'home' } }),
       saveArtifact: () => saved,
-    });
+    }, i18n);
   assert.equal(node('save').disabled, false);
-  assert.equal(node('state').textContent, isDirty ? 'Unsaved changes' : 'Not saved yet');
-  return { unload, navigations, resolveSave, rejectSave, save: () => events.get('save:click')(), node };
+  // The e2e smokes match these English texts exactly.
+  if (i18n.language === 'en') assert.equal(node('state').textContent, isDirty ? 'Unsaved changes' : 'Not saved yet');
+  return { designer, document, unload, navigations, resolveSave, rejectSave, save: () => events.get('save:click')(), node };
 }
 
 for (const dirty of [true, false]) {
@@ -87,3 +92,14 @@ for (const failed of [true, false]) {
     assert.equal(h.node('save').disabled, false);
   });
 }
+
+test('the host detects its language, labels the page with it and passes it to CED', async t => {
+  t.after(() => i18n.setLanguage('en'));
+  const english = await host(false);
+  assert.equal(english.designer.language, 'en');
+  assert.equal(english.document.documentElement.lang, 'en');
+  const hungarian = await host(false, ['hu-HU', 'en-US']);
+  assert.equal(hungarian.designer.language, 'hu');
+  assert.equal(hungarian.document.documentElement.lang, 'hu');
+  assert.equal(hungarian.node('state').textContent, 'Még nincs mentve');
+});

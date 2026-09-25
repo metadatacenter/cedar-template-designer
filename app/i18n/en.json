@@ -1,0 +1,60 @@
+{
+  "Page": {
+    "Title": "CEDAR Template Designer",
+    "Loading": "Loading designer…"
+  },
+  "Header": {
+    "Workspace": "Workspace",
+    "Save": "Save",
+    "Title": {
+      "template": "Template Designer",
+      "element": "Element Designer",
+      "field": "Field Designer"
+    }
+  },
+  "State": {
+    "Saving": "Saving…",
+    "ReadOnly": "Read only",
+    "UnsavedChanges": "Unsaved changes",
+    "NotSavedYet": "Not saved yet",
+    "NoUnsavedChanges": "No unsaved changes"
+  },
+  "Message": {
+    "ChangesKept": "Your changes are still here.",
+    "ReadOnly": "This artifact is read only. Create a draft or change permissions in Workspace to edit it.",
+    "ConfirmDiscard": "Discard your unsaved changes and return to Workspace?"
+  },
+  "Version": {
+    "Title": "Create a new template version?",
+    "Explanation": "The existing template will be published and your changes saved as a new draft. Existing metadata stays with the original template.",
+    "KeepEditing": "Keep editing",
+    "CreateDraft": "Create new draft",
+    "Instances": "{{count}} metadata instances use this template. These changes require a new version.",
+    "InstancesOfVersion": "{{count}} metadata instances use this template (version {{version}}). These changes require a new version.",
+    "ExistingInstances": "Existing metadata instances use this template. These changes require a new version.",
+    "ExistingInstancesOfVersion": "Existing metadata instances use this template (version {{version}}). These changes require a new version."
+  },
+  "Error": {
+    "UnknownRoute": "Unknown designer route. Open a template, element or field from Workspace.",
+    "InvalidWorkspaceUrl": "Invalid Workspace URL in frontend configuration.",
+    "Conflict": "This artifact changed since you opened it. Your edits have been kept; reopen the latest version before saving.",
+    "SessionExpired": "Your session has expired. Sign in again before saving.",
+    "Forbidden": "You do not have permission to save this artifact.",
+    "RequestFailed": "Request failed ({{status}}). {{detail}}",
+    "EditsKept": "Your edits have been kept.",
+    "InvalidSearchCursor": "Invalid repository search cursor.",
+    "ChooseReusable": "Choose a reusable field or element.",
+    "NameRequired": {
+      "template": "Enter a template name before saving.",
+      "element": "Enter an element name before saving.",
+      "field": "Enter a field name before saving."
+    },
+    "NoFolder": "No destination folder is available. Open Create from a Workspace folder.",
+    "NoValidator": "The server did not provide a version validator. Reopen this artifact before saving.",
+    "ComponentLoad": "Could not load {{name}}. Rebuild and stage the local components.",
+    "ConfigurationLoad": "Frontend configuration could not be loaded.",
+    "SignIn": "Sign-in could not be initialized. Reload to try again.",
+    "MissingFieldDesigner": "This Designer bundle does not include CEFD. Stage a current CED bundle and reload.",
+    "OutdatedBundle": "The local CED bundle is out of date. Rebuild CED and restart Designer."
+  }
+}

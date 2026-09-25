@@ -16,7 +16,7 @@ for (const kind of ['template', 'element', 'field']) {
         const h = harness([]);
         await assert.rejects(saveArtifact({ ...h.options,
           route: { ...route, kind, id }, artifact: { ...artifact, 'schema:name': name },
-        }), { message: `Enter a ${kind} name before saving.` });
+        }), { message: `Enter ${kind === 'element' ? 'an' : 'a'} ${kind} name before saving.` });
         assert.equal(h.calls.length, 0);
       }
     }
