@@ -3,25 +3,25 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CEDAR Template Designer</title>
+  <title data-i18n="Page.Title">CEDAR Template Designer</title>
   <base href="/">
   <link href="favicon.ico" rel="icon">
   <script src="config/version.js"></script>
 </head>
 <body>
   <header>
-    <button id="back" type="button"><span id="back-icon" aria-hidden="true"></span>Workspace</button>
-    <strong id="title">Template Designer</strong>
+    <button id="back" type="button"><span id="back-icon" aria-hidden="true"></span><span data-i18n="Header.Workspace">Workspace</span></button>
+    <strong id="title" data-i18n="Header.Title.template">Template Designer</strong>
     <span id="state" role="status"></span>
-    <button id="save" type="button" disabled>Save</button>
+    <button id="save" type="button" disabled data-i18n="Header.Save">Save</button>
   </header>
-  <p id="message" role="status">Loading designer…</p>
+  <p id="message" role="status" data-i18n="Page.Loading">Loading designer…</p>
   <main id="editor"></main>
   <dialog id="version-dialog" aria-labelledby="version-title">
-    <h2 id="version-title">Create a new template version?</h2>
+    <h2 id="version-title" data-i18n="Version.Title">Create a new template version?</h2>
     <p id="version-message"></p>
-    <p>The existing template will be published and your changes saved as a new draft. Existing metadata stays with the original template.</p>
-    <form method="dialog"><button value="cancel">Keep editing</button><button value="confirm">Create new draft</button></form>
+    <p data-i18n="Version.Explanation">The existing template will be published and your changes saved as a new draft. Existing metadata stays with the original template.</p>
+    <form method="dialog"><button value="cancel" data-i18n="Version.KeepEditing">Keep editing</button><button value="confirm" data-i18n="Version.CreateDraft">Create new draft</button></form>
   </dialog>
   <script src="scripts/keycloak/keycloak.min.js"></script>
   <script src="scripts/handlers/KeycloakUserHandler.js"></script>

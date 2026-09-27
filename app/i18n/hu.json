@@ -1,0 +1,60 @@
+{
+  "Page": {
+    "Title": "CEDAR sablontervező",
+    "Loading": "A tervező betöltése…"
+  },
+  "Header": {
+    "Workspace": "Munkaterület",
+    "Save": "Mentés",
+    "Title": {
+      "template": "Sablontervező",
+      "element": "Elemtervező",
+      "field": "Mezőtervező"
+    }
+  },
+  "State": {
+    "Saving": "Mentés…",
+    "ReadOnly": "Csak olvasható",
+    "UnsavedChanges": "Nem mentett módosítások",
+    "NotSavedYet": "Még nincs mentve",
+    "NoUnsavedChanges": "Nincsenek nem mentett módosítások"
+  },
+  "Message": {
+    "ChangesKept": "A módosításai megmaradtak.",
+    "ReadOnly": "Ez az artefaktum csak olvasható. A szerkesztéshez hozzon létre egy vázlatot, vagy módosítsa a jogosultságokat a Munkaterületen.",
+    "ConfirmDiscard": "Elveti a nem mentett módosításait, és visszatér a Munkaterületre?"
+  },
+  "Version": {
+    "Title": "Létrehoz egy új sablonverziót?",
+    "Explanation": "A meglévő sablon közzétételre kerül, a módosításai pedig új vázlatként lesznek mentve. A meglévő metaadatok az eredeti sablonhoz tartoznak továbbra is.",
+    "KeepEditing": "Szerkesztés folytatása",
+    "CreateDraft": "Új vázlat létrehozása",
+    "Instances": "{{count}} metaadatpéldány használja ezt a sablont. Ezek a módosítások új verziót igényelnek.",
+    "InstancesOfVersion": "{{count}} metaadatpéldány használja ezt a sablont (verzió: {{version}}). Ezek a módosítások új verziót igényelnek.",
+    "ExistingInstances": "Meglévő metaadatpéldányok használják ezt a sablont. Ezek a módosítások új verziót igényelnek.",
+    "ExistingInstancesOfVersion": "Meglévő metaadatpéldányok használják ezt a sablont (verzió: {{version}}). Ezek a módosítások új verziót igényelnek."
+  },
+  "Error": {
+    "UnknownRoute": "Ismeretlen tervezőútvonal. Nyisson meg egy sablont, elemet vagy mezőt a Munkaterületről.",
+    "InvalidWorkspaceUrl": "Érvénytelen Munkaterület-URL a frontend konfigurációjában.",
+    "Conflict": "Ez az artefaktum megváltozott, mióta megnyitotta. A szerkesztései megmaradtak; mentés előtt nyissa meg újra a legfrissebb verziót.",
+    "SessionExpired": "A munkamenete lejárt. Mentés előtt jelentkezzen be újra.",
+    "Forbidden": "Nincs jogosultsága az artefaktum mentéséhez.",
+    "RequestFailed": "A kérés sikertelen ({{status}}). {{detail}}",
+    "EditsKept": "A szerkesztései megmaradtak.",
+    "InvalidSearchCursor": "Érvénytelen tárhelykeresési kurzor.",
+    "ChooseReusable": "Válasszon egy újrafelhasználható mezőt vagy elemet.",
+    "NameRequired": {
+      "template": "Mentés előtt adja meg a sablon nevét.",
+      "element": "Mentés előtt adja meg az elem nevét.",
+      "field": "Mentés előtt adja meg a mező nevét."
+    },
+    "NoFolder": "Nem áll rendelkezésre célmappa. A létrehozást egy Munkaterület-mappából indítsa.",
+    "NoValidator": "A kiszolgáló nem adott meg verzióellenőrzőt. Mentés előtt nyissa meg újra az artefaktumot.",
+    "ComponentLoad": "A(z) {{name}} nem tölthető be. Építse újra és telepítse a helyi komponenseket.",
+    "ConfigurationLoad": "A frontend konfigurációja nem tölthető be.",
+    "SignIn": "A bejelentkezés nem inicializálható. Töltse újra az oldalt, és próbálja újra.",
+    "MissingFieldDesigner": "Ez a Designer-csomag nem tartalmazza a CEFD-t. Telepítsen egy aktuális CED-csomagot, és töltse újra az oldalt.",
+    "OutdatedBundle": "A helyi CED-csomag elavult. Építse újra a CED-et, és indítsa újra a Designert."
+  }
+}
