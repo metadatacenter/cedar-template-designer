@@ -1,0 +1,16 @@
+{
+  "name": "cedar-designer-host-browser",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Rendered contracts for the Template Designer host",
+  "engines": {
+    "node": "^24.15.0"
+  },
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
+  }
+}

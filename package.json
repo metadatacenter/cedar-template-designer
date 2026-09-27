@@ -9,7 +9,8 @@
   "scripts": {
     "start": "gulp",
     "prepare:components": "node scripts/stage-components.mjs && node scripts/stage-design.mjs",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "test:browser": "npm --prefix browser test"
   },
   "allowScripts": {
     "fsevents@2.3.3": true
