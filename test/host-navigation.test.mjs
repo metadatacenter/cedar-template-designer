@@ -6,7 +6,7 @@ import * as i18n from '../app/scripts/i18n.mjs';
 
 // Exercise the real DOM wiring and navigation order with controlled I/O. In particular,
 // location.assign fires beforeunload synchronously, before save's finally block runs.
-async function host(isDirty = true, languages = ['en-US']) {
+async function host(isDirty = true, languages = ['en-US'], existing = false) {
   const events = new Map(), nodes = new Map(), navigations = [];
   let resolveSave, rejectSave;
   const saved = new Promise((resolve, reject) => { resolveSave = resolve; rejectSave = reject; });
@@ -28,7 +28,7 @@ async function host(isDirty = true, languages = ['en-US']) {
     return event.prevented;
   };
   const location = {
-    pathname: '/templates/create', search: '',
+    pathname: existing ? '/templates/edit/template-id' : '/templates/create', search: '',
     assign: url => navigations.push({ url, blocked: unload() }),
   };
   const window = {
@@ -59,12 +59,13 @@ async function host(isDirty = true, languages = ['en-US']) {
   );
   await run(window, document, location, fetch, { whenDefined: async () => {}, get: () => true },
     { randomUUID: () => 'session' }, { languages }, { ...core,
+      canEdit: () => true,
       createBackend: () => async () => ({ data: { homeFolderId: 'home' } }),
       saveArtifact: () => saved,
     }, i18n);
   assert.equal(node('save').disabled, false);
   // The e2e smokes match these English texts exactly.
-  if (i18n.language === 'en') assert.equal(node('state').textContent, isDirty ? 'Modified' : 'Saved');
+  if (i18n.language === 'en') assert.equal(node('state').textContent, isDirty ? 'Modified' : existing ? 'Saved' : 'Not saved');
   return { change: () => events.get('designer:dirtyChange')(), designer, document, unload, navigations, resolveSave, rejectSave, save: () => events.get('save:click')(), node };
 }
 
@@ -76,6 +77,8 @@ for (const dirty of [true, false]) {
     assert.equal(h.unload(), true, 'leaving during an unfinished save must still warn');
     h.resolveSave({ data: { '@id': 'saved-template' } });
     await saving;
+    assert.equal(h.node('state').textContent, 'Saved');
+    assert.equal(h.node('state').dataset.dirty, 'false');
     assert.deepEqual(h.navigations, [{ url: 'https://workspace.example/dashboard', blocked: false }]);
   });
 }
@@ -101,23 +104,23 @@ test('the host detects its language, labels the page with it and passes it to CE
   const hungarian = await host(false, ['hu-HU', 'en-US']);
   assert.equal(hungarian.designer.language, 'hu');
   assert.equal(hungarian.document.documentElement.lang, 'hu');
-  assert.equal(hungarian.node('state').textContent, 'Mentve');
+  assert.equal(hungarian.node('state').textContent, 'Nincs mentve');
 });
 
 test('save status follows edits, reverts and an unsuccessful save', async () => {
   const h = await host(false);
   const state = h.node('state');
-  assert.equal(state.textContent, 'Saved');
+  assert.equal(state.textContent, 'Not saved');
   assert.equal(state.dataset.saveState, 'true');
-  assert.equal(state.dataset.dirty, 'false');
+  assert.equal(state.dataset.dirty, 'true');
   h.designer.isDirty = true;
   h.change();
   assert.equal(state.textContent, 'Modified');
   assert.equal(state.dataset.dirty, 'true');
   h.designer.isDirty = false;
   h.change();
-  assert.equal(state.textContent, 'Saved');
-  assert.equal(state.dataset.dirty, 'false');
+  assert.equal(state.textContent, 'Not saved');
+  assert.equal(state.dataset.dirty, 'true');
   h.designer.isDirty = true;
   h.change();
   const saving = h.save();
@@ -130,4 +133,16 @@ test('save status follows edits, reverts and an unsuccessful save', async () => 
   assert.equal(state.dataset.saveState, 'true');
   assert.equal(state.dataset.dirty, 'true');
   assert.equal(h.node('save').disabled, false);
+});
+
+test('an existing unchanged artifact is saved, and returning to its original content restores that state', async () => {
+  const h = await host(false, ['en-US'], true);
+  assert.equal(h.node('state').textContent, 'Saved');
+  assert.equal(h.node('state').dataset.dirty, 'false');
+  h.designer.isDirty = true;
+  h.change();
+  assert.equal(h.node('state').textContent, 'Modified');
+  h.designer.isDirty = false;
+  h.change();
+  assert.equal(h.node('state').textContent, 'Saved');
 });

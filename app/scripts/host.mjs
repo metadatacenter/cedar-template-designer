@@ -7,14 +7,14 @@ const { t, detectLanguage, setLanguage, localizeDocument } = await import(`./i18
 const language = setLanguage(detectLanguage(navigator.languages));
 localizeDocument(document);
 const ui = Object.fromEntries(['back', 'save', 'title', 'state', 'message', 'editor', 'version-dialog', 'version-message'].map(id => [id, document.getElementById(id)]));
-let designer, writable = false, saving = false, leaving = false, returnUrl, route, etag, folderId, request, config;
+let designer, writable = false, saving = false, leaving = false, returnUrl, route, persisted = false, etag, folderId, request, config;
 function message(text, error = false) { ui.message.textContent = text; ui.message.dataset.error = String(error); }
 function dirty() { return !leaving && Boolean(designer?.isDirty); }
 function update() {
   ui.save.disabled = !writable || saving || !designer?.canSave;
   ui.state.dataset.saveState = String(!saving && writable);
-  ui.state.dataset.dirty = String(!saving && writable && dirty());
-  ui.state.textContent = t(saving ? 'State.Saving' : !writable ? 'State.ReadOnly' : dirty() ? 'State.Modified' : 'State.Saved');
+  ui.state.dataset.dirty = String(!saving && writable && (dirty() || !persisted));
+  ui.state.textContent = t(saving ? 'State.Saving' : !writable ? 'State.ReadOnly' : dirty() ? 'State.Modified' : persisted ? 'State.Saved' : 'State.NotSaved');
   if (designer) designer.inert = !writable || saving;
 }
 window.addEventListener('beforeunload', event => {
@@ -44,6 +44,7 @@ ui.save.addEventListener('click', async () => {
     const result = await saveArtifact({ request, base: config.resourceRestAPI, route,
       artifact: designer.currentArtifact, etag, folderId, confirmVersion });
     if (!result) { message(t('Message.ChangesKept')); return; }
+    persisted = true;
     leaving = true;
     location.assign(returnUrl);
   } catch (error) {
@@ -97,6 +98,7 @@ try {
       const url = `${config.resourceRestAPI}/${route.collection}/${encodeURIComponent(route.id)}`;
       const [loaded, report] = await Promise.all([request(url), request(`${url}/report`)]);
       designer.loadArtifact(loaded.data);
+      persisted = true;
       etag = loaded.etag;
       writable = canEdit(report.data, loaded.data);
     } else {
