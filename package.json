@@ -18,13 +18,13 @@
   "author": "Metadatacenter.org",
   "license": "BSD-2-Clause",
   "devDependencies": {
-    "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20260930.c3c74a94",
+    "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20260930.14afaeb9",
     "gulp": "^5.0.1",
     "gulp-connect": "5.7.0"
   },
   "dependencies": {
-    "cedar-embeddable-designer": "npm:@org.metadatacenter/cedar-embeddable-designer@0.1.0-dev.20260927.g54bc44980f0d.t0427",
+    "cedar-embeddable-designer": "npm:@org.metadatacenter/cedar-embeddable-designer@0.1.0-dev.20260930.c80b0324",
     "cedar-embeddable-editor": "2.0.18",
-    "cedar-embeddable-term-picker": "npm:@org.metadatacenter/cedar-embeddable-term-picker@0.1.0-dev.20260927.gfdc70eb004af.t0427"
+    "cedar-embeddable-term-picker": "npm:@org.metadatacenter/cedar-embeddable-term-picker@0.1.0-dev.20260930.351019a8"
   }
 }
