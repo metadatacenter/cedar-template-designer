@@ -15,9 +15,8 @@
   "State": {
     "Saving": "Saving…",
     "ReadOnly": "Read only",
-    "UnsavedChanges": "Unsaved changes",
-    "NotSavedYet": "Not saved yet",
-    "NoUnsavedChanges": "No unsaved changes"
+    "Modified": "Modified",
+    "Saved": "Saved"
   },
   "Message": {
     "ChangesKept": "Your changes are still here.",

@@ -15,9 +15,8 @@
   "State": {
     "Saving": "Mentés…",
     "ReadOnly": "Csak olvasható",
-    "UnsavedChanges": "Nem mentett módosítások",
-    "NotSavedYet": "Még nincs mentve",
-    "NoUnsavedChanges": "Nincsenek nem mentett módosítások"
+    "Modified": "Módosítva",
+    "Saved": "Mentve"
   },
   "Message": {
     "ChangesKept": "A módosításai megmaradtak.",

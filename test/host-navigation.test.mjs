@@ -12,7 +12,7 @@ async function host(isDirty = true, languages = ['en-US']) {
   const saved = new Promise((resolve, reject) => { resolveSave = resolve; rejectSave = reject; });
   const designer = {
     isDirty, canSave: true, currentArtifact: {}, validate: () => ({ canSave: true }),
-    newArtifact() {}, addEventListener() {},
+    newArtifact() {}, addEventListener(event, callback) { events.set('designer:' + event, callback); },
     loadArtifact() {},
   };
   const node = id => {
@@ -64,8 +64,8 @@ async function host(isDirty = true, languages = ['en-US']) {
     }, i18n);
   assert.equal(node('save').disabled, false);
   // The e2e smokes match these English texts exactly.
-  if (i18n.language === 'en') assert.equal(node('state').textContent, isDirty ? 'Unsaved changes' : 'Not saved yet');
-  return { designer, document, unload, navigations, resolveSave, rejectSave, save: () => events.get('save:click')(), node };
+  if (i18n.language === 'en') assert.equal(node('state').textContent, isDirty ? 'Modified' : 'Saved');
+  return { change: () => events.get('designer:dirtyChange')(), designer, document, unload, navigations, resolveSave, rejectSave, save: () => events.get('save:click')(), node };
 }
 
 for (const dirty of [true, false]) {
@@ -101,5 +101,33 @@ test('the host detects its language, labels the page with it and passes it to CE
   const hungarian = await host(false, ['hu-HU', 'en-US']);
   assert.equal(hungarian.designer.language, 'hu');
   assert.equal(hungarian.document.documentElement.lang, 'hu');
-  assert.equal(hungarian.node('state').textContent, 'Még nincs mentve');
+  assert.equal(hungarian.node('state').textContent, 'Mentve');
+});
+
+test('save status follows edits, reverts and an unsuccessful save', async () => {
+  const h = await host(false);
+  const state = h.node('state');
+  assert.equal(state.textContent, 'Saved');
+  assert.equal(state.dataset.saveState, 'true');
+  assert.equal(state.dataset.dirty, 'false');
+  h.designer.isDirty = true;
+  h.change();
+  assert.equal(state.textContent, 'Modified');
+  assert.equal(state.dataset.dirty, 'true');
+  h.designer.isDirty = false;
+  h.change();
+  assert.equal(state.textContent, 'Saved');
+  assert.equal(state.dataset.dirty, 'false');
+  h.designer.isDirty = true;
+  h.change();
+  const saving = h.save();
+  assert.equal(state.textContent, 'Saving…');
+  assert.equal(state.dataset.saveState, 'false');
+  assert.equal(h.node('save').disabled, true);
+  h.rejectSave(new Error('Save failed'));
+  await saving;
+  assert.equal(state.textContent, 'Modified');
+  assert.equal(state.dataset.saveState, 'true');
+  assert.equal(state.dataset.dirty, 'true');
+  assert.equal(h.node('save').disabled, false);
 });

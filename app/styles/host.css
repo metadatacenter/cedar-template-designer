@@ -13,11 +13,16 @@ header { display: flex; align-items: center; gap: 1rem; padding: .7rem 1rem; bac
   font-weight: var(--cedar-font-weight-regular);
   color: var(--cedar-text-muted);
 }
-#state[data-dirty=true]::before {
+#state[data-save-state=true]::before {
   content: '';
+  box-sizing: border-box;
   flex: 0 0 var(--cedar-space-2);
   height: var(--cedar-space-2);
   border-radius: 50%;
+  border: 2px solid var(--cedar-status-unsaved-dot);
+  background: transparent;
+}
+#state[data-save-state=true][data-dirty=true]::before {
   background: var(--cedar-status-unsaved-dot);
 }
 button { font: inherit; padding: .5rem .9rem; border: 1px solid var(--cedar-control-border-default); border-radius: 5px; cursor: pointer; background: white; color: var(--cedar-color-primary); }

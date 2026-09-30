@@ -81,3 +81,34 @@ test('Workspace return matches the shared borderless return control', async ({pa
   await expect(back).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
   await expect(back).toBeEnabled();
 });
+
+test('save indicator is hollow when saved and filled when modified', async ({page}) => {
+  await host(page);
+  const state = page.locator('#state');
+  const appearance = () => state.evaluate(node => {
+    const dot = getComputedStyle(node, '::before');
+    return {content: dot.content, border: dot.borderTopColor, fill: dot.backgroundColor,
+      width: dot.borderTopWidth};
+  });
+  await state.evaluate(node => {
+    node.dataset.saveState = 'true';
+    node.dataset.dirty = 'false';
+    node.textContent = 'Saved';
+  });
+  const saved = await appearance();
+  expect(saved.content).toBe('""');
+  expect(saved.width).toBe('2px');
+  expect(saved.fill).toBe('rgba(0, 0, 0, 0)');
+  await state.evaluate(node => {
+    node.dataset.dirty = 'true';
+    node.textContent = 'Modified';
+  });
+  const modified = await appearance();
+  expect(modified.fill).toBe(saved.border);
+  expect(modified.fill).not.toBe(saved.fill);
+  await state.evaluate(node => {
+    node.dataset.saveState = 'false';
+    node.textContent = 'Saving…';
+  });
+  expect((await appearance()).content).toBe('none');
+});

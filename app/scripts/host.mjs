@@ -12,9 +12,9 @@ function message(text, error = false) { ui.message.textContent = text; ui.messag
 function dirty() { return !leaving && Boolean(designer?.isDirty); }
 function update() {
   ui.save.disabled = !writable || saving || !designer?.canSave;
+  ui.state.dataset.saveState = String(!saving && writable);
   ui.state.dataset.dirty = String(!saving && writable && dirty());
-  ui.state.textContent = t(saving ? 'State.Saving' : !writable ? 'State.ReadOnly' : dirty() ? 'State.UnsavedChanges' :
-    !route.id ? 'State.NotSavedYet' : 'State.NoUnsavedChanges');
+  ui.state.textContent = t(saving ? 'State.Saving' : !writable ? 'State.ReadOnly' : dirty() ? 'State.Modified' : 'State.Saved');
   if (designer) designer.inert = !writable || saving;
 }
 window.addEventListener('beforeunload', event => {
