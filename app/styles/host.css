@@ -31,7 +31,14 @@ dialog { max-width: 34rem; border: 1px solid var(--cedar-overlay-border); border
 dialog::backdrop { background: var(--cedar-dialog-backdrop); }
 dialog form { display: flex; justify-content: flex-end; gap: var(--cedar-dialog-action-gap); }
 
-#back { display: inline-flex; align-items: center; gap: .5rem; }
+#back {
+  display: inline-flex; align-items: center; gap: var(--cedar-space-2);
+  min-height: var(--cedar-control-height-default);
+  padding: var(--cedar-space-2) var(--cedar-space-3);
+  border: 0; border-radius: var(--cedar-control-radius-default);
+  background: transparent; font-size: var(--cedar-font-size);
+  font-weight: var(--cedar-font-weight-regular);
+}
 #back-icon, #back-icon svg { display: block; width: var(--cedar-icon-size-default); height: var(--cedar-icon-size-default); }
 
 /* Manual field resizing is forbidden; automatic content sizing remains available. */

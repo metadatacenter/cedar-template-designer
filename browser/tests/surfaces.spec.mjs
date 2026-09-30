@@ -73,3 +73,11 @@ for (const { surface, state, width, title } of surfaceCases(
     await scenarios[surface.scenario](page);
     await checkSurface(page, surface, state, expect, testInfo);
   });
+
+test('Workspace return matches the shared borderless return control', async ({page}) => {
+  await host(page);
+  const back = page.getByRole('button', {name: 'Workspace', exact: true});
+  await expect(back).toHaveCSS('border-top-width', '0px');
+  await expect(back).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(back).toBeEnabled();
+});
