@@ -1,9 +1,9 @@
 @import '../components/motion.css';
 @import '../components/custom-properties.css';
 @import '../components/icon-contract.css';
-:root { font-family: var(--cedar-font-family); color: var(--cedar-text-primary); background: var(--cedar-surface-canvas); }
+:root { font-family: var(--cedar-font-family); color: var(--cedar-text-primary); background: var(--cedar-surface-subtle); }
 body { margin: 0; }
-header { display: flex; align-items: center; gap: 1rem; padding: .7rem 1rem; background: var(--cedar-surface-raised); border-bottom: 1px solid var(--cedar-border-rule); }
+header { display: flex; align-items: center; gap: var(--cedar-space-4); padding: var(--cedar-space-3) var(--cedar-space-4); background: var(--cedar-surface-raised); border-bottom: 1px solid var(--cedar-border-rule); }
 #title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #state {
   margin-left: auto;
@@ -26,22 +26,22 @@ header { display: flex; align-items: center; gap: 1rem; padding: .7rem 1rem; bac
 #state[data-save-state=true][data-dirty=true]::before {
   background: var(--cedar-status-unsaved-dot);
 }
-button { font: inherit; padding: .5rem .9rem; border: 1px solid var(--cedar-control-border-default); border-radius: 5px; cursor: pointer; background: white; color: var(--cedar-color-primary); }
-#save, button[value=confirm] { background: var(--cedar-action-primary-surface); color: white; border-color: var(--cedar-action-primary-surface); }
+button { font: inherit; padding: var(--cedar-space-2) var(--cedar-space-3); border: 1px solid var(--cedar-control-border-default); border-radius: var(--cedar-radius); cursor: pointer; background: var(--cedar-surface-raised); color: var(--cedar-color-primary); }
+#save, button[value=confirm] { background: var(--cedar-color-primary); color: var(--cedar-color-on-primary); border-color: var(--cedar-color-primary); }
 button:disabled { opacity: var(--cedar-control-disabled-opacity); cursor: default; }
-#message { padding: .6rem 1rem; margin: 0; background: var(--cedar-status-info-surface); }
+#message { padding: var(--cedar-space-2) var(--cedar-space-4); margin: 0; background: var(--cedar-surface-selected); }
 #message:empty { display: none; }
 #message[data-error=true] { background: var(--cedar-status-error-surface); color: var(--cedar-status-error-text); }
 cedar-embeddable-designer { display: block; height: calc(100dvh - 100px); }
-dialog { max-width: 34rem; border: 1px solid var(--cedar-overlay-border); border-radius: var(--cedar-dialog-radius); padding: var(--cedar-dialog-padding); background: var(--cedar-overlay-surface); box-shadow: var(--cedar-dialog-shadow); }
+dialog { max-width: 34rem; border: 1px solid var(--cedar-border-rule); border-radius: var(--cedar-radius); padding: var(--cedar-space-6); background: var(--cedar-surface-raised); box-shadow: var(--cedar-shadow-dialog); }
 dialog::backdrop { background: var(--cedar-dialog-backdrop); }
-dialog form { display: flex; justify-content: flex-end; gap: var(--cedar-dialog-action-gap); }
+dialog form { display: flex; justify-content: flex-end; gap: var(--cedar-space-3); }
 
 #back {
   display: inline-flex; align-items: center; gap: var(--cedar-space-2);
   min-height: var(--cedar-control-height-default);
   padding: var(--cedar-space-2) var(--cedar-space-3);
-  border: 0; border-radius: var(--cedar-control-radius-default);
+  border: 0; border-radius: var(--cedar-radius);
   background: transparent; font-size: var(--cedar-font-size);
   font-weight: var(--cedar-font-weight-regular);
 }
