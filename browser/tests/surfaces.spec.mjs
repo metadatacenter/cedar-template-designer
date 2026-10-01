@@ -49,6 +49,7 @@ async function host(page) {
   await page.goto("https://surface.test/");
 }
 const scenarios = {
+  "host-page": async (page) => host(page),
   version: async (page) => {
     await host(page);
     await page
