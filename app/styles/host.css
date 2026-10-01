@@ -2,7 +2,7 @@
 @import '../components/custom-properties.css';
 @import '../components/icon-contract.css';
 :root { font-family: var(--cedar-font-family); color: var(--cedar-text-primary); background: var(--cedar-surface-subtle); }
-body { margin: 0; }
+body { margin: 0; font-size: var(--cedar-font-size); line-height: var(--cedar-control-line-height-default); }
 header { display: flex; align-items: center; gap: var(--cedar-space-4); padding: var(--cedar-space-3) var(--cedar-space-4); background: var(--cedar-surface-raised); border-bottom: 1px solid var(--cedar-border-rule); }
 #title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #state {
@@ -33,8 +33,9 @@ button:disabled { opacity: var(--cedar-control-disabled-opacity); cursor: defaul
 #message:empty { display: none; }
 #message[data-error=true] { background: var(--cedar-status-error-surface); color: var(--cedar-status-error-text); }
 cedar-embeddable-designer { display: block; height: calc(100dvh - 100px); }
-dialog { max-width: 34rem; border: 1px solid var(--cedar-border-rule); border-radius: var(--cedar-radius); padding: var(--cedar-space-6); background: var(--cedar-surface-raised); box-shadow: var(--cedar-shadow-dialog); }
+dialog { max-width: 34rem; color: var(--cedar-text-primary); font: inherit; border: 1px solid var(--cedar-border-rule); border-radius: var(--cedar-radius); padding: var(--cedar-space-6); background: var(--cedar-surface-raised); box-shadow: var(--cedar-shadow-dialog); }
 dialog::backdrop { background: var(--cedar-dialog-backdrop); }
+dialog h2 { margin: 0 0 var(--cedar-space-4); color: var(--cedar-text-title); font-size: var(--cedar-font-size-artifact-title); font-weight: var(--cedar-font-weight-medium); line-height: var(--cedar-line-height-heading); }
 dialog form { display: flex; justify-content: flex-end; gap: var(--cedar-space-3); }
 
 #back {
