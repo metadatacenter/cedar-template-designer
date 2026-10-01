@@ -1,5 +1,6 @@
 @import '../components/motion.css';
 @import '../components/custom-properties.css';
+@import '../components/icon-contract.css';
 :root { font-family: var(--cedar-font-family); color: var(--cedar-text-primary); background: var(--cedar-surface-canvas); }
 body { margin: 0; }
 header { display: flex; align-items: center; gap: 1rem; padding: .7rem 1rem; background: var(--cedar-surface-raised); border-bottom: 1px solid var(--cedar-border-rule); }
