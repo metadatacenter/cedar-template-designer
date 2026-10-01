@@ -6,7 +6,8 @@ import * as i18n from '../app/scripts/i18n.mjs';
 
 // Exercise the real DOM wiring and navigation order with controlled I/O. In particular,
 // location.assign fires beforeunload synchronously, before save's finally block runs.
-async function host(isDirty = true, languages = ['en-US'], existing = false) {
+// With an impact, a save asks the version dialog first, as a template change that needs a new version does.
+async function host(isDirty = true, languages = ['en-US'], existing = false, impact = null) {
   const events = new Map(), nodes = new Map(), navigations = [];
   let resolveSave, rejectSave;
   const saved = new Promise((resolve, reject) => { resolveSave = resolve; rejectSave = reject; });
@@ -18,7 +19,7 @@ async function host(isDirty = true, languages = ['en-US'], existing = false) {
   const node = id => {
     if (!nodes.has(id)) nodes.set(id, {
       dataset: {}, addEventListener: (event, callback) => events.set(`${id}:${event}`, callback),
-      append() {}, replaceChildren() {},
+      append() {}, replaceChildren() {}, showModal() { this.open = true; },
     });
     return nodes.get(id);
   };
@@ -61,12 +62,13 @@ async function host(isDirty = true, languages = ['en-US'], existing = false) {
     { randomUUID: () => 'session' }, { languages }, { ...core,
       canEdit: () => true,
       createBackend: () => async () => ({ data: { homeFolderId: 'home' } }),
-      saveArtifact: () => saved,
+      saveArtifact: options => impact ? options.confirmVersion(impact).then(confirmed => confirmed ? saved : null) : saved,
     }, i18n);
   assert.equal(node('save').disabled, false);
   // The e2e smokes match these English texts exactly.
   if (i18n.language === 'en') assert.equal(node('state').textContent, isDirty ? 'Modified' : existing ? 'Saved' : 'Not saved');
-  return { change: () => events.get('designer:dirtyChange')(), designer, document, unload, navigations, resolveSave, rejectSave, save: () => events.get('save:click')(), node };
+  const closeVersion = choice => { node('version-dialog').returnValue = choice; events.get('version-dialog:close')(); };
+  return { change: () => events.get('designer:dirtyChange')(), closeVersion, designer, document, unload, navigations, resolveSave, rejectSave, save: () => events.get('save:click')(), node };
 }
 
 for (const dirty of [true, false]) {
@@ -145,4 +147,37 @@ test('an existing unchanged artifact is saved, and returning to its original con
   h.designer.isDirty = false;
   h.change();
   assert.equal(h.node('state').textContent, 'Saved');
+});
+
+test('the version dialog names the draft version the existing template is published as', async () => {
+  const h = await host(true, ['en-US'], true, { numberOfInstances: 9, oldVersion: '0.0.1' });
+  const saving = h.save();
+  assert.equal(h.node('version-dialog').open, true);
+  assert.equal(h.node('version-message').textContent,
+    '9 metadata instances use this template (version 0.0.1 draft). These changes require a new version.');
+  assert.equal(h.node('version-explanation').textContent,
+    'The existing template will be published as version 0.0.1 and your changes saved as a new draft. Existing metadata stays with the original template.');
+  h.closeVersion('cancel');
+  await saving;
+});
+
+test('discarding from the version dialog returns to Workspace without a further prompt or write', async () => {
+  const h = await host(true, ['en-US'], true, { numberOfInstances: 9, oldVersion: '0.0.1' });
+  const saving = h.save();
+  h.closeVersion('discard');
+  await saving;
+  assert.deepEqual(h.navigations, [{ url: 'https://workspace.example/dashboard', blocked: false }]);
+  assert.notEqual(h.node('message').textContent, 'Your changes are still here.');
+});
+
+test('keeping editing from the version dialog stays in the designer with the changes', async () => {
+  const h = await host(true, ['en-US'], true, { numberOfInstances: 9 });
+  const saving = h.save();
+  assert.equal(h.node('version-explanation').textContent,
+    'The existing template will be published and your changes saved as a new draft. Existing metadata stays with the original template.');
+  h.closeVersion('cancel');
+  await saving;
+  assert.deepEqual(h.navigations, []);
+  assert.equal(h.node('message').textContent, 'Your changes are still here.');
+  assert.equal(h.unload(), true);
 });

@@ -27,12 +27,14 @@
   "Version": {
     "Title": "Létrehoz egy új sablonverziót?",
     "Explanation": "A meglévő sablon közzétételre kerül, a módosításai pedig új vázlatként lesznek mentve. A meglévő metaadatok az eredeti sablonhoz tartoznak továbbra is.",
+    "ExplanationOfVersion": "A meglévő sablon {{version}} verzióként kerül közzétételre, a módosításai pedig új vázlatként lesznek mentve. A meglévő metaadatok az eredeti sablonhoz tartoznak továbbra is.",
     "KeepEditing": "Szerkesztés folytatása",
     "CreateDraft": "Új vázlat létrehozása",
+    "Discard": "Módosítások elvetése",
     "Instances": "{{count}} metaadatpéldány használja ezt a sablont. Ezek a módosítások új verziót igényelnek.",
-    "InstancesOfVersion": "{{count}} metaadatpéldány használja ezt a sablont (verzió: {{version}}). Ezek a módosítások új verziót igényelnek.",
+    "InstancesOfVersion": "{{count}} metaadatpéldány használja ezt a sablont (verzió: {{version}}, vázlat). Ezek a módosítások új verziót igényelnek.",
     "ExistingInstances": "Meglévő metaadatpéldányok használják ezt a sablont. Ezek a módosítások új verziót igényelnek.",
-    "ExistingInstancesOfVersion": "Meglévő metaadatpéldányok használják ezt a sablont (verzió: {{version}}). Ezek a módosítások új verziót igényelnek."
+    "ExistingInstancesOfVersion": "Meglévő metaadatpéldányok használják ezt a sablont (verzió: {{version}}, vázlat). Ezek a módosítások új verziót igényelnek."
   },
   "Error": {
     "UnknownRoute": "Ismeretlen tervezőútvonal. Nyisson meg egy sablont, elemet vagy mezőt a Munkaterületről.",

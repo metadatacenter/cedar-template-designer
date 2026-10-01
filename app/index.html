@@ -18,10 +18,10 @@
   <p id="message" role="status" data-i18n="Page.Loading">Loading designer…</p>
   <main id="editor"></main>
   <dialog id="version-dialog" aria-labelledby="version-title">
-    <h2 id="version-title" data-i18n="Version.Title">Create a new template version?</h2>
+    <h2 id="version-title"><span id="version-icon" aria-hidden="true"></span><span data-i18n="Version.Title">Create a new template version?</span></h2>
     <p id="version-message"></p>
-    <p data-i18n="Version.Explanation">The existing template will be published and your changes saved as a new draft. Existing metadata stays with the original template.</p>
-    <form method="dialog"><button value="cancel" data-i18n="Version.KeepEditing">Keep editing</button><button value="confirm" data-i18n="Version.CreateDraft">Create new draft</button></form>
+    <p id="version-explanation" data-i18n="Version.Explanation">The existing template will be published and your changes saved as a new draft. Existing metadata stays with the original template.</p>
+    <form method="dialog"><button value="discard" data-i18n="Version.Discard">Discard changes</button><button value="cancel" data-i18n="Version.KeepEditing">Keep editing</button><button value="confirm" data-i18n="Version.CreateDraft">Create new draft</button></form>
   </dialog>
   <script src="scripts/keycloak/keycloak.min.js"></script>
   <script src="scripts/handlers/KeycloakUserHandler.js"></script>

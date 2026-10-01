@@ -1,12 +1,14 @@
 import {iconSvg} from '../components/icons.js';
 document.getElementById('back-icon').innerHTML = iconSvg('back');
+// Workspace heads its Create Draft dialog with this icon, and this dialog also ends in a new draft.
+document.getElementById('version-icon').innerHTML = iconSvg('new-record');
 const version = encodeURIComponent(window.cedarCacheControl || 'local');
 const { routeFor, workspaceReturn, canEdit, createBackend, childSource, saveArtifact } = await import(`./host-core.mjs?v=${version}`);
 // host-core.mjs imports this same versioned URL, so both modules share one active language.
 const { t, detectLanguage, setLanguage, localizeDocument } = await import(`./i18n.mjs?v=${version}`);
 const language = setLanguage(detectLanguage(navigator.languages));
 localizeDocument(document);
-const ui = Object.fromEntries(['back', 'save', 'title', 'state', 'message', 'editor', 'version-dialog', 'version-message'].map(id => [id, document.getElementById(id)]));
+const ui = Object.fromEntries(['back', 'save', 'title', 'state', 'message', 'editor', 'version-dialog', 'version-message', 'version-explanation'].map(id => [id, document.getElementById(id)]));
 let designer, writable = false, saving = false, leaving = false, returnUrl, route, persisted = false, etag, folderId, request, config;
 function message(text, error = false) { ui.message.textContent = text; ui.message.dataset.error = String(error); }
 function dirty() { return !leaving && Boolean(designer?.isDirty); }
@@ -20,18 +22,26 @@ function update() {
 window.addEventListener('beforeunload', event => {
   if (!leaving && (dirty() || saving)) { event.preventDefault(); event.returnValue = ''; }
 });
-ui.back.addEventListener('click', () => {
-  if (!returnUrl || saving || (dirty() && !window.confirm(t('Message.ConfirmDiscard')))) return;
+function leave() {
   leaving = true;
   location.assign(returnUrl);
+}
+ui.back.addEventListener('click', () => {
+  if (!returnUrl || saving || (dirty() && !window.confirm(t('Message.ConfirmDiscard')))) return;
+  leave();
 });
 function confirmVersion(impact) {
   const key = `Version.${impact.numberOfInstances == null ? 'ExistingInstances' : 'Instances'}${impact.oldVersion ? 'OfVersion' : ''}`;
   ui['version-message'].textContent = t(key, { count: impact.numberOfInstances, version: impact.oldVersion });
+  ui['version-explanation'].textContent = t(`Version.Explanation${impact.oldVersion ? 'OfVersion' : ''}`, { version: impact.oldVersion });
   const dialog = ui['version-dialog'];
   dialog.returnValue = 'cancel';
   return new Promise(resolve => {
-    dialog.addEventListener('close', () => resolve(dialog.returnValue === 'confirm'), { once: true });
+    dialog.addEventListener('close', () => {
+      // Discarding was the choice made in the dialog, so it asks nothing further.
+      if (dialog.returnValue === 'discard' && returnUrl) leave();
+      resolve(dialog.returnValue === 'confirm');
+    }, { once: true });
     dialog.showModal();
   });
 }
@@ -43,10 +53,9 @@ ui.save.addEventListener('click', async () => {
   try {
     const result = await saveArtifact({ request, base: config.resourceRestAPI, route,
       artifact: designer.currentArtifact, etag, folderId, confirmVersion });
-    if (!result) { message(t('Message.ChangesKept')); return; }
+    if (!result) { if (!leaving) message(t('Message.ChangesKept')); return; }
     persisted = true;
-    leaving = true;
-    location.assign(returnUrl);
+    leave();
   } catch (error) {
     message(error.message, true);
   } finally { saving = false; update(); }
