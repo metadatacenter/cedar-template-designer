@@ -6,6 +6,7 @@
   "Header": {
     "Workspace": "Workspace",
     "Save": "Save",
+    "SaveBlocked": "Cannot save until errors are fixed",
     "Title": {
       "template": "Template Designer",
       "element": "Element Designer",
@@ -15,24 +16,27 @@
   "State": {
     "Saving": "Saving…",
     "ReadOnly": "Read only",
-    "UnsavedChanges": "Unsaved changes",
-    "NotSavedYet": "Not saved yet",
-    "NoUnsavedChanges": "No unsaved changes"
+    "Modified": "Modified",
+    "Unmodified": "Unmodified",
+    "Saved": "Saved"
   },
   "Message": {
-    "ChangesKept": "Your changes are still here.",
+    "ChangesKept": "Not saved. Your changes remain in the designer.",
+    "ChangesDiscarded": "Not saved. Your changes were discarded.",
     "ReadOnly": "This artifact is read only. Create a draft or change permissions in Workspace to edit it.",
     "ConfirmDiscard": "Discard your unsaved changes and return to Workspace?"
   },
   "Version": {
     "Title": "Create a new template version?",
     "Explanation": "The existing template will be published and your changes saved as a new draft. Existing metadata stays with the original template.",
+    "ExplanationOfVersion": "The existing template will be published as version {{version}} and your changes saved as a new draft. Existing metadata stays with the original template.",
     "KeepEditing": "Keep editing",
     "CreateDraft": "Create new draft",
+    "Discard": "Discard changes",
     "Instances": "{{count}} metadata instances use this template. These changes require a new version.",
-    "InstancesOfVersion": "{{count}} metadata instances use this template (version {{version}}). These changes require a new version.",
+    "InstancesOfVersion": "{{count}} metadata instances use this template (version {{version}} draft). These changes require a new version.",
     "ExistingInstances": "Existing metadata instances use this template. These changes require a new version.",
-    "ExistingInstancesOfVersion": "Existing metadata instances use this template (version {{version}}). These changes require a new version."
+    "ExistingInstancesOfVersion": "Existing metadata instances use this template (version {{version}} draft). These changes require a new version."
   },
   "Error": {
     "UnknownRoute": "Unknown designer route. Open a template, element or field from Workspace.",

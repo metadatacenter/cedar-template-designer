@@ -1,9 +1,12 @@
 @import '../components/motion.css';
 @import '../components/custom-properties.css';
-:root { font-family: var(--cedar-font-family); color: var(--cedar-text-primary); background: var(--cedar-surface-canvas); }
-body { margin: 0; }
-header { display: flex; align-items: center; gap: 1rem; padding: .7rem 1rem; background: var(--cedar-surface-raised); border-bottom: 1px solid var(--cedar-border-rule); }
-#title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@import '../components/icon-contract.css';
+:root { font-family: var(--cedar-font-family); color: var(--cedar-text-primary); background: var(--cedar-surface-subtle); }
+body { margin: 0; font-size: var(--cedar-font-size); line-height: var(--cedar-control-line-height-default); }
+strong, b { font-weight: var(--cedar-font-weight-medium); }
+header { display: flex; align-items: center; gap: var(--cedar-space-4); padding: var(--cedar-space-3) var(--cedar-space-4); background: var(--cedar-surface-raised); border-bottom: 1px solid var(--cedar-border-rule); }
+/* The designer names itself at the size a template's title is given in the form. */
+#title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--cedar-font-size-artifact-title); line-height: var(--cedar-line-height-heading); }
 #state {
   margin-left: auto;
   display: inline-flex;
@@ -13,25 +16,63 @@ header { display: flex; align-items: center; gap: 1rem; padding: .7rem 1rem; bac
   font-weight: var(--cedar-font-weight-regular);
   color: var(--cedar-text-muted);
 }
-#state[data-dirty=true]::before {
+/* A hollow dot while nothing is unsaved, whether the artifact is unmodified or saved; filled once it is modified. */
+#state[data-save-state=true]::before {
   content: '';
+  box-sizing: border-box;
   flex: 0 0 var(--cedar-space-2);
   height: var(--cedar-space-2);
   border-radius: 50%;
+  border: 2px solid var(--cedar-status-unsaved-dot);
+  background: transparent;
+}
+#state[data-save-state=true][data-dirty=true]::before {
   background: var(--cedar-status-unsaved-dot);
 }
-button { font: inherit; padding: .5rem .9rem; border: 1px solid var(--cedar-control-border-default); border-radius: 5px; cursor: pointer; background: white; color: var(--cedar-color-primary); }
-#save, button[value=confirm] { background: var(--cedar-action-primary-surface); color: white; border-color: var(--cedar-action-primary-surface); }
+button { font: inherit; padding: var(--cedar-space-2) var(--cedar-space-3); border: 1px solid var(--cedar-control-border-default); border-radius: var(--cedar-radius); cursor: pointer; background: var(--cedar-surface-raised); color: var(--cedar-color-primary); }
+#save-help { position: relative; display: inline-flex; }
+/* A disabled button receives no pointer events in some browsers, so its wrapper takes the hover. */
+#save-help[data-blocked=true] #save { pointer-events: none; }
+#save-tooltip {
+  position: absolute;
+  top: calc(100% + var(--cedar-space-1));
+  right: 0;
+  z-index: var(--cedar-layer-tooltip);
+  visibility: hidden;
+  width: max-content;
+  max-width: min(360px, calc(100vw - 16px));
+  padding: var(--cedar-space-2) var(--cedar-space-3);
+  background: var(--cedar-surface-raised);
+  border: 1px solid var(--cedar-border-rule);
+  border-radius: var(--cedar-radius);
+  box-shadow: var(--cedar-shadow-overlay);
+  font-size: var(--cedar-font-size);
+  font-weight: var(--cedar-font-weight-regular);
+  color: var(--cedar-text-primary);
+}
+#save-help[data-blocked=true]:hover #save-tooltip { visibility: visible; }
+#save, button[value=confirm] { background: var(--cedar-color-primary); color: var(--cedar-color-on-primary); border-color: var(--cedar-color-primary); }
 button:disabled { opacity: var(--cedar-control-disabled-opacity); cursor: default; }
-#message { padding: .6rem 1rem; margin: 0; background: var(--cedar-status-info-surface); }
+#message { padding: var(--cedar-space-2) var(--cedar-space-4); margin: 0; background: var(--cedar-surface-selected); }
 #message:empty { display: none; }
 #message[data-error=true] { background: var(--cedar-status-error-surface); color: var(--cedar-status-error-text); }
 cedar-embeddable-designer { display: block; height: calc(100dvh - 100px); }
-dialog { max-width: 34rem; border: 1px solid var(--cedar-overlay-border); border-radius: var(--cedar-dialog-radius); padding: var(--cedar-dialog-padding); background: var(--cedar-overlay-surface); box-shadow: var(--cedar-dialog-shadow); }
+dialog { max-width: 34rem; color: var(--cedar-text-primary); font: inherit; border: 1px solid var(--cedar-border-rule); border-radius: var(--cedar-radius); padding: var(--cedar-space-6); background: var(--cedar-surface-raised); box-shadow: var(--cedar-shadow-dialog); }
 dialog::backdrop { background: var(--cedar-dialog-backdrop); }
-dialog form { display: flex; justify-content: flex-end; gap: var(--cedar-dialog-action-gap); }
+dialog h2 { display: flex; align-items: center; gap: var(--cedar-space-2); margin: 0 0 var(--cedar-space-4); color: var(--cedar-text-title); font-size: var(--cedar-font-size-artifact-title); font-weight: var(--cedar-font-weight-medium); line-height: var(--cedar-line-height-heading); }
+#version-icon, #version-icon svg { display: block; flex: none; width: var(--cedar-icon-size-default); height: var(--cedar-icon-size-default); }
+dialog form { display: flex; justify-content: flex-end; gap: var(--cedar-space-3); }
+/* Leaving without saving stands apart from the two choices that stay in the designer. */
+dialog form button[value=discard] { margin-inline-end: auto; }
 
-#back { display: inline-flex; align-items: center; gap: .5rem; }
+#back {
+  display: inline-flex; align-items: center; gap: var(--cedar-space-2);
+  min-height: var(--cedar-control-height-default);
+  padding: var(--cedar-space-2) var(--cedar-space-3);
+  border: 0; border-radius: var(--cedar-radius);
+  background: transparent; font-size: var(--cedar-font-size);
+  font-weight: var(--cedar-font-weight-regular);
+}
 #back-icon, #back-icon svg { display: block; width: var(--cedar-icon-size-default); height: var(--cedar-icon-size-default); }
 
 /* Manual field resizing is forbidden; automatic content sizing remains available. */

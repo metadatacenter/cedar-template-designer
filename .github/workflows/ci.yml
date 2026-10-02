@@ -44,6 +44,12 @@ jobs:
       - name: Run host contract tests
         run: npm test
 
+      - name: Validate rendered host surfaces
+        run: |
+          npm --prefix browser ci
+          ./browser/node_modules/.bin/playwright install --with-deps chromium
+          npm run test:browser
+
       - name: Stage the shared icon registry
         run: node scripts/stage-design.mjs
 

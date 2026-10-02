@@ -6,6 +6,7 @@
   "Header": {
     "Workspace": "Munkaterület",
     "Save": "Mentés",
+    "SaveBlocked": "Nem menthető, amíg a hibák nincsenek kijavítva",
     "Title": {
       "template": "Sablontervező",
       "element": "Elemtervező",
@@ -15,24 +16,27 @@
   "State": {
     "Saving": "Mentés…",
     "ReadOnly": "Csak olvasható",
-    "UnsavedChanges": "Nem mentett módosítások",
-    "NotSavedYet": "Még nincs mentve",
-    "NoUnsavedChanges": "Nincsenek nem mentett módosítások"
+    "Modified": "Módosítva",
+    "Unmodified": "Változatlan",
+    "Saved": "Mentve"
   },
   "Message": {
-    "ChangesKept": "A módosításai megmaradtak.",
+    "ChangesKept": "Nincs mentve. A módosításai a tervezőben maradtak.",
+    "ChangesDiscarded": "Nincs mentve. A módosításait elvetette.",
     "ReadOnly": "Ez az artefaktum csak olvasható. A szerkesztéshez hozzon létre egy vázlatot, vagy módosítsa a jogosultságokat a Munkaterületen.",
     "ConfirmDiscard": "Elveti a nem mentett módosításait, és visszatér a Munkaterületre?"
   },
   "Version": {
     "Title": "Létrehoz egy új sablonverziót?",
     "Explanation": "A meglévő sablon közzétételre kerül, a módosításai pedig új vázlatként lesznek mentve. A meglévő metaadatok az eredeti sablonhoz tartoznak továbbra is.",
+    "ExplanationOfVersion": "A meglévő sablon {{version}} verzióként kerül közzétételre, a módosításai pedig új vázlatként lesznek mentve. A meglévő metaadatok az eredeti sablonhoz tartoznak továbbra is.",
     "KeepEditing": "Szerkesztés folytatása",
     "CreateDraft": "Új vázlat létrehozása",
+    "Discard": "Módosítások elvetése",
     "Instances": "{{count}} metaadatpéldány használja ezt a sablont. Ezek a módosítások új verziót igényelnek.",
-    "InstancesOfVersion": "{{count}} metaadatpéldány használja ezt a sablont (verzió: {{version}}). Ezek a módosítások új verziót igényelnek.",
+    "InstancesOfVersion": "{{count}} metaadatpéldány használja ezt a sablont (verzió: {{version}}, vázlat). Ezek a módosítások új verziót igényelnek.",
     "ExistingInstances": "Meglévő metaadatpéldányok használják ezt a sablont. Ezek a módosítások új verziót igényelnek.",
-    "ExistingInstancesOfVersion": "Meglévő metaadatpéldányok használják ezt a sablont (verzió: {{version}}). Ezek a módosítások új verziót igényelnek."
+    "ExistingInstancesOfVersion": "Meglévő metaadatpéldányok használják ezt a sablont (verzió: {{version}}, vázlat). Ezek a módosítások új verziót igényelnek."
   },
   "Error": {
     "UnknownRoute": "Ismeretlen tervezőútvonal. Nyisson meg egy sablont, elemet vagy mezőt a Munkaterületről.",

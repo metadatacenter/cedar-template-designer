@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "repo": "cedar-template-designer",
+  "browserHelper": "browser/tests/surface-contracts.generated.mjs",
+  "surfaces": [
+    {
+      "id": "designer.confirmations",
+      "name": "Template Designer",
+      "section": "Confirmation / Warning / Error"
+    },
+    {
+      "id": "designer.new-version",
+      "name": "Create New Template Version",
+      "parent": "designer.confirmations",
+      "section": "Confirmation / Warning / Error",
+      "contract": "dialog",
+      "selector": "#version-dialog",
+      "scenario": "version",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "app/index.html",
+          "anchor": "id=\"version-dialog\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "designer.errors",
+      "name": "Designer Errors",
+      "parent": "designer.confirmations",
+      "section": "Confirmation / Warning / Error",
+      "contract": "error-alert",
+      "selector": "#message",
+      "scenario": "error",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "app/index.html",
+          "anchor": "id=\"message\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "designer.discard",
+      "name": "Discard Unsaved Designer Changes",
+      "parent": "designer.confirmations",
+      "section": "Confirmation / Warning / Error"
+    },
+    {
+      "id": "designer.host",
+      "name": "Template Designer Host",
+      "section": "Template Designer",
+      "contract": "page",
+      "scenario": "host-page",
+      "selector": "body",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "app/index.html",
+          "anchor": "<header"
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    }
+  ]
+}
