@@ -18,7 +18,8 @@ async function host(isDirty = true, languages = ['en-US'], existing = false, imp
   };
   const node = id => {
     if (!nodes.has(id)) nodes.set(id, {
-      dataset: {}, addEventListener: (event, callback) => events.set(`${id}:${event}`, callback),
+      dataset: {}, attributes: {}, addEventListener: (event, callback) => events.set(`${id}:${event}`, callback),
+      setAttribute(name, value) { this.attributes[name] = value; }, removeAttribute(name) { delete this.attributes[name]; },
       append() {}, replaceChildren() {}, showModal() { this.open = true; },
     });
     return nodes.get(id);
@@ -135,6 +136,28 @@ test('save status follows edits, reverts and an unsuccessful save', async () => 
   assert.equal(state.dataset.saveState, 'true');
   assert.equal(state.dataset.dirty, 'true');
   assert.equal(h.node('save').disabled, false);
+});
+
+test('Save explains its refusal only while the designer lists an error', async () => {
+  const h = await host(false);
+  const help = h.node('save-help');
+  assert.equal(help.dataset.blocked, 'false');
+  // A blank name nobody has touched blocks saving, but the summary does not list it yet.
+  h.designer.canSave = false;
+  h.designer.validationReport = { canSave: false, issues: [{ setting: 'name', shown: false }] };
+  h.change();
+  assert.equal(h.node('save').disabled, true);
+  assert.equal(help.dataset.blocked, 'false');
+  assert.equal(h.node('save').attributes['aria-describedby'], undefined);
+  h.designer.validationReport = { canSave: false, issues: [{ setting: 'key', shown: true }] };
+  h.change();
+  assert.equal(help.dataset.blocked, 'true');
+  assert.equal(h.node('save').attributes['aria-describedby'], 'save-tooltip');
+  h.designer.canSave = true;
+  h.designer.validationReport = { canSave: true, issues: [] };
+  h.change();
+  assert.equal(help.dataset.blocked, 'false');
+  assert.equal(h.node('save').attributes['aria-describedby'], undefined);
 });
 
 test('an existing unchanged artifact is unmodified, and returning to its original content restores that state', async () => {

@@ -6,6 +6,7 @@
   "Header": {
     "Workspace": "Munkaterület",
     "Save": "Mentés",
+    "SaveBlocked": "Nem menthető, amíg a hibák nincsenek kijavítva",
     "Title": {
       "template": "Sablontervező",
       "element": "Elemtervező",

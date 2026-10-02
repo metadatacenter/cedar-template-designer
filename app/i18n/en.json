@@ -6,6 +6,7 @@
   "Header": {
     "Workspace": "Workspace",
     "Save": "Save",
+    "SaveBlocked": "Cannot save until errors are fixed",
     "Title": {
       "template": "Template Designer",
       "element": "Element Designer",

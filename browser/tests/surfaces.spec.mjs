@@ -83,6 +83,24 @@ test('Workspace return matches the shared borderless return control', async ({pa
   await expect(back).toBeEnabled();
 });
 
+test('a refused Save says why on hover, and only while errors are listed', async ({page}) => {
+  await host(page);
+  const help = page.locator('#save-help');
+  const tooltip = page.getByRole('tooltip');
+  await expect(page.locator('#save')).toBeDisabled();
+  await help.hover();
+  await expect(tooltip).toBeHidden();
+  await help.evaluate((node) => { node.dataset.blocked = 'true'; });
+  await page.mouse.move(0, 0);
+  await help.hover();
+  await expect(tooltip).toBeVisible();
+  await expect(tooltip).toHaveText('Cannot save until errors are fixed');
+  const box = await tooltip.boundingBox();
+  expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize().width);
+  await page.mouse.move(0, 0);
+  await expect(tooltip).toBeHidden();
+});
+
 test('save indicator is hollow until there is unsaved content, then filled', async ({page}) => {
   await host(page);
   const state = page.locator('#state');

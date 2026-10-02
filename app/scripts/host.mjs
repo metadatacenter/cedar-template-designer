@@ -8,12 +8,17 @@ const { routeFor, workspaceReturn, canEdit, createBackend, childSource, saveArti
 const { t, detectLanguage, setLanguage, localizeDocument } = await import(`./i18n.mjs?v=${version}`);
 const language = setLanguage(detectLanguage(navigator.languages));
 localizeDocument(document);
-const ui = Object.fromEntries(['back', 'save', 'title', 'state', 'message', 'editor', 'version-dialog', 'version-message', 'version-explanation'].map(id => [id, document.getElementById(id)]));
+const ui = Object.fromEntries(['back', 'save', 'save-help', 'title', 'state', 'message', 'editor', 'version-dialog', 'version-message', 'version-explanation'].map(id => [id, document.getElementById(id)]));
 let designer, writable = false, saving = false, leaving = false, returnUrl, route, saved = false, etag, folderId, request, config;
 function message(text, error = false) { ui.message.textContent = text; ui.message.dataset.error = String(error); }
 function dirty() { return !leaving && Boolean(designer?.isDirty); }
 function update() {
   ui.save.disabled = !writable || saving || !designer?.canSave;
+  // While the designer lists errors, Save says why it is refused. An error it holds back, such as a name nobody has touched, is not yet one to point at.
+  const blocked = writable && !saving && Boolean(designer?.validationReport?.issues.some(issue => issue.shown));
+  ui['save-help'].dataset.blocked = String(blocked);
+  if (blocked) ui.save.setAttribute('aria-describedby', 'save-tooltip');
+  else ui.save.removeAttribute('aria-describedby');
   ui.state.dataset.saveState = String(!saving && writable);
   ui.state.dataset.dirty = String(!saving && writable && dirty());
   // Until it is edited, an artifact is unmodified, whether read from the server or new; only a save made here is reported as saved.
