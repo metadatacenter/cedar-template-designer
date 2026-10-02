@@ -167,7 +167,7 @@ test('discarding from the version dialog returns to Workspace without a further 
   h.closeVersion('discard');
   await saving;
   assert.deepEqual(h.navigations, [{ url: 'https://workspace.example/dashboard', blocked: false }]);
-  assert.notEqual(h.node('message').textContent, 'Your changes are still here.');
+  assert.notEqual(h.node('message').textContent, 'Not saved. Your changes remain in the designer.');
 });
 
 test('keeping editing from the version dialog stays in the designer with the changes', async () => {
@@ -178,6 +178,6 @@ test('keeping editing from the version dialog stays in the designer with the cha
   h.closeVersion('cancel');
   await saving;
   assert.deepEqual(h.navigations, []);
-  assert.equal(h.node('message').textContent, 'Your changes are still here.');
+  assert.equal(h.node('message').textContent, 'Not saved. Your changes remain in the designer.');
   assert.equal(h.unload(), true);
 });

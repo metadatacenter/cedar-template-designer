@@ -20,7 +20,7 @@
     "Saved": "Saved"
   },
   "Message": {
-    "ChangesKept": "Your changes are still here.",
+    "ChangesKept": "Not saved. Your changes remain in the designer.",
     "ReadOnly": "This artifact is read only. Create a draft or change permissions in Workspace to edit it.",
     "ConfirmDiscard": "Discard your unsaved changes and return to Workspace?"
   },
