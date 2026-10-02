@@ -9,14 +9,15 @@ const { t, detectLanguage, setLanguage, localizeDocument } = await import(`./i18
 const language = setLanguage(detectLanguage(navigator.languages));
 localizeDocument(document);
 const ui = Object.fromEntries(['back', 'save', 'title', 'state', 'message', 'editor', 'version-dialog', 'version-message', 'version-explanation'].map(id => [id, document.getElementById(id)]));
-let designer, writable = false, saving = false, leaving = false, returnUrl, route, persisted = false, etag, folderId, request, config;
+let designer, writable = false, saving = false, leaving = false, returnUrl, route, persisted = false, saved = false, etag, folderId, request, config;
 function message(text, error = false) { ui.message.textContent = text; ui.message.dataset.error = String(error); }
 function dirty() { return !leaving && Boolean(designer?.isDirty); }
 function update() {
   ui.save.disabled = !writable || saving || !designer?.canSave;
   ui.state.dataset.saveState = String(!saving && writable);
   ui.state.dataset.dirty = String(!saving && writable && (dirty() || !persisted));
-  ui.state.textContent = t(saving ? 'State.Saving' : !writable ? 'State.ReadOnly' : dirty() ? 'State.Modified' : persisted ? 'State.Saved' : 'State.NotSaved');
+  // An artifact read from the server is unmodified until it is edited; only a save made here is reported as saved.
+  ui.state.textContent = t(saving ? 'State.Saving' : !writable ? 'State.ReadOnly' : dirty() ? 'State.Modified' : saved ? 'State.Saved' : persisted ? 'State.Unmodified' : 'State.NotSaved');
   if (designer) designer.inert = !writable || saving;
 }
 window.addEventListener('beforeunload', event => {
@@ -55,6 +56,7 @@ ui.save.addEventListener('click', async () => {
       artifact: designer.currentArtifact, etag, folderId, confirmVersion });
     if (!result) { if (!leaving) message(t('Message.ChangesKept')); return; }
     persisted = true;
+    saved = true;
     leave();
   } catch (error) {
     message(error.message, true);

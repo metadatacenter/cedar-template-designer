@@ -51,8 +51,8 @@ test('t() interpolates, falls back to English and then to the key', t_ => {
 
 test('English text matches the strings the e2e smokes and host tests match', () => {
   setLanguage('en');
-  assert.deepEqual(['State.Saved', 'State.Modified', 'State.ReadOnly', 'State.Saving'].map(key => t(key)),
-    ['Saved', 'Modified', 'Read only', 'Saving…']);
+  assert.deepEqual(['State.Saved', 'State.Unmodified', 'State.Modified', 'State.ReadOnly', 'State.Saving'].map(key => t(key)),
+    ['Saved', 'Unmodified', 'Modified', 'Read only', 'Saving…']);
   assert.match(new BackendError(412).message, /changed since/);
   assert.equal(new BackendError(500, null).message, 'Request failed (500). Your edits have been kept.');
   assert.equal(new BackendError(500, { message: 'Server said no.' }).message, 'Request failed (500). Server said no.');

@@ -17,6 +17,7 @@
     "ReadOnly": "Read only",
     "Modified": "Modified",
     "NotSaved": "Not saved",
+    "Unmodified": "Unmodified",
     "Saved": "Saved"
   },
   "Message": {

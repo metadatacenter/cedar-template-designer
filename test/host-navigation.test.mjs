@@ -66,7 +66,7 @@ async function host(isDirty = true, languages = ['en-US'], existing = false, imp
     }, i18n);
   assert.equal(node('save').disabled, false);
   // The e2e smokes match these English texts exactly.
-  if (i18n.language === 'en') assert.equal(node('state').textContent, isDirty ? 'Modified' : existing ? 'Saved' : 'Not saved');
+  if (i18n.language === 'en') assert.equal(node('state').textContent, isDirty ? 'Modified' : existing ? 'Unmodified' : 'Not saved');
   const closeVersion = choice => { node('version-dialog').returnValue = choice; events.get('version-dialog:close')(); };
   return { change: () => events.get('designer:dirtyChange')(), closeVersion, designer, document, unload, navigations, resolveSave, rejectSave, save: () => events.get('save:click')(), node };
 }
@@ -137,16 +137,16 @@ test('save status follows edits, reverts and an unsuccessful save', async () => 
   assert.equal(h.node('save').disabled, false);
 });
 
-test('an existing unchanged artifact is saved, and returning to its original content restores that state', async () => {
+test('an existing unchanged artifact is unmodified, and returning to its original content restores that state', async () => {
   const h = await host(false, ['en-US'], true);
-  assert.equal(h.node('state').textContent, 'Saved');
+  assert.equal(h.node('state').textContent, 'Unmodified');
   assert.equal(h.node('state').dataset.dirty, 'false');
   h.designer.isDirty = true;
   h.change();
   assert.equal(h.node('state').textContent, 'Modified');
   h.designer.isDirty = false;
   h.change();
-  assert.equal(h.node('state').textContent, 'Saved');
+  assert.equal(h.node('state').textContent, 'Unmodified');
 });
 
 test('the version dialog names the draft version the existing template is published as', async () => {

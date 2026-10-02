@@ -17,6 +17,7 @@
     "ReadOnly": "Csak olvasható",
     "Modified": "Módosítva",
     "NotSaved": "Nincs mentve",
+    "Unmodified": "Változatlan",
     "Saved": "Mentve"
   },
   "Message": {
