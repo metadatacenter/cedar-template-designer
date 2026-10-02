@@ -5,7 +5,8 @@
 body { margin: 0; font-size: var(--cedar-font-size); line-height: var(--cedar-control-line-height-default); }
 strong, b { font-weight: var(--cedar-font-weight-medium); }
 header { display: flex; align-items: center; gap: var(--cedar-space-4); padding: var(--cedar-space-3) var(--cedar-space-4); background: var(--cedar-surface-raised); border-bottom: 1px solid var(--cedar-border-rule); }
-#title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The designer names itself at the size a template's title is given in the form. */
+#title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--cedar-font-size-artifact-title); line-height: var(--cedar-line-height-heading); }
 #state {
   margin-left: auto;
   display: inline-flex;
