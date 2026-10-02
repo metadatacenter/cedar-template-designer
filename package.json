@@ -18,7 +18,7 @@
   "author": "Metadatacenter.org",
   "license": "BSD-2-Clause",
   "devDependencies": {
-    "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20261001.af8f325e",
+    "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20261002.c03c21a7",
     "gulp": "^5.0.1",
     "gulp-connect": "5.7.0"
   },
