@@ -83,7 +83,7 @@ test('Workspace return matches the shared borderless return control', async ({pa
   await expect(back).toBeEnabled();
 });
 
-test('save indicator appears only while there is unsaved content', async ({page}) => {
+test('save indicator is hollow until there is unsaved content, then filled', async ({page}) => {
   await host(page);
   const state = page.locator('#state');
   const appearance = () => state.evaluate(node => {
@@ -96,7 +96,7 @@ test('save indicator appears only while there is unsaved content', async ({page}
       node.dataset.dirty = 'false';
       node.textContent = text;
     }, text);
-    expect((await appearance()).content).toBe('none');
+    expect(await appearance()).toEqual({content: '""', fill: 'rgba(0, 0, 0, 0)'});
   }
   await state.evaluate(node => {
     node.dataset.dirty = 'true';

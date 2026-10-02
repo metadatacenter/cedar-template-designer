@@ -15,12 +15,17 @@ header { display: flex; align-items: center; gap: var(--cedar-space-4); padding:
   font-weight: var(--cedar-font-weight-regular);
   color: var(--cedar-text-muted);
 }
-/* The dot marks unsaved content and nothing else: an unmodified or saved artifact shows none. */
-#state[data-save-state=true][data-dirty=true]::before {
+/* A hollow dot while nothing is unsaved, whether the artifact is unmodified or saved; filled once it is modified. */
+#state[data-save-state=true]::before {
   content: '';
+  box-sizing: border-box;
   flex: 0 0 var(--cedar-space-2);
   height: var(--cedar-space-2);
   border-radius: 50%;
+  border: 2px solid var(--cedar-status-unsaved-dot);
+  background: transparent;
+}
+#state[data-save-state=true][data-dirty=true]::before {
   background: var(--cedar-status-unsaved-dot);
 }
 button { font: inherit; padding: var(--cedar-space-2) var(--cedar-space-3); border: 1px solid var(--cedar-control-border-default); border-radius: var(--cedar-radius); cursor: pointer; background: var(--cedar-surface-raised); color: var(--cedar-color-primary); }

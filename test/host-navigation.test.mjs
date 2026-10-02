@@ -66,7 +66,7 @@ async function host(isDirty = true, languages = ['en-US'], existing = false, imp
     }, i18n);
   assert.equal(node('save').disabled, false);
   // The e2e smokes match these English texts exactly.
-  if (i18n.language === 'en') assert.equal(node('state').textContent, isDirty ? 'Modified' : existing ? 'Unmodified' : 'Not saved');
+  if (i18n.language === 'en') assert.equal(node('state').textContent, isDirty ? 'Modified' : 'Unmodified');
   const closeVersion = choice => { node('version-dialog').returnValue = choice; events.get('version-dialog:close')(); };
   return { change: () => events.get('designer:dirtyChange')(), closeVersion, designer, document, unload, navigations, resolveSave, rejectSave, save: () => events.get('save:click')(), node };
 }
@@ -106,23 +106,23 @@ test('the host detects its language, labels the page with it and passes it to CE
   const hungarian = await host(false, ['hu-HU', 'en-US']);
   assert.equal(hungarian.designer.language, 'hu');
   assert.equal(hungarian.document.documentElement.lang, 'hu');
-  assert.equal(hungarian.node('state').textContent, 'Nincs mentve');
+  assert.equal(hungarian.node('state').textContent, 'Változatlan');
 });
 
 test('save status follows edits, reverts and an unsuccessful save', async () => {
   const h = await host(false);
   const state = h.node('state');
-  assert.equal(state.textContent, 'Not saved');
+  assert.equal(state.textContent, 'Unmodified');
   assert.equal(state.dataset.saveState, 'true');
-  assert.equal(state.dataset.dirty, 'true');
+  assert.equal(state.dataset.dirty, 'false');
   h.designer.isDirty = true;
   h.change();
   assert.equal(state.textContent, 'Modified');
   assert.equal(state.dataset.dirty, 'true');
   h.designer.isDirty = false;
   h.change();
-  assert.equal(state.textContent, 'Not saved');
-  assert.equal(state.dataset.dirty, 'true');
+  assert.equal(state.textContent, 'Unmodified');
+  assert.equal(state.dataset.dirty, 'false');
   h.designer.isDirty = true;
   h.change();
   const saving = h.save();
