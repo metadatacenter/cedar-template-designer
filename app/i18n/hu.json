@@ -22,6 +22,7 @@
   },
   "Message": {
     "ChangesKept": "Nincs mentve. A módosításai a tervezőben maradtak.",
+    "ChangesDiscarded": "Nincs mentve. A módosításait elvetette.",
     "ReadOnly": "Ez az artefaktum csak olvasható. A szerkesztéshez hozzon létre egy vázlatot, vagy módosítsa a jogosultságokat a Munkaterületen.",
     "ConfirmDiscard": "Elveti a nem mentett módosításait, és visszatér a Munkaterületre?"
   },

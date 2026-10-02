@@ -14,7 +14,9 @@ async function host(isDirty = true, languages = ['en-US'], existing = false, imp
   const designer = {
     isDirty, canSave: true, currentArtifact: {}, validate: () => ({ canSave: true }),
     newArtifact() {}, addEventListener(event, callback) { events.set('designer:' + event, callback); },
-    loadArtifact() {},
+    // Like CED, loading again takes the artifact as the baseline the designer compares edits with.
+    // The first load leaves alone the state each test starts from.
+    loads: [], loadArtifact(source) { if (this.loads.push(source) > 1) this.isDirty = false; },
   };
   const node = id => {
     if (!nodes.has(id)) nodes.set(id, {
@@ -184,13 +186,29 @@ test('the version dialog names the draft version the existing template is publis
   await saving;
 });
 
-test('discarding from the version dialog returns to Workspace without a further prompt or write', async () => {
+test('discarding from the version dialog restores the template as opened and stays in the designer', async () => {
   const h = await host(true, ['en-US'], true, { numberOfInstances: 9, oldVersion: '0.0.1' });
+  const [opened] = h.designer.loads;
+  h.designer.isDirty = true;
+  h.change();
   const saving = h.save();
   h.closeVersion('discard');
   await saving;
-  assert.deepEqual(h.navigations, [{ url: 'https://workspace.example/dashboard', blocked: false }]);
-  assert.notEqual(h.node('message').textContent, 'Not saved. Your changes remain in the designer.');
+  assert.deepEqual(h.navigations, []);
+  assert.equal(h.designer.loads.length, 2);
+  assert.deepEqual(h.designer.loads[1], opened);
+  assert.notEqual(h.designer.loads[1], opened, 'each restore must start from its own copy of the stored template');
+  assert.equal(h.node('message').textContent, 'Not saved. Your changes were discarded.');
+  assert.equal(h.node('state').textContent, 'Unmodified');
+  assert.equal(h.unload(), false);
+  // A later save that keeps its changes says so.
+  h.designer.isDirty = true;
+  h.change();
+  const again = h.save();
+  h.closeVersion('cancel');
+  await again;
+  assert.equal(h.designer.loads.length, 2);
+  assert.equal(h.node('message').textContent, 'Not saved. Your changes remain in the designer.');
 });
 
 test('keeping editing from the version dialog stays in the designer with the changes', async () => {
@@ -201,6 +219,7 @@ test('keeping editing from the version dialog stays in the designer with the cha
   h.closeVersion('cancel');
   await saving;
   assert.deepEqual(h.navigations, []);
+  assert.equal(h.designer.loads.length, 1);
   assert.equal(h.node('message').textContent, 'Not saved. Your changes remain in the designer.');
   assert.equal(h.unload(), true);
 });

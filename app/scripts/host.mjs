@@ -9,7 +9,7 @@ const { t, detectLanguage, setLanguage, localizeDocument } = await import(`./i18
 const language = setLanguage(detectLanguage(navigator.languages));
 localizeDocument(document);
 const ui = Object.fromEntries(['back', 'save', 'save-help', 'title', 'state', 'message', 'editor', 'version-dialog', 'version-message', 'version-explanation'].map(id => [id, document.getElementById(id)]));
-let designer, writable = false, saving = false, leaving = false, returnUrl, route, saved = false, etag, folderId, request, config;
+let designer, writable = false, saving = false, leaving = false, discarded = false, returnUrl, route, saved = false, etag, folderId, request, config, stored;
 function message(text, error = false) { ui.message.textContent = text; ui.message.dataset.error = String(error); }
 function dirty() { return !leaving && Boolean(designer?.isDirty); }
 function update() {
@@ -44,8 +44,9 @@ function confirmVersion(impact) {
   dialog.returnValue = 'cancel';
   return new Promise(resolve => {
     dialog.addEventListener('close', () => {
-      // Discarding was the choice made in the dialog, so it asks nothing further.
-      if (dialog.returnValue === 'discard' && returnUrl) leave();
+      // Discarding returns the designer to the template as it was opened, and stays in the designer.
+      discarded = dialog.returnValue === 'discard';
+      if (discarded) designer.loadArtifact(structuredClone(stored));
       resolve(dialog.returnValue === 'confirm');
     }, { once: true });
     dialog.showModal();
@@ -59,7 +60,7 @@ ui.save.addEventListener('click', async () => {
   try {
     const result = await saveArtifact({ request, base: config.resourceRestAPI, route,
       artifact: designer.currentArtifact, etag, folderId, confirmVersion });
-    if (!result) { if (!leaving) message(t('Message.ChangesKept')); return; }
+    if (!result) { message(t(discarded ? 'Message.ChangesDiscarded' : 'Message.ChangesKept')); return; }
     saved = true;
     leave();
   } catch (error) {
@@ -112,6 +113,7 @@ try {
     if (route.id) {
       const url = `${config.resourceRestAPI}/${route.collection}/${encodeURIComponent(route.id)}`;
       const [loaded, report] = await Promise.all([request(url), request(`${url}/report`)]);
+      stored = structuredClone(loaded.data);
       designer.loadArtifact(loaded.data);
       etag = loaded.etag;
       writable = canEdit(report.data, loaded.data);
