@@ -39,7 +39,7 @@ button:focus-visible { outline: var(--cedar-focus-ring-width) solid var(--cedar-
 button:disabled { opacity: var(--cedar-control-disabled-opacity); cursor: default; }
 #message:empty { display: none; }
 cedar-embeddable-designer { display: block; height: calc(100dvh - 100px); }
-dialog { max-width: 34rem; color: var(--cedar-text-primary); font: inherit; border: 1px solid var(--cedar-border-rule); border-radius: var(--cedar-radius); padding: var(--cedar-space-6); background: var(--cedar-surface-raised); box-shadow: var(--cedar-shadow-dialog); }
+dialog { max-width: 34rem; color: var(--cedar-text-primary); font: inherit; border: 1px solid var(--cedar-border-rule); border-radius: var(--cedar-radius); padding: var(--cedar-space-6); background: var(--cedar-surface-raised); box-shadow: var(--cedar-shadow-overlay); }
 dialog::backdrop { background: var(--cedar-dialog-backdrop); }
 dialog h2 { display: flex; align-items: center; gap: var(--cedar-space-2); margin: 0 0 var(--cedar-space-4); color: var(--cedar-text-title); font-size: var(--cedar-font-size-artifact-title); font-weight: var(--cedar-font-weight-medium); line-height: var(--cedar-line-height-heading); }
 #version-icon, #version-icon svg { display: block; flex: none; width: var(--cedar-icon-size-default); height: var(--cedar-icon-size-default); }

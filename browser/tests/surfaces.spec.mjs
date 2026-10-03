@@ -51,7 +51,7 @@ async function host(page) {
         contentType: "text/css",
         body: readFileSync(
           new URL(
-            "../../node_modules/@org.metadatacenter/cedar-design-tokens/fonts/_" +
+            "../../node_modules/@org.metadatacenter/cedar-design-tokens/scss/fonts/_" +
               path.split("/").pop().replace(".css", ".scss"),
             import.meta.url,
           ),
