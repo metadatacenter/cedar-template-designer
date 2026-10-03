@@ -32,8 +32,10 @@ button:focus-visible { outline: var(--cedar-focus-ring-width) solid var(--cedar-
   visibility: hidden;
 }
 #save-help[data-blocked=true]:hover #save-tooltip { visibility: visible; }
-/* Save and the dialog's confirmation take the secondary action's box, filled in the theme colour whether hovered or not. */
+/* Save and the dialog's confirmation take the secondary action's box, filled in the theme colour, and darken to its
+   strong variant on hover, as every shared primary action does. */
 #save, #version-dialog button[value=confirm] { background: var(--cedar-color-primary); color: var(--cedar-color-on-primary); border-color: var(--cedar-color-primary); }
+#save:is(:hover, :active):not(:disabled), #version-dialog button[value=confirm]:is(:hover, :active):not(:disabled) { background: var(--cedar-color-primary-strong); border-color: var(--cedar-color-primary-strong); }
 button:disabled { opacity: var(--cedar-control-disabled-opacity); cursor: default; }
 #message:empty { display: none; }
 cedar-embeddable-designer { display: block; height: calc(100dvh - 100px); }

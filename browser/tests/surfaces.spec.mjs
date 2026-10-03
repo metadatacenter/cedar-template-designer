@@ -97,7 +97,7 @@ test('Workspace return matches the shared borderless return control', async ({pa
   await expect(back).toBeEnabled();
 });
 
-test('the version dialog sets its two ordinary choices beside the filled primary action', async ({page}) => {
+test('the version dialog sets its two ordinary choices beside the filled primary action, which darkens on hover', async ({page}) => {
   await scenarios.version(page);
   const dialog = page.locator('#version-dialog');
   const button = (name) => dialog.getByRole('button', {name, exact: true});
@@ -110,8 +110,17 @@ test('the version dialog sets its two ordinary choices beside the filled primary
     await expect(button(name)).not.toHaveCSS('background-color', fill);
     expect((await button(name).boundingBox()).height).toBe(height);
   }
+  // The primary action darkens to the theme's strong variant on hover, as the shared recipe does.
+  const strong = await confirm.evaluate((node) => {
+    const probe = document.createElement('span');
+    probe.style.color = 'var(--cedar-color-primary-strong)';
+    node.after(probe);
+    const value = getComputedStyle(probe).color;
+    probe.remove();
+    return value;
+  });
   await confirm.hover();
-  await expect(confirm).toHaveCSS('background-color', fill);
+  await expect(confirm).toHaveCSS('background-color', strong);
 });
 
 test('a refused Save says why on hover, and only while errors are listed', async ({page}) => {
