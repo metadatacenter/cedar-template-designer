@@ -31,7 +31,7 @@ async function host(page) {
         ),
       });
     if (
-      ["/components/motion.css", "/components/custom-properties.css", "/components/icon-contract.css"].includes(
+      ["/components/motion.css", "/components/custom-properties.css", "/components/icon-contract.css", "/components/save-state.css", "/components/tooltip.css"].includes(
         path,
       )
     )

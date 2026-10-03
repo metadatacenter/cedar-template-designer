@@ -1,6 +1,8 @@
 @import '../components/motion.css';
 @import '../components/custom-properties.css';
 @import '../components/icon-contract.css';
+@import '../components/save-state.css';
+@import '../components/tooltip.css';
 :root { font-family: var(--cedar-font-family); color: var(--cedar-text-primary); background: var(--cedar-surface-subtle); }
 body { margin: 0; font-size: var(--cedar-font-size); line-height: var(--cedar-control-line-height-default); }
 strong, b { font-weight: var(--cedar-font-weight-medium); }
@@ -16,40 +18,17 @@ header { display: flex; align-items: center; gap: var(--cedar-space-4); padding:
   font-weight: var(--cedar-font-weight-regular);
   color: var(--cedar-text-muted);
 }
-/* A hollow dot while nothing is unsaved, whether the artifact is unmodified or saved; filled once it is modified. */
-#state[data-save-state=true]::before {
-  content: '';
-  box-sizing: border-box;
-  flex: 0 0 var(--cedar-space-2);
-  height: var(--cedar-space-2);
-  border-radius: 50%;
-  border: 2px solid var(--cedar-status-unsaved-dot);
-  background: transparent;
-}
-#state[data-save-state=true][data-dirty=true]::before {
-  background: var(--cedar-status-unsaved-dot);
-}
 button { font: inherit; padding: var(--cedar-space-2) var(--cedar-space-3); border: 1px solid var(--cedar-control-border-default); border-radius: var(--cedar-radius); cursor: pointer; background: var(--cedar-surface-raised); color: var(--cedar-color-primary); }
 button:focus-visible { outline: var(--cedar-focus-ring-width) solid var(--cedar-color-primary); outline-offset: var(--cedar-focus-ring-offset); }
 #save-help { position: relative; display: inline-flex; }
 /* A disabled button receives no pointer events in some browsers, so its wrapper takes the hover. */
 #save-help[data-blocked=true] #save { pointer-events: none; }
+/* The shared tooltip surface; the host places it under the Save button and shows it on hover. */
 #save-tooltip {
   position: absolute;
   top: calc(100% + var(--cedar-space-1));
   right: 0;
-  z-index: var(--cedar-layer-tooltip);
   visibility: hidden;
-  width: max-content;
-  max-width: min(360px, calc(100vw - 16px));
-  padding: var(--cedar-space-2) var(--cedar-space-3);
-  background: var(--cedar-surface-raised);
-  border: 1px solid var(--cedar-border-rule);
-  border-radius: var(--cedar-radius);
-  box-shadow: var(--cedar-shadow-overlay);
-  font-size: var(--cedar-font-size);
-  font-weight: var(--cedar-font-weight-regular);
-  color: var(--cedar-text-primary);
 }
 #save-help[data-blocked=true]:hover #save-tooltip { visibility: visible; }
 #save, button[value=confirm] { background: var(--cedar-color-primary); color: var(--cedar-color-on-primary); border-color: var(--cedar-color-primary); }
