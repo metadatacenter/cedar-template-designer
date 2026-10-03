@@ -143,3 +143,28 @@ test('save indicator is hollow until there is unsaved content, then filled', asy
   });
   expect((await appearance()).content).toBe('none');
 });
+
+test('dialog buttons take the shared focus ring from the keyboard', async ({page}) => {
+  await scenarios.version(page);
+  const dialog = page.locator('#version-dialog');
+  const ring = await page.evaluate(() => {
+    const root = getComputedStyle(document.documentElement);
+    return {
+      width: root.getPropertyValue('--cedar-focus-ring-width').trim(),
+      offset: root.getPropertyValue('--cedar-focus-ring-offset').trim(),
+    };
+  });
+  // The primary button's fill is the shared primary colour, resolved the way an outline is.
+  const primary = await dialog.locator('button[value=confirm]').evaluate((button) => getComputedStyle(button).backgroundColor);
+  for (const name of ['Discard changes', 'Keep editing', 'Create new draft']) {
+    const button = dialog.getByRole('button', {name, exact: true});
+    for (let step = 0; step < 4 && !(await button.evaluate((node) => node === document.activeElement)); step++)
+      await page.keyboard.press('Tab');
+    await expect(button).toBeFocused();
+    expect(await button.evaluate((node) => node.matches(':focus-visible'))).toBe(true);
+    await expect(button).toHaveCSS('outline-style', 'solid');
+    await expect(button).toHaveCSS('outline-color', primary);
+    await expect(button).toHaveCSS('outline-width', ring.width);
+    await expect(button).toHaveCSS('outline-offset', ring.offset);
+  }
+});
