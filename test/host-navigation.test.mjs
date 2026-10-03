@@ -98,6 +98,9 @@ for (const failed of [true, false]) {
     assert.deepEqual(h.navigations, []);
     assert.equal(h.unload(), true);
     assert.equal(h.node('save').disabled, false);
+    // A failure reads as an error notice; a cancelled save's explanation as information.
+    assert.equal(h.node('message').textContent, failed ? 'Save failed' : 'Not saved. Your changes remain in the designer.');
+    assert.equal(h.node('message').dataset.tone, failed ? 'error' : 'info');
   });
 }
 

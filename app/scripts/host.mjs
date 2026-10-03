@@ -10,7 +10,7 @@ const language = setLanguage(detectLanguage(navigator.languages));
 localizeDocument(document);
 const ui = Object.fromEntries(['back', 'save', 'save-help', 'title', 'state', 'message', 'editor', 'version-dialog', 'version-message', 'version-explanation'].map(id => [id, document.getElementById(id)]));
 let designer, writable = false, saving = false, leaving = false, discarded = false, returnUrl, route, saved = false, etag, folderId, request, config, stored;
-function message(text, error = false) { ui.message.textContent = text; ui.message.dataset.error = String(error); }
+function message(text, error = false) { ui.message.textContent = text; ui.message.dataset.tone = error ? 'error' : 'info'; }
 function dirty() { return !leaving && Boolean(designer?.isDirty); }
 function update() {
   ui.save.disabled = !writable || saving || !designer?.canSave;

@@ -31,7 +31,7 @@ async function host(page) {
         ),
       });
     if (
-      ["/components/motion.css", "/components/custom-properties.css", "/components/icon-contract.css", "/components/save-state.css", "/components/tooltip.css"].includes(
+      ["/components/motion.css", "/components/custom-properties.css", "/components/icon-contract.css", "/components/save-state.css", "/components/tooltip.css", "/components/notice.css", "/components/secondary-action.css"].includes(
         path,
       )
     )
@@ -73,7 +73,7 @@ const scenarios = {
   error: async (page) => {
     await host(page);
     await page.locator("#message").evaluate((message) => {
-      message.dataset.error = "true";
+      message.dataset.tone = "error";
       message.textContent =
         "Your edits have been kept. Reopen the latest version before saving.";
     });
@@ -95,6 +95,23 @@ test('Workspace return matches the shared borderless return control', async ({pa
   await expect(back).toHaveCSS('border-top-width', '0px');
   await expect(back).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
   await expect(back).toBeEnabled();
+});
+
+test('the version dialog sets its two ordinary choices beside the filled primary action', async ({page}) => {
+  await scenarios.version(page);
+  const dialog = page.locator('#version-dialog');
+  const button = (name) => dialog.getByRole('button', {name, exact: true});
+  const confirm = button('Create new draft');
+  const fill = await confirm.evaluate((node) => getComputedStyle(node).backgroundColor);
+  const height = (await confirm.boundingBox()).height;
+  for (const name of ['Discard changes', 'Keep editing']) {
+    await expect(button(name)).toHaveClass(/\bcedar-secondary-action\b/);
+    await expect(button(name)).toHaveCSS('border-top-width', '1px');
+    await expect(button(name)).not.toHaveCSS('background-color', fill);
+    expect((await button(name).boundingBox()).height).toBe(height);
+  }
+  await confirm.hover();
+  await expect(confirm).toHaveCSS('background-color', fill);
 });
 
 test('a refused Save says why on hover, and only while errors are listed', async ({page}) => {

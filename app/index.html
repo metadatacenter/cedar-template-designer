@@ -13,15 +13,15 @@
     <button id="back" type="button"><span id="back-icon" aria-hidden="true"></span><span data-i18n="Header.Workspace">Workspace</span></button>
     <strong id="title" data-i18n="Header.Title.template">Template Designer</strong>
     <span id="state" class="cedar-save-state" role="status"></span>
-    <span id="save-help"><button id="save" type="button" disabled data-i18n="Header.Save">Save</button><span id="save-tooltip" class="cedar-tooltip" role="tooltip" data-i18n="Header.SaveBlocked">Cannot save until errors are fixed</span></span>
+    <span id="save-help"><button id="save" class="cedar-secondary-action" type="button" disabled data-i18n="Header.Save">Save</button><span id="save-tooltip" class="cedar-tooltip" role="tooltip" data-i18n="Header.SaveBlocked">Cannot save until errors are fixed</span></span>
   </header>
-  <p id="message" role="status" data-i18n="Page.Loading">Loading designer…</p>
+  <p id="message" class="cedar-notice" role="status" data-i18n="Page.Loading">Loading designer…</p>
   <main id="editor"></main>
   <dialog id="version-dialog" aria-labelledby="version-title">
     <h2 id="version-title"><span id="version-icon" aria-hidden="true"></span><span data-i18n="Version.Title">Create a new template version?</span></h2>
     <p id="version-message"></p>
     <p id="version-explanation" data-i18n="Version.Explanation">The existing template will be published and your changes saved as a new draft. Existing metadata stays with the original template.</p>
-    <form method="dialog"><button value="discard" data-i18n="Version.Discard">Discard changes</button><button value="cancel" data-i18n="Version.KeepEditing">Keep editing</button><button value="confirm" data-i18n="Version.CreateDraft">Create new draft</button></form>
+    <form method="dialog"><button class="cedar-secondary-action" value="discard" data-i18n="Version.Discard">Discard changes</button><button class="cedar-secondary-action" value="cancel" data-i18n="Version.KeepEditing">Keep editing</button><button class="cedar-secondary-action" value="confirm" data-i18n="Version.CreateDraft">Create new draft</button></form>
   </dialog>
   <script src="scripts/keycloak/keycloak.min.js"></script>
   <script src="scripts/handlers/KeycloakUserHandler.js"></script>
