@@ -7,7 +7,7 @@
   "description": "Authenticated CED host for CEDAR Workspace",
   "main": "app/scripts/host.mjs",
   "scripts": {
-    "start": "gulp",
+    "start": "node scripts/designer.mjs start",
     "prepare:components": "node scripts/stage-components.mjs && node scripts/stage-design.mjs",
     "test": "node --test test/*.test.mjs",
     "test:browser": "npm --prefix browser test"
@@ -18,9 +18,7 @@
   "author": "Metadatacenter.org",
   "license": "BSD-2-Clause",
   "devDependencies": {
-    "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20261002.cfb0a1fe",
-    "gulp": "^5.0.1",
-    "gulp-connect": "5.7.0"
+    "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20261002.cfb0a1fe"
   },
   "dependencies": {
     "cedar-embeddable-designer": "npm:@org.metadatacenter/cedar-embeddable-designer@0.1.0-dev.20261002.344bc179",

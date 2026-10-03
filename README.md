@@ -24,8 +24,8 @@ cedarcli native restart frontend designer
 ```
 
 The development server uses port 4202 (`CEDAR_FRONTEND_PORT` overrides it).
-`npm start` runs the same host directly. `npm run prepare:components` or
-`npx gulp copy:ced` stages the installed packages without restarting the server.
+`npm start` runs the same host directly. `npm run prepare:components` stages the
+installed packages without restarting the server.
 Reload the page after staging.
 
 | Component | Pinned package |
