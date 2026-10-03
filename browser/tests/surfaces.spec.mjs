@@ -5,7 +5,9 @@ const registry = JSON.parse(
   readFileSync(new URL("../../.ui-surfaces.json", import.meta.url), "utf8"),
 );
 // Render the actual host markup and stylesheet. Authentication/component behavior
-// is covered by the host suite; this fixture isolates the host-owned surfaces.
+// is covered by the host suite; this fixture isolates the host-owned surfaces. The
+// designer's bundle registers the shared Roboto faces for the whole page; without its
+// script the fixture registers the same faces from the token package.
 async function host(page) {
   const html = readFileSync(
     new URL("../../app/index.html", import.meta.url),
@@ -14,7 +16,7 @@ async function host(page) {
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, "")
     .replace(
       "</head>",
-      '<link rel="stylesheet" href="/styles/host.css"></head>',
+      '<link rel="stylesheet" href="/fonts/roboto-400.css"><link rel="stylesheet" href="/fonts/roboto-500.css"><link rel="stylesheet" href="/styles/host.css"></head>',
     );
   await page.route("https://surface.test/**", (route) => {
     const path = new URL(route.request().url()).pathname;
@@ -39,6 +41,18 @@ async function host(page) {
           new URL(
             "../../node_modules/@org.metadatacenter/cedar-design-tokens/dist/" +
               path.split("/").pop(),
+            import.meta.url,
+          ),
+          "utf8",
+        ),
+      });
+    if (["/fonts/roboto-400.css", "/fonts/roboto-500.css"].includes(path))
+      return route.fulfill({
+        contentType: "text/css",
+        body: readFileSync(
+          new URL(
+            "../../node_modules/@org.metadatacenter/cedar-design-tokens/fonts/_" +
+              path.split("/").pop().replace(".css", ".scss"),
             import.meta.url,
           ),
           "utf8",
