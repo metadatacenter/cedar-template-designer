@@ -1,3 +1,5 @@
+import { resourceSelector, resourcePathId } from './resource-address.mjs';
+export { resourceSelector, resourcePathId };
 // Loading the maps with this module's query string keeps one shared instance with host.mjs,
 // which imports the same versioned URL and sets the active language on it.
 const { t } = await import(`./i18n.mjs${new URL(import.meta.url).search}`);
@@ -33,7 +35,7 @@ export function workspaceReturn(base, requested, folderId) {
     throw new Error(t('Error.InvalidWorkspaceUrl'));
   }
   const fallback = new URL('/dashboard', workspace);
-  if (folderId) fallback.searchParams.set('folderId', folderId);
+  if (folderId) fallback.searchParams.set('folderId', resourceSelector(folderId));
   try {
     const candidate = new URL(requested);
     if (candidate.origin === workspace.origin && !candidate.username && !candidate.password) return candidate.href;
@@ -111,7 +113,7 @@ export function childSource(request, base) {
     async load(result, { signal }) {
       const collection = { field: 'template-fields', element: 'template-elements' }[result.type];
       if (!collection) throw new Error(t('Error.ChooseReusable'));
-      return (await request(`${base}/${collection}/${encodeURIComponent(result.id)}`, { signal })).data;
+      return (await request(`${base}/${collection}/${encodeURIComponent(resourcePathId(result.id))}`, { signal })).data;
     },
   };
 }
@@ -150,11 +152,11 @@ export async function saveArtifact({ request, base, route, artifact, etag, folde
   current();
   if (!route.id) {
     if (!folderId) throw new Error(t('Error.NoFolder'));
-    return request(`${url}?${new URLSearchParams({ folder_id: folderId })}`, { method: 'POST', body: artifact });
+    return request(`${url}?${new URLSearchParams({ folder_id: resourceSelector(folderId) })}`, { method: 'POST', body: artifact });
   }
   if (!etag) throw new Error(t('Error.NoValidator'));
-  artifact['@id'] = route.id;
-  const encodedId = encodeURIComponent(route.id);
+  artifact['@id'] = route.id; // Resolved from the loaded document, never from a short browser address.
+  const encodedId = encodeURIComponent(resourcePathId(route.id));
   if (route.kind === 'template') {
     const { data: impact } = await request(`${base}/command/check-update-template/${encodedId}`, { method: 'POST', body: artifact });
     current();

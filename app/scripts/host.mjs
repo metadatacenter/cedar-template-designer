@@ -3,7 +3,7 @@ document.getElementById('back-icon').innerHTML = iconSvg('back');
 // Workspace heads its Create Draft dialog with this icon, and this dialog also ends in a new draft.
 document.getElementById('version-icon').innerHTML = iconSvg('new-record');
 const version = encodeURIComponent(window.cedarCacheControl || 'local');
-const { routeFor, workspaceReturn, canEdit, canCreate, createBackend, childSource, saveArtifact, DesignerCoordinator, waitForDesigner } = await import(`./host-core.mjs?v=${version}`);
+const { resourceSelector, resourcePathId, routeFor, workspaceReturn, canEdit, canCreate, createBackend, childSource, saveArtifact, DesignerCoordinator, waitForDesigner } = await import(`./host-core.mjs?v=${version}`);
 // host-core.mjs imports this same versioned URL, so both modules share one active language.
 const { t, detectLanguage, setLanguage, localizeDocument } = await import(`./i18n.mjs?v=${version}`);
 const language = setLanguage(detectLanguage(navigator.languages));
@@ -92,7 +92,7 @@ ui.save.addEventListener('click', async () => {
       state.committed(attempt, result.etag, newIdentity);
       route.id = result.data['@id'];
       const address = new URL(location.href);
-      address.pathname = `/${route.kind}s/edit/${encodeURIComponent(route.id)}`;
+      address.pathname = `/${route.kind}s/edit/${encodeURIComponent(resourcePathId(route.id))}`;
       window.history.replaceState(null, '', address.href);
       message(t(newIdentity ? 'Message.SavedNewIdentity' : 'Message.SavedWithChanges') + (!result.etag ? ' ' + t('Error.NoValidator') : ''), state.reloadRequired);
       return;
@@ -149,15 +149,16 @@ try {
     ui.editor.append(designer);
     if (typeof designer.loadArtifact !== 'function') throw new Error(t('Error.OutdatedBundle'));
     if (route.id) {
-      const url = `${config.resourceRestAPI}/${route.collection}/${encodeURIComponent(route.id)}`;
+      const url = `${config.resourceRestAPI}/${route.collection}/${encodeURIComponent(resourcePathId(route.id))}`;
       const [loaded, report] = await Promise.all([request(url), request(`${url}/report`)]);
-      if (!loaded.data || loaded.data['@id'] !== route.id) throw new Error(t('Error.InvalidArtifact'));
+      if (!loaded.data || resourcePathId(loaded.data['@id']) !== resourcePathId(route.id)) throw new Error(t('Error.InvalidArtifact'));
+      route.id = loaded.data['@id']; // Keep the stored identity for subsequent PUT bodies.
       designer.loadArtifact(loaded.data);
       state.loaded({ artifact: loaded.data, etag: loaded.etag, writable: canEdit(report.data, loaded.data) });
       if (state.writable && !loaded.etag) { state.reloadRequired = true; message(t('Error.NoValidator'), true); }
     } else {
       if (!folderId) throw new Error(t('Error.NoFolder'));
-      const {data: folder} = await request(`${config.resourceRestAPI}/folders/${encodeURIComponent(folderId)}`);
+      const {data: folder} = await request(`${config.resourceRestAPI}/folders/${encodeURIComponent(resourcePathId(folderId))}`);
       designer.newArtifact(route.kind === 'field' ? undefined : route.kind);
       state.loaded({writable: canCreate(folder)});
     }
