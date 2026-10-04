@@ -16,6 +16,10 @@
     <span id="save-help"><button id="save" class="cedar-secondary-action" type="button" disabled data-i18n="Header.Save">Save</button><span id="save-tooltip" class="cedar-tooltip" role="tooltip" data-i18n="Header.SaveBlocked">Cannot save until errors are fixed</span></span>
   </header>
   <p id="message" class="cedar-notice" role="status" data-i18n="Page.Loading">Loading designer…</p>
+  <button id="reload" type="button" class="cedar-secondary-action" hidden data-i18n="Header.Reload">Reload designer</button>
+  <details id="server-issues" class="cedar-notice" hidden>
+    <summary id="server-issues-title"></summary><ul id="server-issues-list"></ul>
+  </details>
   <main id="editor"></main>
   <dialog id="version-dialog" aria-labelledby="version-title">
     <h2 id="version-title"><span id="version-icon" aria-hidden="true"></span><span data-i18n="Version.Title">Create a new template version?</span></h2>

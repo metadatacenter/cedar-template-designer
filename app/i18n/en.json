@@ -11,20 +11,27 @@
       "template": "Template Designer",
       "element": "Element Designer",
       "field": "Field Designer"
-    }
+    },
+    "Reload": "Reload designer"
   },
   "State": {
     "Saving": "Saving…",
     "ReadOnly": "Read only",
     "Modified": "Modified",
     "Unmodified": "Unmodified",
-    "Saved": "Saved"
+    "Saved": "Saved",
+    "LoadFailed": "Unable to load",
+    "ReloadRequired": "Reload required"
   },
   "Message": {
     "ChangesKept": "Not saved. Your changes remain in the designer.",
     "ChangesDiscarded": "Not saved. Your changes were discarded.",
     "ReadOnly": "This artifact is read only. Create a draft or change permissions in Workspace to edit it.",
-    "ConfirmDiscard": "Discard your unsaved changes and return to Workspace?"
+    "ConfirmDiscard": "Discard your unsaved changes and return to Workspace?",
+    "ConfirmReload": "Discard your unsaved changes and reload the latest artifact?",
+    "ServerFindings": "Server validation: {{count}} findings",
+    "SavedWithChanges": "Saved. Further changes remain in the designer.",
+    "SavedNewIdentity": "Saved as a new artifact. Further changes remain here; reload the saved artifact before saving again."
   },
   "Version": {
     "Title": "Create a new template version?",
@@ -59,6 +66,11 @@
     "ConfigurationLoad": "Frontend configuration could not be loaded.",
     "SignIn": "Sign-in could not be initialized. Reload to try again.",
     "MissingFieldDesigner": "This Designer bundle does not include CEFD. Stage a current CED bundle and reload.",
-    "OutdatedBundle": "The local CED bundle is out of date. Rebuild CED and restart Designer."
+    "OutdatedBundle": "The local CED bundle is out of date. Rebuild CED and restart Designer.",
+    "InvalidChildren": "The repository returned an incomplete child list. Please retry.",
+    "InvalidImpact": "The server did not provide a valid update assessment. Your changes have been kept.",
+    "DocumentChanged": "The document changed while saving was being prepared. Review it and save again.",
+    "InvalidArtifact": "The repository returned a different or incomplete artifact. Reload to try again.",
+    "SaveUnconfirmed": "The server accepted the save but did not identify the saved artifact. Check Workspace before saving again."
   }
 }

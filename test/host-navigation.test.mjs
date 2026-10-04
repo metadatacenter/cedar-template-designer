@@ -12,7 +12,7 @@ async function host(isDirty = true, languages = ['en-US'], existing = false, imp
   let resolveSave, rejectSave;
   const saved = new Promise((resolve, reject) => { resolveSave = resolve; rejectSave = reject; });
   const designer = {
-    isDirty, canSave: true, currentArtifact: {}, validate: () => ({ canSave: true }),
+    isDirty, canSave: true, currentArtifact: {}, validationReport: { canSave: true, issues: [] }, validate: () => ({ canSave: true, issues: [] }),
     newArtifact() {}, addEventListener(event, callback) { events.set('designer:' + event, callback); },
     // Like CED, loading again takes the artifact as the baseline the designer compares edits with.
     // The first load leaves alone the state each test starts from.
@@ -64,7 +64,7 @@ async function host(isDirty = true, languages = ['en-US'], existing = false, imp
   await run(window, document, location, fetch, { whenDefined: async () => {}, get: () => true },
     { randomUUID: () => 'session' }, { languages }, { ...core,
       canEdit: () => true,
-      createBackend: () => async () => ({ data: { homeFolderId: 'home' } }),
+      createBackend: () => async () => ({ data: { '@id': 'template-id', homeFolderId: 'home', currentUserPermissions: {capabilities: ['createInFolder', 'updateResource']} }, etag: '"one"' }),
       saveArtifact: options => impact ? options.confirmVersion(impact).then(confirmed => confirmed ? saved : null) : saved,
     }, i18n);
   assert.equal(node('save').disabled, false);

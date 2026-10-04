@@ -1,6 +1,18 @@
 // Loading the maps with this module's query string keeps one shared instance with host.mjs,
 // which imports the same versioned URL and sets the active language on it.
 const { t } = await import(`./i18n.mjs${new URL(import.meta.url).search}`);
+const { DesignerCoordinator } = await import(`./host-state.mjs${new URL(import.meta.url).search}`);
+export { DesignerCoordinator };
+
+/** Angular registers CED asynchronously after its script has loaded. Bound that wait. */
+export function waitForDesigner(registry, timeoutMs = 30000) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(t('Error.OutdatedBundle'))), timeoutMs);
+    registry.whenDefined('cedar-embeddable-designer').then(() => {
+      clearTimeout(timer); resolve();
+    }, error => { clearTimeout(timer); reject(error); });
+  });
+}
 
 export function routeFor(pathname) {
   const match = /^\/(templates|elements|fields)\/(create|edit)(?:\/(.+))?\/?$/.exec(pathname);
@@ -30,8 +42,13 @@ export function workspaceReturn(base, requested, folderId) {
 }
 
 export function canEdit(report, artifact) {
-  return report?.currentUserPermissions?.capabilities?.includes('updateResource') === true &&
+  const capabilities = report?.currentUserPermissions?.capabilities;
+  return Array.isArray(capabilities) && capabilities.includes('updateResource') &&
     artifact['bibo:status'] !== 'bibo:published';
+}
+export function canCreate(folder) {
+  const capabilities = folder?.currentUserPermissions?.capabilities;
+  return Array.isArray(capabilities) && capabilities.includes('createInFolder');
 }
 
 export class BackendError extends Error {
@@ -64,7 +81,7 @@ export function createBackend(auth, sessionId, fetcher = fetch) {
       const text = await response.text();
       let data;
       try { data = text ? JSON.parse(text) : null; } catch { data = null; }
-      if (attempt === 0 && (response.status === 401 || data?.suggestedAction === 'refreshToken')) {
+      if (!response.ok && attempt === 0 && (response.status === 401 || data?.suggestedAction === 'refreshToken')) {
         await refresh(-1);
         continue;
       }
@@ -81,7 +98,10 @@ export function childSource(request, base) {
       if (!Number.isSafeInteger(offset) || offset < 0) throw new Error(t('Error.InvalidSearchCursor'));
       const params = new URLSearchParams({ q: query, resource_types: 'field,element', limit: '25', offset: String(offset) });
       const { data } = await request(`${base}/search?${params}`, { signal });
-      const rows = data.resources || [];
+      const rows = data?.resources;
+      if (!Array.isArray(rows) || !Number.isSafeInteger(data.totalCount) || data.totalCount < rows.length ||
+          rows.some(row => !row || typeof row['@id'] !== 'string' || !row['@id'].trim() || !['field', 'element'].includes(row.resourceType)) ||
+          new Set(rows.map(row => row['@id'])).size !== rows.length) throw new Error(t('Error.InvalidChildren'));
       return {
         results: rows.map(row => ({ id: row['@id'], name: row['schema:name'], type: row.resourceType,
           version: row['pav:version'], status: row['bibo:status'], createdOn: row['pav:createdOn'], modifiedOn: row['pav:lastUpdatedOn'] })),
@@ -119,23 +139,31 @@ export function storageArtifact(source, creating = false) {
 }
 
 /** Validators belong to the loaded representation, never a URL cache. */
-export async function saveArtifact({ request, base, route, artifact, etag, folderId, confirmVersion }) {
+export async function saveArtifact({ request, base, route, artifact, etag, folderId, confirmVersion, stillCurrent = () => true }) {
   const name = artifact?.['schema:name'];
   if (typeof name !== 'string' || !name.trim()) {
     throw new Error(t(`Error.NameRequired.${route.kind}`));
   }
   artifact = storageArtifact(artifact, !route.id);
   const url = `${base}/${route.collection}`;
+  const current = () => { if (!stillCurrent()) throw new Error(t('Error.DocumentChanged')); };
+  current();
   if (!route.id) {
     if (!folderId) throw new Error(t('Error.NoFolder'));
     return request(`${url}?${new URLSearchParams({ folder_id: folderId })}`, { method: 'POST', body: artifact });
   }
   if (!etag) throw new Error(t('Error.NoValidator'));
+  artifact['@id'] = route.id;
   const encodedId = encodeURIComponent(route.id);
   if (route.kind === 'template') {
     const { data: impact } = await request(`${base}/command/check-update-template/${encodedId}`, { method: 'POST', body: artifact });
+    current();
+    if (!impact || typeof impact.canBeUpdated !== 'boolean' ||
+        (impact.numberOfInstances != null && (!Number.isSafeInteger(impact.numberOfInstances) || impact.numberOfInstances < 0)) ||
+        (impact.oldVersion != null && typeof impact.oldVersion !== 'string')) throw new Error(t('Error.InvalidImpact'));
     if (!impact.canBeUpdated) {
       if (!await confirmVersion(impact)) return null;
+      current();
       return request(`${base}/command/publish-create-draft-template/${encodedId}`, { method: 'POST', body: artifact, etag });
     }
   }
