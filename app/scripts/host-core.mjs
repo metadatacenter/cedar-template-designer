@@ -56,7 +56,9 @@ export function canCreate(folder) {
 export class BackendError extends Error {
   constructor(status, data) {
     // A server-supplied message is shown as the server wrote it; only the host's own text is translated.
-    super(status === 412 ? t('Error.Conflict') :
+    // Status 0 means no answer arrived.
+    super(status === 0 ? t('Error.Unreachable') :
+      status === 412 ? t('Error.Conflict') :
       status === 401 ? t('Error.SessionExpired') :
       status === 403 ? t('Error.Forbidden') :
       t('Error.RequestFailed', { status, detail: data?.message || data?.errorMessage || t('Error.EditsKept') }));
@@ -79,7 +81,15 @@ export function createBackend(auth, sessionId, fetcher = fetch) {
       const headers = { Authorization: `Bearer ${auth.getToken()}`, 'CEDAR-Client-Session-Id': sessionId, Accept: 'application/json' };
       if (body !== undefined) headers['Content-Type'] = 'application/json';
       if (etag) headers['If-Match'] = etag;
-      const response = await fetcher(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal });
+      let response;
+      try {
+        response = await fetcher(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal });
+      } catch (error) {
+        // A cancelled request stays a cancellation. Any other rejection means no answer arrived, and the
+        // browser's own text for that is neither translated nor helpful.
+        if (error?.name === 'AbortError') throw error;
+        throw new BackendError(0);
+      }
       const text = await response.text();
       let data;
       try { data = text ? JSON.parse(text) : null; } catch { data = null; }

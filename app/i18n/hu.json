@@ -73,6 +73,7 @@
     "InvalidImpact": "A kiszolgáló nem adott érvényes frissítési értékelést. A módosításai megmaradtak.",
     "DocumentChanged": "A dokumentum megváltozott a mentés előkészítése közben. Ellenőrizze, és mentse újra.",
     "InvalidArtifact": "Az adattár eltérő vagy hiányos artefaktumot adott vissza. Próbálja újra az újratöltéssel.",
-    "SaveUnconfirmed": "A kiszolgáló elfogadta a mentést, de nem azonosította a mentett artefaktumot. Újabb mentés előtt ellenőrizze a Workspace-ben."
+    "SaveUnconfirmed": "A kiszolgáló elfogadta a mentést, de nem azonosította a mentett artefaktumot. Újabb mentés előtt ellenőrizze a Workspace-ben.",
+    "Unreachable": "A kiszolgáló nem érhető el. Ellenőrizze a kapcsolatot, és próbálja újra."
   }
 }

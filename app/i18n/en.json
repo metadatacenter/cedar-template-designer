@@ -73,6 +73,7 @@
     "InvalidImpact": "The server did not provide a valid update assessment. Your changes have been kept.",
     "DocumentChanged": "The document changed while saving was being prepared. Review it and save again.",
     "InvalidArtifact": "The repository returned a different or incomplete artifact. Reload to try again.",
-    "SaveUnconfirmed": "The server accepted the save but did not identify the saved artifact. Check Workspace before saving again."
+    "SaveUnconfirmed": "The server accepted the save but did not identify the saved artifact. Check Workspace before saving again.",
+    "Unreachable": "The server could not be reached. Check your connection and try again."
   }
 }

@@ -1,65 +1,6 @@
-import {readFileSync} from 'node:fs';
 import {test,expect} from '@playwright/test';
+import {host,edit} from './host-fixture.mjs';
 
-const root = new URL('../../app/', import.meta.url);
-const source = name => readFileSync(new URL(name, root), 'utf8');
-async function host(page, kind='template', mode='edit', allowed=true, initial={}) {
-  const state={writes:[],failure:null,impact:{canBeUpdated:true},brokenLoad:false,holdWrite:null,savedId:mode==='edit'?'item':'saved',nextEtag:'"next"',loadedId:'item',loadedEtag:'"opened"',...initial};
-  await page.route('https://workspace.test/**',route=>route.fulfill({contentType:'text/html',body:'<h1>Workspace</h1>'}));
-  await page.route('https://designer.test/**',async route=>{
-    const url=new URL(route.request().url()),path=url.pathname;
-    if(path.startsWith('/api/')) {
-      if(path==='/api/users/user')return route.fulfill({json:{homeFolderId:'home'}});
-      if(path.startsWith('/api/folders/'))return route.fulfill({json:{currentUserPermissions:{capabilities:allowed?['createInFolder']:[]}}});
-      if(path.endsWith('/report'))return route.fulfill({json:{currentUserPermissions:{capabilities:allowed?['updateResource']:[]}}});
-      if(path.includes('/check-update-template/'))return route.fulfill({json:state.impact});
-      if(route.request().method()!=='GET'){
-        state.writes.push({path,body:route.request().postDataJSON(),etag:route.request().headers()['if-match']});
-        if(state.holdWrite)await state.holdWrite;
-        if(state.failure)return route.fulfill(state.failure);
-        return route.fulfill({json:state.savedId?{'@id':state.savedId}:{},headers:state.nextEtag?{ETag:state.nextEtag}:{}});
-      }
-      if(state.brokenLoad)return route.fulfill({status:503,json:{message:'Load unavailable'}});
-      return route.fulfill({json:{'@id':state.loadedId,'schema:name':'Opened',properties:{}},headers:state.loadedEtag?{ETag:state.loadedEtag}:{}});
-    }
-    if(path==='/config/host.json')return route.fulfill({json:{workspaceFrontend:'https://workspace.test',resourceRestAPI:'https://designer.test/api',userRestAPI:'https://designer.test/api'}});
-    if(path==='/config/version.js')return route.fulfill({contentType:'text/javascript',body:"window.cedarCacheControl='fixture';"});
-    if(path==='/scripts/handlers/KeycloakUserHandler.js')return route.fulfill({contentType:'text/javascript',body:`window.KeycloakUserHandler=class{initUserHandler(ok){ok(true)}getParsedToken(){return{sub:'user'}}getToken(){return 'test'}refreshToken(_n,ok){ok(true)}};`});
-    if(path==='/components/manifest.json')return route.fulfill({json:Object.fromEntries(['cedar-embeddable-editor','cedar-embeddable-term-picker','cedar-embeddable-designer'].map(name=>[name,{sha256:'fixture'}]))});
-    if(path==='/components/cedar-embeddable-designer.js')return route.fulfill({contentType:'text/javascript',body:`
-      class Designer extends HTMLElement {
-        currentArtifact={}; baseline=''; report={valid:true,canSave:true,issues:[]};
-        connectedCallback(){this.textContent='Designer fixture'}
-        get canSave(){return this.report.canSave}get validationReport(){return this.report}validate(){return this.report}
-        get isDirty(){return JSON.stringify(this.currentArtifact)!==this.baseline}
-        loadArtifact(value){this.currentArtifact=structuredClone(value);this.baseline=JSON.stringify(value)}
-        newArtifact(){this.loadArtifact({'schema:name':''});this.report={valid:false,canSave:false,issues:[{setting:'name',shown:false,severity:'error'}]}}
-      }
-      setTimeout(()=>{
-        customElements.define('cedar-embeddable-field-designer',class extends Designer{});
-        customElements.define('cedar-embeddable-designer',Designer);
-      },30);`});
-    if(path==='/components/icons.js')return route.fulfill({contentType:'text/javascript',body:'export const iconSvg=()=>"";'});
-    if(path.startsWith('/components/')||path.startsWith('/scripts/keycloak/'))return route.fulfill({contentType:'text/javascript',body:''});
-    if(path.startsWith('/scripts/')||path.startsWith('/i18n/'))return route.fulfill({contentType:path.endsWith('.json')?'application/json':'text/javascript',body:source(path.slice(1))});
-    if(path.startsWith('/styles/'))return route.fulfill({contentType:'text/css',body:source(path.slice(1))});
-    return route.fulfill({contentType:'text/html',body:source('index.html')});
-  });
-  await page.goto(`https://designer.test/${kind}s/${mode}${mode==='edit'?'/item':''}`);
-  if(state.brokenLoad||state.loadedId!=='item'){
-    await expect(page.locator('#state')).toHaveText('Unable to load');return state;
-  }
-  await expect(page.locator('#editor')).toBeVisible();
-  await expect(page.locator('#state')).toHaveText(!allowed?'Read only':mode==='edit'&&!state.loadedEtag?'Reload required':'Unmodified');
-  return state;
-}
-async function edit(page, name='Edited', issue=null) {
-  await page.locator('#editor > *').evaluate((designer,{name,issue})=>{
-    designer.currentArtifact['schema:name']=name;
-    designer.report={valid:!issue,canSave:!issue,issues:issue?[issue]:[]};
-    designer.dispatchEvent(new CustomEvent('artifactChange'));
-  },{name,issue});
-}
 for(const kind of ['template','element','field'])for(const mode of ['create','edit'])for(const allowed of [false,true]) {
   test(`${kind} ${mode}: permission and unnamed initial state stay coordinated, allowed=${allowed}`,async({page})=>{
     const state=await host(page,kind,mode,allowed);
