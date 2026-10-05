@@ -40,6 +40,8 @@
     "KeepEditing": "Keep editing",
     "CreateDraft": "Create new draft",
     "Discard": "Discard changes",
+    "OneInstance": "1 metadata instance uses this template. These changes require a new version.",
+    "OneInstanceOfVersion": "1 metadata instance uses this template (version {{version}} draft). These changes require a new version.",
     "Instances": "{{count}} metadata instances use this template. These changes require a new version.",
     "InstancesOfVersion": "{{count}} metadata instances use this template (version {{version}} draft). These changes require a new version.",
     "ExistingInstances": "Existing metadata instances use this template. These changes require a new version.",

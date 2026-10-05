@@ -40,6 +40,8 @@
     "KeepEditing": "Szerkesztés folytatása",
     "CreateDraft": "Új vázlat létrehozása",
     "Discard": "Módosítások elvetése",
+    "OneInstance": "1 metaadatpéldány használja ezt a sablont. Ezek a módosítások új verziót igényelnek.",
+    "OneInstanceOfVersion": "1 metaadatpéldány használja ezt a sablont (verzió: {{version}}, vázlat). Ezek a módosítások új verziót igényelnek.",
     "Instances": "{{count}} metaadatpéldány használja ezt a sablont. Ezek a módosítások új verziót igényelnek.",
     "InstancesOfVersion": "{{count}} metaadatpéldány használja ezt a sablont (verzió: {{version}}, vázlat). Ezek a módosítások új verziót igényelnek.",
     "ExistingInstances": "Meglévő metaadatpéldányok használják ezt a sablont. Ezek a módosítások új verziót igényelnek.",

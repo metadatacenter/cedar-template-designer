@@ -55,7 +55,9 @@ ui.reload.addEventListener('click', () => {
   leaving = true; location.reload();
 });
 function confirmVersion(impact) {
-  const key = `Version.${impact.numberOfInstances == null ? 'ExistingInstances' : 'Instances'}${impact.oldVersion ? 'OfVersion' : ''}`;
+  const count = impact.numberOfInstances;
+  const counted = count == null ? 'ExistingInstances' : count === 1 ? 'OneInstance' : 'Instances';
+  const key = `Version.${counted}${impact.oldVersion ? 'OfVersion' : ''}`;
   ui['version-message'].textContent = t(key, { count: impact.numberOfInstances, version: impact.oldVersion });
   ui['version-explanation'].textContent = t(`Version.Explanation${impact.oldVersion ? 'OfVersion' : ''}`, { version: impact.oldVersion });
   const dialog = ui['version-dialog'];

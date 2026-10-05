@@ -189,6 +189,21 @@ test('the version dialog names the draft version the existing template is publis
   await saving;
 });
 
+for (const [count, version, language, message] of [
+  [1, null, 'en-US', '1 metadata instance uses this template. These changes require a new version.'],
+  [1, '0.0.1', 'en-US', '1 metadata instance uses this template (version 0.0.1 draft). These changes require a new version.'],
+  [9, null, 'en-US', '9 metadata instances use this template. These changes require a new version.'],
+  [null, null, 'en-US', 'Existing metadata instances use this template. These changes require a new version.'],
+  [1, null, 'hu-HU', '1 metaadatpéldány használja ezt a sablont. Ezek a módosítások új verziót igényelnek.'],
+  [9, '0.0.1', 'hu-HU', '9 metaadatpéldány használja ezt a sablont (verzió: 0.0.1, vázlat). Ezek a módosítások új verziót igényelnek.'],
+]) test(`the version dialog's message for an instance count of ${count ?? 'unknown'}${version ? ' and a versioned draft' : ''} in ${language}`, async () => {
+  const h = await host(true, [language], true, { numberOfInstances: count, ...(version ? { oldVersion: version } : {}) });
+  const saving = h.save();
+  assert.equal(h.node('version-message').textContent, message);
+  h.closeVersion('cancel');
+  await saving;
+});
+
 test('discarding from the version dialog restores the template as opened and stays in the designer', async () => {
   const h = await host(true, ['en-US'], true, { numberOfInstances: 9, oldVersion: '0.0.1' });
   const [opened] = h.designer.loads;
