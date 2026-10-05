@@ -75,6 +75,12 @@
     "InvalidArtifact": "The repository returned a different or incomplete artifact. Reload to try again.",
     "SaveUnconfirmed": "The server accepted the save but did not identify the saved artifact. Check Workspace before saving again.",
     "Unreachable": "The server could not be reached. Check your connection and try again.",
-    "Unreadable": "CEDAR cannot read this artifact, so it cannot be opened. {{detail}}"
+    "Unreadable": "CEDAR cannot read this artifact, so it cannot be opened. {{detail}}",
+    "SessionEnded": "Your session has expired. Sign in again.",
+    "ForbiddenOpen": "You do not have permission to open this artifact.",
+    "ForbiddenCreate": "You do not have permission to create an artifact here.",
+    "ReloadToRetry": "Reload to try again.",
+    "UnreadableAnswer": "The server sent an answer the Designer cannot read. Reload to try again.",
+    "ManifestLoad": "The component manifest could not be loaded. Rebuild and stage the local components."
   }
 }

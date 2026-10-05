@@ -12,6 +12,17 @@ export function text(language,key,params={}) {
   return value.replace(/\{\{\s*([\w.]+)\s*\}\}/g,(placeholder,name)=>params[name]===undefined?placeholder:String(params[name]));
 }
 
+/** The requests the page makes while it opens, by name, as a path and method identify them. */
+export const OPENING_REQUESTS={
+  configuration:(path)=>path==='/config/host.json',
+  profile:(path)=>path==='/api/users/user',
+  manifest:(path)=>path==='/components/manifest.json',
+  component:(path)=>path==='/components/cedar-embeddable-designer.js',
+  artifact:(path,method)=>method==='GET'&&/^\/api\/(templates|template-elements|template-fields)\/item$/.test(path),
+  report:(path)=>path.endsWith('/report'),
+  folder:(path)=>path.startsWith('/api/folders/'),
+};
+
 const root = new URL('../../app/', import.meta.url);
 const source = name => readFileSync(new URL(name, root), 'utf8');
 export async function host(page, kind='template', mode='edit', allowed=true, initial={}) {
@@ -19,6 +30,9 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
   await page.route('https://workspace.test/**',route=>route.fulfill({contentType:'text/html',body:'<h1>Workspace</h1>'}));
   await page.route('https://designer.test/**',async route=>{
     const url=new URL(route.request().url()),path=url.pathname;
+    // A request named in `openingFailure` gets that answer instead of its own.
+    const failing=state.openingFailure;
+    if(failing&&OPENING_REQUESTS[failing.request](path,route.request().method()))return failing.answer(route);
     if(path.startsWith('/api/')) {
       if(path==='/api/users/user')return route.fulfill({json:{homeFolderId:'home'}});
       if(path.startsWith('/api/folders/'))return route.fulfill({json:{currentUserPermissions:{capabilities:allowed?['createInFolder']:[]}}});
@@ -60,7 +74,7 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
   // The host takes its language from the browser's preferences.
   await page.addInitScript(language=>Object.defineProperty(navigator,'languages',{get:()=>[language]}),state.language);
   await page.goto(`https://designer.test/${kind}s/${mode}${mode==='edit'?'/item':''}`);
-  if(state.brokenLoad||state.loadedId!=='item'||state.unreadable){
+  if(state.brokenLoad||state.loadedId!=='item'||state.unreadable||state.openingFailure){
     await expect(page.locator('#state')).toHaveText(text(state.language,'State.LoadFailed'));return state;
   }
   await expect(page.locator('#editor')).toBeVisible();

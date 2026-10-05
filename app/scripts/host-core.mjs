@@ -54,17 +54,35 @@ export function canCreate(folder) {
 }
 
 export class BackendError extends Error {
-  constructor(status, data) {
+  constructor(status, data, { unreadable = false } = {}) {
     // A server-supplied message is shown as the server wrote it; only the host's own text is translated.
     // Status 0 means no answer arrived.
-    super(status === 0 ? t('Error.Unreachable') :
+    super(unreadable ? t('Error.UnreadableAnswer') :
+      status === 0 ? t('Error.Unreachable') :
       status === 412 ? t('Error.Conflict') :
       status === 401 ? t('Error.SessionExpired') :
       status === 403 ? t('Error.Forbidden') :
       t('Error.RequestFailed', { status, detail: data?.message || data?.errorMessage || t('Error.EditsKept') }));
     this.status = status;
     this.data = data;
+    this.unreadable = unreadable;
   }
+}
+
+/**
+ * What a failure while the page opens says. A BackendError's own text is written for a save, so it
+ * speaks of edits kept and of saving, neither of which exists before the page has opened.
+ */
+export function openingMessage(error, creating = false) {
+  if (!(error instanceof BackendError)) return error?.message ?? String(error);
+  if (error.unreadable) return t('Error.UnreadableAnswer');
+  if (error.status === 0) return t('Error.Unreachable');
+  if (error.status === 401) return t('Error.SessionEnded');
+  if (error.status === 403) return t(creating ? 'Error.ForbiddenCreate' : 'Error.ForbiddenOpen');
+  return t('Error.RequestFailed', {
+    status: error.status,
+    detail: error.data?.message || error.data?.errorMessage || t('Error.ReloadToRetry'),
+  });
 }
 
 export function createBackend(auth, sessionId, fetcher = fetch) {
@@ -92,7 +110,13 @@ export function createBackend(auth, sessionId, fetcher = fetch) {
       }
       const text = await response.text();
       let data;
-      try { data = text ? JSON.parse(text) : null; } catch { data = null; }
+      try { data = text ? JSON.parse(text) : null; } catch {
+        // A read that answers with something other than JSON has failed: a proxy's sign-in page, or
+        // a body cut short. A write's acknowledgement is judged by the save, which knows that an
+        // unreadable one may still mean the write happened.
+        if (response.ok && method === 'GET') throw new BackendError(response.status, null, { unreadable: true });
+        data = null;
+      }
       if (!response.ok && attempt === 0 && (response.status === 401 || data?.suggestedAction === 'refreshToken')) {
         await refresh(-1);
         continue;

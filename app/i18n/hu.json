@@ -75,6 +75,12 @@
     "InvalidArtifact": "Az adattár eltérő vagy hiányos artefaktumot adott vissza. Próbálja újra az újratöltéssel.",
     "SaveUnconfirmed": "A kiszolgáló elfogadta a mentést, de nem azonosította a mentett artefaktumot. Újabb mentés előtt ellenőrizze a Workspace-ben.",
     "Unreachable": "A kiszolgáló nem érhető el. Ellenőrizze a kapcsolatot, és próbálja újra.",
-    "Unreadable": "A CEDAR nem tudja beolvasni ezt az artefaktumot, ezért nem nyitható meg. {{detail}}"
+    "Unreadable": "A CEDAR nem tudja beolvasni ezt az artefaktumot, ezért nem nyitható meg. {{detail}}",
+    "SessionEnded": "A munkamenete lejárt. Jelentkezzen be újra.",
+    "ForbiddenOpen": "Nincs jogosultsága az artefaktum megnyitásához.",
+    "ForbiddenCreate": "Nincs jogosultsága itt artefaktumot létrehozni.",
+    "ReloadToRetry": "Töltse újra az oldalt, és próbálja újra.",
+    "UnreadableAnswer": "A kiszolgáló olyan választ küldött, amelyet a Designer nem tud értelmezni. Töltse újra az oldalt, és próbálja újra.",
+    "ManifestLoad": "A komponensjegyzék nem tölthető be. Építse újra és telepítse a helyi komponenseket."
   }
 }

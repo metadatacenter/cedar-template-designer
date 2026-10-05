@@ -3,7 +3,7 @@ document.getElementById('back-icon').innerHTML = iconSvg('back');
 // Workspace heads its Create Draft dialog with this icon, and this dialog also ends in a new draft.
 document.getElementById('version-icon').innerHTML = iconSvg('new-record');
 const version = encodeURIComponent(window.cedarCacheControl || 'local');
-const { resourceSelector, resourcePathId, useDeploymentBase, routeFor, workspaceReturn, canEdit, canCreate, createBackend, childSource, saveArtifact, DesignerCoordinator, waitForDesigner } = await import(`./host-core.mjs?v=${version}`);
+const { resourceSelector, resourcePathId, useDeploymentBase, routeFor, workspaceReturn, canEdit, canCreate, createBackend, openingMessage, childSource, saveArtifact, DesignerCoordinator, waitForDesigner } = await import(`./host-core.mjs?v=${version}`);
 // host-core.mjs imports this same versioned URL, so both modules share one active language.
 const { t, detectLanguage, setLanguage, localizeDocument } = await import(`./i18n.mjs?v=${version}`);
 const language = setLanguage(detectLanguage(navigator.languages));
@@ -118,11 +118,15 @@ async function loadScript(name, digest) {
     document.head.append(script);
   });
 }
+/** A file the page needs before it can open, read whole or refused with the reason given. */
+async function readJson(url, failure, options) {
+  let response;
+  try { response = await fetch(url, options); } catch { throw new Error(t('Error.Unreachable')); }
+  if (!response.ok) throw new Error(t(failure));
+  try { return await response.json(); } catch { throw new Error(t(failure)); }
+}
 try {
-  config = await fetch(`config/host.json?v=${version}`).then(response => {
-    if (!response.ok) throw new Error(t('Error.ConfigurationLoad'));
-    return response.json();
-  });
+  config = await readJson(`config/host.json?v=${version}`, 'Error.ConfigurationLoad');
   const params = new URLSearchParams(location.search);
   folderId = params.get('folderId');
   returnUrl = workspaceReturn(config.workspaceFrontend, params.get('returnTo'), folderId);
@@ -135,9 +139,11 @@ try {
     // The home folder is an identity this deployment minted, so it names the base to shorten against.
     useDeploymentBase(profile.homeFolderId);
     folderId ||= profile.homeFolderId;
-    const manifest = await fetch(`components/manifest.json?v=${version}`, { cache: 'no-store' }).then(response => response.json());
+    const manifest = await readJson(`components/manifest.json?v=${version}`, 'Error.ManifestLoad', { cache: 'no-store' });
     for (const name of ['cedar-embeddable-editor', 'cedar-embeddable-term-picker', 'cedar-embeddable-designer']) {
-      await loadScript(name, manifest[name].sha256);
+      const digest = manifest?.[name]?.sha256;
+      if (typeof digest !== 'string') throw new Error(t('Error.ComponentLoad', { name }));
+      await loadScript(name, digest);
     }
     const elementName = route.kind === 'field' ? 'cedar-embeddable-field-designer' : 'cedar-embeddable-designer';
     await waitForDesigner(customElements);
@@ -187,5 +193,5 @@ try {
   designer = null;
   state.failLoad();
   update();
-  message(error.message, true);
+  message(openingMessage(error, !route?.id), true);
 }
