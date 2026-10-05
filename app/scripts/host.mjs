@@ -11,12 +11,14 @@ localizeDocument(document);
 const ui = Object.fromEntries(['back', 'save', 'save-help', 'title', 'state', 'message', 'editor', 'version-dialog', 'version-message', 'version-explanation', 'reload', 'server-issues', 'server-issues-title', 'server-issues-list'].map(id => [id, document.getElementById(id)]));
 const state = new DesignerCoordinator();
 let designer, leaving = false, discarded = false, returnUrl, route, saved = false, folderId, request, config;
+// The stored artifact is one the designer cannot read, so reloading it cannot help.
+let unreadable = false;
 function message(text, error = false) { ui.message.textContent = text; ui.message.dataset.tone = error ? 'error' : 'info'; }
 function dirty() { return !leaving && state.dirty(designer); }
 function update() {
   const report = state.report(designer);
   ui.save.disabled = !report.canSave;
-  ui.reload.hidden = !(state.loadFailed || state.reloadRequired) || state.uncertainCreation;
+  ui.reload.hidden = !(state.loadFailed || state.reloadRequired) || state.uncertainCreation || unreadable;
   ui.reload.disabled = state.saving;
   ui['server-issues'].hidden = !report.server.length;
   ui['server-issues-title'].textContent = t('Message.ServerFindings', {count: report.server.length});
@@ -157,7 +159,14 @@ try {
       const [loaded, report] = await Promise.all([request(url), request(`${url}/report`)]);
       if (!loaded.data || resourcePathId(loaded.data['@id']) !== resourcePathId(route.id)) throw new Error(t('Error.InvalidArtifact'));
       route.id = loaded.data['@id']; // Keep the stored identity for subsequent PUT bodies.
-      designer.loadArtifact(loaded.data);
+      try {
+        designer.loadArtifact(loaded.data);
+      } catch (error) {
+        // The reader refuses an artifact it cannot read, such as one whose child is stored under a
+        // reserved key, and says why in its own words, which name the place in the artifact.
+        unreadable = true;
+        throw new Error(t('Error.Unreadable', { detail: error.message }));
+      }
       state.loaded({ artifact: loaded.data, etag: loaded.etag, writable: canEdit(report.data, loaded.data) });
       if (state.writable && !loaded.etag) { state.reloadRequired = true; message(t('Error.NoValidator'), true); }
     } else {

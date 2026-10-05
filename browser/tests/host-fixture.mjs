@@ -32,7 +32,7 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
         return route.fulfill({json:state.savedId?{'@id':state.savedId}:{},headers:state.nextEtag?{ETag:state.nextEtag}:{}});
       }
       if(state.brokenLoad)return route.fulfill({status:503,json:{message:'Load unavailable'}});
-      return route.fulfill({json:{'@id':state.loadedId,'schema:name':'Opened',properties:{}},headers:state.loadedEtag?{ETag:state.loadedEtag}:{}});
+      return route.fulfill({json:{'@id':state.loadedId,'schema:name':'Opened',properties:{},...(state.unreadable?{unreadable:true}:{})},headers:state.loadedEtag?{ETag:state.loadedEtag}:{}});
     }
     if(path==='/config/host.json')return route.fulfill({json:{workspaceFrontend:'https://workspace.test',resourceRestAPI:'https://designer.test/api',userRestAPI:'https://designer.test/api'}});
     if(path==='/config/version.js')return route.fulfill({contentType:'text/javascript',body:"window.cedarCacheControl='fixture';"});
@@ -44,7 +44,7 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
         connectedCallback(){this.textContent='Designer fixture'}
         get canSave(){return this.report.canSave}get validationReport(){return this.report}validate(){return this.report}
         get isDirty(){return JSON.stringify(this.currentArtifact)!==this.baseline}
-        loadArtifact(value){this.currentArtifact=structuredClone(value);this.baseline=JSON.stringify(value)}
+        loadArtifact(value){if(value.unreadable)throw new Error('Child schema uses a reserved instance property name at /properties/@foo/');this.currentArtifact=structuredClone(value);this.baseline=JSON.stringify(value)}
         newArtifact(){this.loadArtifact({'schema:name':''});this.report={valid:false,canSave:false,issues:[{setting:'name',shown:false,severity:'error'}]}}
       }
       setTimeout(()=>{
@@ -60,7 +60,7 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
   // The host takes its language from the browser's preferences.
   await page.addInitScript(language=>Object.defineProperty(navigator,'languages',{get:()=>[language]}),state.language);
   await page.goto(`https://designer.test/${kind}s/${mode}${mode==='edit'?'/item':''}`);
-  if(state.brokenLoad||state.loadedId!=='item'){
+  if(state.brokenLoad||state.loadedId!=='item'||state.unreadable){
     await expect(page.locator('#state')).toHaveText(text(state.language,'State.LoadFailed'));return state;
   }
   await expect(page.locator('#editor')).toBeVisible();

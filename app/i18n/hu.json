@@ -74,6 +74,7 @@
     "DocumentChanged": "A dokumentum megváltozott a mentés előkészítése közben. Ellenőrizze, és mentse újra.",
     "InvalidArtifact": "Az adattár eltérő vagy hiányos artefaktumot adott vissza. Próbálja újra az újratöltéssel.",
     "SaveUnconfirmed": "A kiszolgáló elfogadta a mentést, de nem azonosította a mentett artefaktumot. Újabb mentés előtt ellenőrizze a Workspace-ben.",
-    "Unreachable": "A kiszolgáló nem érhető el. Ellenőrizze a kapcsolatot, és próbálja újra."
+    "Unreachable": "A kiszolgáló nem érhető el. Ellenőrizze a kapcsolatot, és próbálja újra.",
+    "Unreadable": "A CEDAR nem tudja beolvasni ezt az artefaktumot, ezért nem nyitható meg. {{detail}}"
   }
 }

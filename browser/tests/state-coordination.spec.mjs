@@ -1,5 +1,5 @@
 import {test,expect} from '@playwright/test';
-import {host,edit} from './host-fixture.mjs';
+import {host,edit,text} from './host-fixture.mjs';
 
 for(const kind of ['template','element','field'])for(const mode of ['create','edit'])for(const allowed of [false,true]) {
   test(`${kind} ${mode}: permission and unnamed initial state stay coordinated, allowed=${allowed}`,async({page})=>{
@@ -96,4 +96,14 @@ for(const kind of ['template','element','field'])for(const fault of ['unavailabl
   state.brokenLoad=false;state.loadedId='item';state.loadedEtag='"recovered"';
   await page.locator('#reload').click();
   await expect(page.locator('#state')).toHaveText('Unmodified');await expect(page.locator('#save')).toBeEnabled();
+});
+
+// The designer refuses an artifact it cannot read, such as one whose child is stored under a reserved
+// key. Reloading would read the same stored artifact, so the page says why and offers no reload.
+for(const kind of ['template','element','field'])for(const language of ['en','hu'])test(`${kind} the designer cannot read says so in ${language} and offers no reload`,async({page})=>{
+  const state=await host(page,kind,'edit',true,{unreadable:true,language});
+  await expect(page.locator('#message')).toHaveText(text(language,'Error.Unreadable',{detail:'Child schema uses a reserved instance property name at /properties/@foo/'}));
+  await expect(page.locator('#message')).toHaveAttribute('data-tone','error');
+  await expect(page.locator('#save')).toBeDisabled();await expect(page.locator('#reload')).toBeHidden();
+  expect(state.writes).toHaveLength(0);
 });
