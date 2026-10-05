@@ -87,7 +87,7 @@ for(const {kind,mode,language,edited,outcome} of cases)
     await expect(status).toHaveText(text(language,expected.reload?'State.ReloadRequired':edited?'State.Modified':'State.Unmodified'));
     if(expected.findings){
       await expect(page.locator('#server-issues')).toBeVisible();
-      await expect(page.locator('#server-issues-title')).toHaveText(text(language,'Message.ServerFindings',{count:expected.findings}));
+      await expect(page.locator('#server-issues-title')).toHaveText(text(language,expected.findings===1?'Message.ServerFindingsOne':'Message.ServerFindings',{count:expected.findings}));
     }else await expect(page.locator('#server-issues')).toBeHidden();
     // Save stays refused while a server error is listed or the artifact must be reloaded.
     if(expected.reload||expected.findings)await expect(save).toBeDisabled();else await expect(save).toBeEnabled();

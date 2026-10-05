@@ -30,6 +30,7 @@
     "ConfirmDiscard": "Discard your unsaved changes and return to Workspace?",
     "ConfirmReload": "Discard your unsaved changes and reload the latest artifact?",
     "ServerFindings": "Server validation: {{count}} findings",
+    "ServerFindingsOne": "Server validation: {{count}} finding",
     "SavedWithChanges": "Saved. Further changes remain in the designer.",
     "SavedNewIdentity": "Saved as a new artifact. Further changes remain here; reload the saved artifact before saving again."
   },
@@ -40,8 +41,8 @@
     "KeepEditing": "Keep editing",
     "CreateDraft": "Create new draft",
     "Discard": "Discard changes",
-    "OneInstance": "1 metadata instance uses this template. These changes require a new version.",
-    "OneInstanceOfVersion": "1 metadata instance uses this template (version {{version}} draft). These changes require a new version.",
+    "InstancesOne": "1 metadata instance uses this template. These changes require a new version.",
+    "InstancesOfVersionOne": "1 metadata instance uses this template (version {{version}} draft). These changes require a new version.",
     "Instances": "{{count}} metadata instances use this template. These changes require a new version.",
     "InstancesOfVersion": "{{count}} metadata instances use this template (version {{version}} draft). These changes require a new version.",
     "ExistingInstances": "Existing metadata instances use this template. These changes require a new version.",

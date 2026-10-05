@@ -30,6 +30,7 @@
     "ConfirmDiscard": "Elveti a nem mentett módosításait, és visszatér a Munkaterületre?",
     "ConfirmReload": "Elveti a nem mentett módosításokat, és újratölti az artefaktum legújabb változatát?",
     "ServerFindings": "Kiszolgálóoldali ellenőrzés: {{count}} megállapítás",
+    "ServerFindingsOne": "Kiszolgálóoldali ellenőrzés: {{count}} megállapítás",
     "SavedWithChanges": "Mentve. További módosítások maradtak a tervezőben.",
     "SavedNewIdentity": "Új erőforrásként mentve. A további módosítások itt maradnak; újabb mentés előtt töltse be újra a mentett erőforrást."
   },
@@ -40,8 +41,8 @@
     "KeepEditing": "Szerkesztés folytatása",
     "CreateDraft": "Új vázlat létrehozása",
     "Discard": "Módosítások elvetése",
-    "OneInstance": "1 metaadatpéldány használja ezt a sablont. Ezek a módosítások új verziót igényelnek.",
-    "OneInstanceOfVersion": "1 metaadatpéldány használja ezt a sablont (verzió: {{version}}, vázlat). Ezek a módosítások új verziót igényelnek.",
+    "InstancesOne": "1 metaadatpéldány használja ezt a sablont. Ezek a módosítások új verziót igényelnek.",
+    "InstancesOfVersionOne": "1 metaadatpéldány használja ezt a sablont (verzió: {{version}}, vázlat). Ezek a módosítások új verziót igényelnek.",
     "Instances": "{{count}} metaadatpéldány használja ezt a sablont. Ezek a módosítások új verziót igényelnek.",
     "InstancesOfVersion": "{{count}} metaadatpéldány használja ezt a sablont (verzió: {{version}}, vázlat). Ezek a módosítások új verziót igényelnek.",
     "ExistingInstances": "Meglévő metaadatpéldányok használják ezt a sablont. Ezek a módosítások új verziót igényelnek.",

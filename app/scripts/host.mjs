@@ -5,7 +5,7 @@ document.getElementById('version-icon').innerHTML = iconSvg('new-record');
 const version = encodeURIComponent(window.cedarCacheControl || 'local');
 const { resourceSelector, resourcePathId, useDeploymentBase, routeFor, workspaceReturn, canEdit, canCreate, createBackend, openingMessage, childSource, saveArtifact, DesignerCoordinator, waitForDesigner } = await import(`./host-core.mjs?v=${version}`);
 // host-core.mjs imports this same versioned URL, so both modules share one active language.
-const { t, detectLanguage, setLanguage, localizeDocument } = await import(`./i18n.mjs?v=${version}`);
+const { t, counted, detectLanguage, setLanguage, localizeDocument } = await import(`./i18n.mjs?v=${version}`);
 const language = setLanguage(detectLanguage(navigator.languages));
 localizeDocument(document);
 const ui = Object.fromEntries(['back', 'save', 'save-help', 'title', 'state', 'message', 'editor', 'version-dialog', 'version-message', 'version-explanation', 'reload', 'server-issues', 'server-issues-title', 'server-issues-list'].map(id => [id, document.getElementById(id)]));
@@ -21,7 +21,7 @@ function update() {
   ui.reload.hidden = !(state.loadFailed || state.reloadRequired) || state.uncertainCreation || unreadable;
   ui.reload.disabled = state.saving;
   ui['server-issues'].hidden = !report.server.length;
-  ui['server-issues-title'].textContent = t('Message.ServerFindings', {count: report.server.length});
+  ui['server-issues-title'].textContent = counted('Message.ServerFindings', report.server.length);
   ui['server-issues-list'].replaceChildren();
   for (const issue of report.server) {
     const row = document.createElement('li');
@@ -58,9 +58,12 @@ ui.reload.addEventListener('click', () => {
 });
 function confirmVersion(impact) {
   const count = impact.numberOfInstances;
-  const counted = count == null ? 'ExistingInstances' : count === 1 ? 'OneInstance' : 'Instances';
-  const key = `Version.${counted}${impact.oldVersion ? 'OfVersion' : ''}`;
-  ui['version-message'].textContent = t(key, { count: impact.numberOfInstances, version: impact.oldVersion });
+  const ofVersion = impact.oldVersion ? 'OfVersion' : '';
+  const params = { count, version: impact.oldVersion };
+  // An unknown count has a message of its own, which names no number.
+  ui['version-message'].textContent = count == null
+    ? t(`Version.ExistingInstances${ofVersion}`, params)
+    : counted(`Version.Instances${ofVersion}`, count, params);
   ui['version-explanation'].textContent = t(`Version.Explanation${impact.oldVersion ? 'OfVersion' : ''}`, { version: impact.oldVersion });
   const dialog = ui['version-dialog'];
   dialog.returnValue = 'cancel';

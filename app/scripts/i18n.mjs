@@ -37,6 +37,15 @@ export function t(key, params = {}) {
   return text.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (placeholder, name) => params[name] === undefined ? placeholder : String(params[name]));
 }
 
+/**
+ * The text for `key` with a number in it, in the singular when the number is one. A message's
+ * singular is its key with `One` appended, as in Workspace. Hungarian keeps a noun singular after
+ * any number, so its two texts read alike; English needs both.
+ */
+export function counted(key, count, params = { count }) {
+  return t(count === 1 ? `${key}One` : key, params);
+}
+
 // Attributes that the host can fill from the maps. An element carrying data-i18n-title, for
 // example, receives the translated key as its title attribute.
 export const localizedAttributes = ['aria-label', 'aria-description', 'title', 'placeholder', 'alt', 'label'];
