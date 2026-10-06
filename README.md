@@ -9,8 +9,9 @@ The host owns Keycloak SSO, permission checks, repository child search, persiste
 conditional writes, dirty-navigation warnings and safe return to Workspace. It
 contains no AngularJS authoring UI or legacy designer dependencies.
 
-The unsaved indicator is a filled yellow dot beside the status text. Hosts may
-override its color with `--designer-unsaved-color`; the default is `#eab308`.
+A mark beside the status text shows the save state: a hollow ring while nothing is
+unsaved and a filled dot once something is. The design tokens' `save-state.css`
+draws it in the warning colour, `status-warning-text`.
 
 ## Local development
 
@@ -24,8 +25,8 @@ cedarcli native restart frontend designer
 ```
 
 The development server uses port 4202 (`CEDAR_FRONTEND_PORT` overrides it).
-`npm start` runs the same host directly. `npm run prepare:components` or
-`npx gulp copy:ced` stages the installed packages without restarting the server.
+`npm start` runs the same host directly. `npm run prepare:components` stages the
+installed packages without restarting the server.
 Reload the page after staging.
 
 | Component | Pinned package |

@@ -11,20 +11,28 @@
       "template": "Template Designer",
       "element": "Element Designer",
       "field": "Field Designer"
-    }
+    },
+    "Reload": "Reload designer"
   },
   "State": {
     "Saving": "Saving…",
     "ReadOnly": "Read only",
     "Modified": "Modified",
     "Unmodified": "Unmodified",
-    "Saved": "Saved"
+    "Saved": "Saved",
+    "LoadFailed": "Unable to load",
+    "ReloadRequired": "Reload required"
   },
   "Message": {
     "ChangesKept": "Not saved. Your changes remain in the designer.",
     "ChangesDiscarded": "Not saved. Your changes were discarded.",
     "ReadOnly": "This artifact is read only. Create a draft or change permissions in Workspace to edit it.",
-    "ConfirmDiscard": "Discard your unsaved changes and return to Workspace?"
+    "ConfirmDiscard": "Discard your unsaved changes and return to Workspace?",
+    "ConfirmReload": "Discard your unsaved changes and reload the latest artifact?",
+    "ServerFindings": "Server validation: {{count}} findings",
+    "ServerFindingsOne": "Server validation: {{count}} finding",
+    "SavedWithChanges": "Saved. Further changes remain in the designer.",
+    "SavedNewIdentity": "Saved as a new artifact. Further changes remain here; reload the saved artifact before saving again."
   },
   "Version": {
     "Title": "Create a new template version?",
@@ -33,6 +41,8 @@
     "KeepEditing": "Keep editing",
     "CreateDraft": "Create new draft",
     "Discard": "Discard changes",
+    "InstancesOne": "1 metadata instance uses this template. These changes require a new version.",
+    "InstancesOfVersionOne": "1 metadata instance uses this template (version {{version}} draft). These changes require a new version.",
     "Instances": "{{count}} metadata instances use this template. These changes require a new version.",
     "InstancesOfVersion": "{{count}} metadata instances use this template (version {{version}} draft). These changes require a new version.",
     "ExistingInstances": "Existing metadata instances use this template. These changes require a new version.",
@@ -59,6 +69,19 @@
     "ConfigurationLoad": "Frontend configuration could not be loaded.",
     "SignIn": "Sign-in could not be initialized. Reload to try again.",
     "MissingFieldDesigner": "This Designer bundle does not include CEFD. Stage a current CED bundle and reload.",
-    "OutdatedBundle": "The local CED bundle is out of date. Rebuild CED and restart Designer."
+    "OutdatedBundle": "The local CED bundle is out of date. Rebuild CED and restart Designer.",
+    "InvalidChildren": "The repository returned an incomplete child list. Please retry.",
+    "InvalidImpact": "The server did not provide a valid update assessment. Your changes have been kept.",
+    "DocumentChanged": "The document changed while saving was being prepared. Review it and save again.",
+    "InvalidArtifact": "The repository returned a different or incomplete artifact. Reload to try again.",
+    "SaveUnconfirmed": "The server accepted the save but did not identify the saved artifact. Check Workspace before saving again.",
+    "Unreachable": "The server could not be reached. Check your connection and try again.",
+    "Unreadable": "CEDAR cannot read this artifact, so it cannot be opened. {{detail}}",
+    "SessionEnded": "Your session has expired. Sign in again.",
+    "ForbiddenOpen": "You do not have permission to open this artifact.",
+    "ForbiddenCreate": "You do not have permission to create an artifact here.",
+    "ReloadToRetry": "Reload to try again.",
+    "UnreadableAnswer": "The server sent an answer the Designer cannot read. Reload to try again.",
+    "ManifestLoad": "The component manifest could not be loaded. Rebuild and stage the local components."
   }
 }

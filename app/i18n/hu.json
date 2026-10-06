@@ -11,20 +11,28 @@
       "template": "Sablontervező",
       "element": "Elemtervező",
       "field": "Mezőtervező"
-    }
+    },
+    "Reload": "Tervező újratöltése"
   },
   "State": {
     "Saving": "Mentés…",
     "ReadOnly": "Csak olvasható",
     "Modified": "Módosítva",
     "Unmodified": "Változatlan",
-    "Saved": "Mentve"
+    "Saved": "Mentve",
+    "LoadFailed": "Nem tölthető be",
+    "ReloadRequired": "Újratöltés szükséges"
   },
   "Message": {
     "ChangesKept": "Nincs mentve. A módosításai a tervezőben maradtak.",
     "ChangesDiscarded": "Nincs mentve. A módosításait elvetette.",
     "ReadOnly": "Ez az artefaktum csak olvasható. A szerkesztéshez hozzon létre egy vázlatot, vagy módosítsa a jogosultságokat a Munkaterületen.",
-    "ConfirmDiscard": "Elveti a nem mentett módosításait, és visszatér a Munkaterületre?"
+    "ConfirmDiscard": "Elveti a nem mentett módosításait, és visszatér a Munkaterületre?",
+    "ConfirmReload": "Elveti a nem mentett módosításokat, és újratölti az artefaktum legújabb változatát?",
+    "ServerFindings": "Kiszolgálóoldali ellenőrzés: {{count}} megállapítás",
+    "ServerFindingsOne": "Kiszolgálóoldali ellenőrzés: {{count}} megállapítás",
+    "SavedWithChanges": "Mentve. További módosítások maradtak a tervezőben.",
+    "SavedNewIdentity": "Új erőforrásként mentve. A további módosítások itt maradnak; újabb mentés előtt töltse be újra a mentett erőforrást."
   },
   "Version": {
     "Title": "Létrehoz egy új sablonverziót?",
@@ -33,6 +41,8 @@
     "KeepEditing": "Szerkesztés folytatása",
     "CreateDraft": "Új vázlat létrehozása",
     "Discard": "Módosítások elvetése",
+    "InstancesOne": "1 metaadatpéldány használja ezt a sablont. Ezek a módosítások új verziót igényelnek.",
+    "InstancesOfVersionOne": "1 metaadatpéldány használja ezt a sablont (verzió: {{version}}, vázlat). Ezek a módosítások új verziót igényelnek.",
     "Instances": "{{count}} metaadatpéldány használja ezt a sablont. Ezek a módosítások új verziót igényelnek.",
     "InstancesOfVersion": "{{count}} metaadatpéldány használja ezt a sablont (verzió: {{version}}, vázlat). Ezek a módosítások új verziót igényelnek.",
     "ExistingInstances": "Meglévő metaadatpéldányok használják ezt a sablont. Ezek a módosítások új verziót igényelnek.",
@@ -59,6 +69,19 @@
     "ConfigurationLoad": "A frontend konfigurációja nem tölthető be.",
     "SignIn": "A bejelentkezés nem inicializálható. Töltse újra az oldalt, és próbálja újra.",
     "MissingFieldDesigner": "Ez a Designer-csomag nem tartalmazza a CEFD-t. Telepítsen egy aktuális CED-csomagot, és töltse újra az oldalt.",
-    "OutdatedBundle": "A helyi CED-csomag elavult. Építse újra a CED-et, és indítsa újra a Designert."
+    "OutdatedBundle": "A helyi CED-csomag elavult. Építse újra a CED-et, és indítsa újra a Designert.",
+    "InvalidChildren": "Az adattár hiányos gyermeklistát adott vissza. Próbálja újra.",
+    "InvalidImpact": "A kiszolgáló nem adott érvényes frissítési értékelést. A módosításai megmaradtak.",
+    "DocumentChanged": "A dokumentum megváltozott a mentés előkészítése közben. Ellenőrizze, és mentse újra.",
+    "InvalidArtifact": "Az adattár eltérő vagy hiányos artefaktumot adott vissza. Próbálja újra az újratöltéssel.",
+    "SaveUnconfirmed": "A kiszolgáló elfogadta a mentést, de nem azonosította a mentett artefaktumot. Újabb mentés előtt ellenőrizze a Workspace-ben.",
+    "Unreachable": "A kiszolgáló nem érhető el. Ellenőrizze a kapcsolatot, és próbálja újra.",
+    "Unreadable": "A CEDAR nem tudja beolvasni ezt az artefaktumot, ezért nem nyitható meg. {{detail}}",
+    "SessionEnded": "A munkamenete lejárt. Jelentkezzen be újra.",
+    "ForbiddenOpen": "Nincs jogosultsága az artefaktum megnyitásához.",
+    "ForbiddenCreate": "Nincs jogosultsága itt artefaktumot létrehozni.",
+    "ReloadToRetry": "Töltse újra az oldalt, és próbálja újra.",
+    "UnreadableAnswer": "A kiszolgáló olyan választ küldött, amelyet a Designer nem tud értelmezni. Töltse újra az oldalt, és próbálja újra.",
+    "ManifestLoad": "A komponensjegyzék nem tölthető be. Építse újra és telepítse a helyi komponenseket."
   }
 }

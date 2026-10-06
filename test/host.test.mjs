@@ -93,6 +93,14 @@ test('backend refreshes an expired session once and retains conditional headers'
   assert.equal(calls[1].headers['If-Match'], '"v1"');
   assert.equal(saved.etag, '"v2"');
 });
+test('a request that gets no answer fails in the host\'s words, and a cancellation stays one', async () => {
+  const auth = { getToken: () => 'test-token', refreshToken: (_validity, success) => success(true) };
+  const unreachable = createBackend(auth, 'session', async () => { throw new TypeError('Failed to fetch'); });
+  await assert.rejects(unreachable(base), error => error instanceof BackendError && error.status === 0 &&
+    error.message === 'The server could not be reached. Check your connection and try again.');
+  const cancelled = createBackend(auth, 'session', async () => { throw new DOMException('Aborted', 'AbortError'); });
+  await assert.rejects(cancelled(base), error => error.name === 'AbortError');
+});
 test('child search forwards cancellation and permission-filtered pagination', async () => {
   const calls = [];
   const source = childSource(async (url, options) => { calls.push({ url, options }); return { data: { resources: [{ '@id': 'a', 'schema:name': 'A', resourceType: 'element' }], totalCount: 2 } }; }, base);

@@ -12,7 +12,7 @@ async function host(isDirty = true, languages = ['en-US'], existing = false, imp
   let resolveSave, rejectSave;
   const saved = new Promise((resolve, reject) => { resolveSave = resolve; rejectSave = reject; });
   const designer = {
-    isDirty, canSave: true, currentArtifact: {}, validate: () => ({ canSave: true }),
+    isDirty, canSave: true, currentArtifact: {}, validationReport: { canSave: true, issues: [] }, validate: () => ({ canSave: true, issues: [] }),
     newArtifact() {}, addEventListener(event, callback) { events.set('designer:' + event, callback); },
     // Like CED, loading again takes the artifact as the baseline the designer compares edits with.
     // The first load leaves alone the state each test starts from.
@@ -64,7 +64,7 @@ async function host(isDirty = true, languages = ['en-US'], existing = false, imp
   await run(window, document, location, fetch, { whenDefined: async () => {}, get: () => true },
     { randomUUID: () => 'session' }, { languages }, { ...core,
       canEdit: () => true,
-      createBackend: () => async () => ({ data: { homeFolderId: 'home' } }),
+      createBackend: () => async () => ({ data: { '@id': 'template-id', homeFolderId: 'home', currentUserPermissions: {capabilities: ['createInFolder', 'updateResource']} }, etag: '"one"' }),
       saveArtifact: options => impact ? options.confirmVersion(impact).then(confirmed => confirmed ? saved : null) : saved,
     }, i18n);
   assert.equal(node('save').disabled, false);
@@ -98,6 +98,9 @@ for (const failed of [true, false]) {
     assert.deepEqual(h.navigations, []);
     assert.equal(h.unload(), true);
     assert.equal(h.node('save').disabled, false);
+    // A failure reads as an error notice; a cancelled save's explanation as information.
+    assert.equal(h.node('message').textContent, failed ? 'Save failed' : 'Not saved. Your changes remain in the designer.');
+    assert.equal(h.node('message').dataset.tone, failed ? 'error' : 'info');
   });
 }
 
@@ -182,6 +185,21 @@ test('the version dialog names the draft version the existing template is publis
     '9 metadata instances use this template (version 0.0.1 draft). These changes require a new version.');
   assert.equal(h.node('version-explanation').textContent,
     'The existing template will be published as version 0.0.1 and your changes saved as a new draft. Existing metadata stays with the original template.');
+  h.closeVersion('cancel');
+  await saving;
+});
+
+for (const [count, version, language, message] of [
+  [1, null, 'en-US', '1 metadata instance uses this template. These changes require a new version.'],
+  [1, '0.0.1', 'en-US', '1 metadata instance uses this template (version 0.0.1 draft). These changes require a new version.'],
+  [9, null, 'en-US', '9 metadata instances use this template. These changes require a new version.'],
+  [null, null, 'en-US', 'Existing metadata instances use this template. These changes require a new version.'],
+  [1, null, 'hu-HU', '1 metaadatpéldány használja ezt a sablont. Ezek a módosítások új verziót igényelnek.'],
+  [9, '0.0.1', 'hu-HU', '9 metaadatpéldány használja ezt a sablont (verzió: 0.0.1, vázlat). Ezek a módosítások új verziót igényelnek.'],
+]) test(`the version dialog's message for an instance count of ${count ?? 'unknown'}${version ? ' and a versioned draft' : ''} in ${language}`, async () => {
+  const h = await host(true, [language], true, { numberOfInstances: count, ...(version ? { oldVersion: version } : {}) });
+  const saving = h.save();
+  assert.equal(h.node('version-message').textContent, message);
   h.closeVersion('cancel');
   await saving;
 });
