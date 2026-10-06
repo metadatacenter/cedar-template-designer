@@ -21,7 +21,7 @@
     "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20261004.1889ea60"
   },
   "dependencies": {
-    "cedar-embeddable-designer": "npm:@org.metadatacenter/cedar-embeddable-designer@0.1.0-dev.20261005.63007c87",
+    "cedar-embeddable-designer": "npm:@org.metadatacenter/cedar-embeddable-designer@0.1.0-dev.20261005.ff5d72a7",
     "cedar-embeddable-editor": "npm:@org.metadatacenter/cedar-embeddable-editor@2.0.21-dev.20261005.f44bf35",
     "cedar-embeddable-term-picker": "npm:@org.metadatacenter/cedar-embeddable-term-picker@0.1.0-dev.20261005.99f959d6"
   }
