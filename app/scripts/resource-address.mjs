@@ -6,18 +6,26 @@ const TYPED = new RegExp(`^(${COLLECTIONS})/(${UUID})$`);
 let deploymentBase = null;
 
 /**
- * Learn the deployment's base from an identity it minted, such as the user's home folder. The server
- * expands a short selector onto its own base only, so only identities on that base are shortened. An
- * identity on any other host stays absolute rather than coming back as a different resource, and
- * until the base is known nothing is shortened.
+ * Learn the deployment's base from its domain. The server expands a short selector onto its own base
+ * only, so only identities on that base are shortened. An identity on any other host stays absolute
+ * rather than coming back as a different resource, and until the base is known nothing is shortened.
  */
-export function useDeploymentBase(identity) {
-  deploymentBase = identity?.match(new RegExp(`^(https?://[^/]+/)(?:${COLLECTIONS})/${UUID}$`))?.[1] ?? null;
-}
-
-/** The same, from the deployment's domain, for an application that holds no identity it minted. */
 export function useDeploymentDomain(domain) {
   deploymentBase = domain ? `https://repo.${domain}/` : null;
+}
+
+/**
+ * The same, from the resource API the deployment is configured with. The server mints identities on
+ * repo.<host> and serves them from resource.<host>, so the API names the base. A user's identities do
+ * not: an account created when CEDAR ran on another domain keeps its home folder on that domain's
+ * base. An API on any other host leaves the base unknown.
+ */
+export function useDeploymentApi(resourceRestAPI) {
+  let host = null;
+  try {
+    host = resourceRestAPI ? new URL(resourceRestAPI).hostname : null;
+  } catch {}
+  useDeploymentDomain(host?.startsWith('resource.') ? host.slice('resource.'.length) : null);
 }
 
 /** HTTP selectors retain the resource type; document identities remain full IRIs. */
