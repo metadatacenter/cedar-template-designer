@@ -48,6 +48,23 @@ function leave() {
   leaving = true;
   location.assign(returnUrl);
 }
+function artifactUrl() { return `${config.resourceRestAPI}/${route.collection}/${encodeURIComponent(resourcePathId(route.id))}`; }
+/**
+ * Open what a save stored in place of the document it submitted, as reopening the page would. A write
+ * can assign the identity, lifecycle metadata and child identifiers, and the next save must update the
+ * stored artifact rather than resubmit the draft. When the stored artifact cannot be adopted, nothing
+ * changes and the answer is false.
+ */
+async function reopen(attempt) {
+  let loaded;
+  try { loaded = await request(artifactUrl()); } catch { return false; }
+  const id = loaded?.data?.['@id'];
+  if (!attempt.current() || typeof id !== 'string' || resourcePathId(id) !== resourcePathId(route.id) || !state.matches(attempt, designer)) return false;
+  try { designer.loadArtifact(loaded.data); } catch { return false; }
+  state.loaded({ artifact: loaded.data, etag: loaded.etag, writable: state.writable });
+  state.reloadRequired = !loaded.etag;
+  return true;
+}
 ui.back.addEventListener('click', () => {
   if (!returnUrl || state.saving || (dirty() && !window.confirm(t('Message.ConfirmDiscard')))) return;
   leave();
@@ -93,18 +110,23 @@ ui.save.addEventListener('click', async () => {
       throw new Error(t('Error.SaveUnconfirmed'));
     }
     saved = true;
-    if (!state.matches(attempt, designer)) {
-      const newIdentity = route.id !== result.data['@id'];
-      // A new draft has server-owned version metadata that the open document has not adopted.
-      state.committed(attempt, result.etag, newIdentity);
-      route.id = result.data['@id'];
-      const address = new URL(location.href);
-      address.pathname = `/${route.kind}s/edit/${encodeURIComponent(resourcePathId(route.id))}`;
-      window.history.replaceState(null, '', address.href);
-      message(t(newIdentity ? 'Message.SavedNewIdentity' : 'Message.SavedWithChanges') + (!result.etag ? ' ' + t('Error.NoValidator') : ''), state.reloadRequired);
+    // A successful save stays in Designer. A new artifact or draft takes its own edit address.
+    const newIdentity = route.id !== result.data['@id'];
+    route.id = result.data['@id'];
+    const address = new URL(location.href);
+    address.pathname = `/${route.kind}s/edit/${encodeURIComponent(resourcePathId(route.id))}`;
+    window.history.replaceState(null, '', address.href);
+    if (state.matches(attempt, designer) && await reopen(attempt)) {
+      message(state.reloadRequired ? t('Error.NoValidator') : '', state.reloadRequired);
       return;
     }
-    leave();
+    if (!attempt.current()) return;
+    // Edits made during the save stay in the designer, which then holds a document the server has not
+    // stored. A reload must adopt what the server assigned before another save: always when the save
+    // created an artifact or draft, and when an unedited document could not be reopened.
+    const edited = !state.matches(attempt, designer);
+    state.committed(attempt, result.etag, newIdentity || !edited);
+    message(edited ? t(newIdentity ? 'Message.SavedNewIdentity' : 'Message.SavedWithChanges') + (!result.etag ? ' ' + t('Error.NoValidator') : '') : t('Message.SavedReloadRequired'), state.reloadRequired);
   } catch (error) {
     if (attempt && !attempt.current()) return;
     state.failed(error, attempt); message(error.message, true);
@@ -164,7 +186,7 @@ try {
     ui.editor.append(designer);
     if (typeof designer.loadArtifact !== 'function') throw new Error(t('Error.OutdatedBundle'));
     if (route.id) {
-      const url = `${config.resourceRestAPI}/${route.collection}/${encodeURIComponent(resourcePathId(route.id))}`;
+      const url = artifactUrl();
       const [loaded, report] = await Promise.all([request(url), request(`${url}/report`)]);
       if (!loaded.data || resourcePathId(loaded.data['@id']) !== resourcePathId(route.id)) throw new Error(t('Error.InvalidArtifact'));
       route.id = loaded.data['@id']; // Keep the stored identity for subsequent PUT bodies.

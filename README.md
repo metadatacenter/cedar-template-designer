@@ -59,8 +59,15 @@ preserving existing values. Existing artifacts use their original
 ETag on PUT. Templates run the backend's `check-update-template` command first;
 when instances prevent an in-place update, a confirmation offers to publish the
 original and save a new draft without copying instances. Cancellation and failures
-keep the edits. Successful saves return to Workspace. Published artifacts and
-artifacts without `updateResource` capability are inert and cannot be saved.
+keep the edits. Published artifacts and artifacts without `updateResource`
+capability are inert and cannot be saved.
+
+A successful save stays in Designer. The host then reads the stored artifact back
+and opens it, so the designer holds the identity, version metadata and child
+identifiers the server assigned. The next save updates that artifact, using the
+ETag the read returned. A new artifact or draft takes its own edit address and
+keeps the query string. Only the Workspace control returns to Workspace, and it
+asks first when changes are unsaved.
 
 The versioning command requires the original `If-Match` validator. The backend
 uses the same source snapshot for version allocation and conditional publication;
@@ -78,5 +85,6 @@ CED continues to support fields inside templates/elements and reusable repositor
 
 `npm test` exercises navigation, permission checks, conditional saving, versioning,
 error retention, token refresh and repository child search without the stack.
-The live CED host smoke covers create/update, stale-save rejection, versioning
-with metadata instances, cancellation and return to Workspace. It is in `cedar-development/ops/e2e/ced-host-smoke.mjs`.
+The live CED host smoke covers create/update without leaving Designer, stale-save
+rejection, versioning with metadata instances, cancellation and the return to Workspace.
+It is in `cedar-development/ops/e2e/ced-host-smoke.mjs`.

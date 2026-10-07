@@ -26,7 +26,7 @@ export const OPENING_REQUESTS={
 const root = new URL('../../app/', import.meta.url);
 const source = name => readFileSync(new URL(name, root), 'utf8');
 export async function host(page, kind='template', mode='edit', allowed=true, initial={}) {
-  const state={language:'en',writes:[],failure:null,impact:{canBeUpdated:true},brokenLoad:false,holdWrite:null,savedId:mode==='edit'?'item':'saved',nextEtag:'"next"',loadedId:'item',loadedEtag:'"opened"',...initial};
+  const state={language:'en',writes:[],stored:new Map(),failure:null,impact:{canBeUpdated:true},brokenLoad:false,holdWrite:null,savedId:mode==='edit'?'item':'saved',nextEtag:'"next"',loadedId:'item',loadedEtag:'"opened"',...initial};
   await page.route('https://workspace.test/**',route=>route.fulfill({contentType:'text/html',body:'<h1>Workspace</h1>'}));
   await page.route('https://designer.test/**',async route=>{
     const url=new URL(route.request().url()),path=url.pathname;
@@ -43,8 +43,12 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
         if(state.holdWrite)await state.holdWrite;
         if(state.failure==='network')return route.abort('failed');
         if(state.failure)return route.fulfill(state.failure);
+        // What a write stores is what the artifact reads back as afterwards, under the same validator.
+        if(state.savedId)state.stored.set(state.savedId,{json:{...state.writes.at(-1).body,'@id':state.savedId},etag:state.nextEtag});
         return route.fulfill({json:state.savedId?{'@id':state.savedId}:{},headers:state.nextEtag?{ETag:state.nextEtag}:{}});
       }
+      const stored=state.stored.get(path.split('/').pop());
+      if(stored)return route.fulfill({json:stored.json,headers:stored.etag?{ETag:stored.etag}:{}});
       if(state.brokenLoad)return route.fulfill({status:503,json:{message:'Load unavailable'}});
       return route.fulfill({json:{'@id':state.loadedId,'schema:name':'Opened',properties:{},...(state.unreadable?{unreadable:true}:{})},headers:state.loadedEtag?{ETag:state.loadedEtag}:{}});
     }

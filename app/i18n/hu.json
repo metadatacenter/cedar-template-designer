@@ -32,7 +32,8 @@
     "ServerFindings": "Kiszolgálóoldali ellenőrzés: {{count}} megállapítás",
     "ServerFindingsOne": "Kiszolgálóoldali ellenőrzés: {{count}} megállapítás",
     "SavedWithChanges": "Mentve. További módosítások maradtak a tervezőben.",
-    "SavedNewIdentity": "Új erőforrásként mentve. A további módosítások itt maradnak; újabb mentés előtt töltse be újra a mentett erőforrást."
+    "SavedNewIdentity": "Új erőforrásként mentve. A további módosítások itt maradnak; újabb mentés előtt töltse be újra a mentett erőforrást.",
+    "SavedReloadRequired": "Mentve. Újabb mentés előtt töltse újra a tervezőt."
   },
   "Version": {
     "Title": "Létrehoz egy új sablonverziót?",
