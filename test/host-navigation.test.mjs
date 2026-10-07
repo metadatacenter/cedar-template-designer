@@ -5,18 +5,22 @@ import * as core from '../app/scripts/host-core.mjs';
 import * as i18n from '../app/scripts/i18n.mjs';
 
 // Exercise the real DOM wiring and navigation order with controlled I/O. In particular,
-// location.assign fires beforeunload synchronously, before save's finally block runs.
+// location.assign fires beforeunload synchronously, before a handler's finally block runs.
 // With an impact, a save asks the version dialog first, as a template change that needs a new version does.
-async function host(isDirty = true, languages = ['en-US'], existing = false, impact = null) {
-  const events = new Map(), nodes = new Map(), navigations = [];
+// With realSave, the host's own saveArtifact writes to the repository below instead of awaiting resolveSave.
+async function host(isDirty = true, languages = ['en-US'], existing = false, impact = null, realSave = false) {
+  const events = new Map(), nodes = new Map(), navigations = [], requests = [];
   let resolveSave, rejectSave;
   const saved = new Promise((resolve, reject) => { resolveSave = resolve; rejectSave = reject; });
   const designer = {
     isDirty, canSave: true, currentArtifact: {}, validationReport: { canSave: true, issues: [] }, validate: () => ({ canSave: true, issues: [] }),
     newArtifact() {}, addEventListener(event, callback) { events.set('designer:' + event, callback); },
-    // Like CED, loading again takes the artifact as the baseline the designer compares edits with.
-    // The first load leaves alone the state each test starts from.
-    loads: [], loadArtifact(source) { if (this.loads.push(source) > 1) this.isDirty = false; },
+    // Like CED, loading takes the artifact as the document and the baseline the designer compares
+    // edits with. A load while the host starts leaves alone the state each test starts from.
+    loads: [], loadArtifact(source) {
+      this.loads.push(source);
+      if (this.started) { this.isDirty = false; this.currentArtifact = structuredClone(source); }
+    },
   };
   const node = id => {
     if (!nodes.has(id)) nodes.set(id, {
@@ -32,12 +36,16 @@ async function host(isDirty = true, languages = ['en-US'], existing = false, imp
     return event.prevented;
   };
   const location = {
-    pathname: existing ? '/templates/edit/template-id' : '/templates/create', search: '',
+    pathname: existing ? '/templates/edit/template-id' : '/templates/create',
+    search: `?folderId=folder-id&returnTo=${encodeURIComponent('https://workspace.example/folders/folder-id')}`,
+    get href() { return `https://designer.example${this.pathname}${this.search}`; },
     assign: url => navigations.push({ url, blocked: unload() }),
   };
   const window = {
     addEventListener: (event, callback) => events.set(event, callback),
-    confirm: () => true,
+    confirmations: [], answer: true,
+    confirm(text) { this.confirmations.push(text); return this.answer; },
+    history: { replaceState(_state, _title, url) { ({ pathname: location.pathname, search: location.search } = new URL(url)); } },
     KeycloakUserHandler: class {
       initUserHandler(resolve) { resolve(true); }
       getParsedToken() { return { sub: 'test-user' }; }
@@ -54,6 +62,45 @@ async function host(isDirty = true, languages = ['en-US'], existing = false, imp
   const fetch = async url => ({ ok: true, json: async () => url.startsWith('config/') ? config : Object.fromEntries(
     ['cedar-embeddable-editor', 'cedar-embeddable-term-picker', 'cedar-embeddable-designer'].map(name => [name, { sha256: 'test' }]),
   ) });
+  // Holds templates as the resource server does. Creation mints the identity and starts at Draft
+  // 0.0.1. An update needs the current ETag, refuses a change to lifecycle metadata, and answers
+  // with the graph record rather than the document. An entry that is an error fails its read.
+  const repository = new Map(), impacts = [];
+  if (existing) repository.set('template-id', { data: { '@id': 'template-id', 'schema:name': 'Study', 'pav:version': '0.0.1', 'bibo:status': 'bibo:draft' }, etag: '"one"' });
+  let revision = 0;
+  const store = (id, data) => {
+    const entry = { data: { ...structuredClone(data), '@id': id }, etag: `"${++revision}"` };
+    repository.set(id, entry);
+    return entry;
+  };
+  const request = async (url, { method = 'GET', body, etag } = {}) => {
+    requests.push({ method, url, ...(etag ? { etag } : {}) });
+    const [, collection, id, rest] = new URL(url).pathname.split('/').map(decodeURIComponent);
+    const current = id => {
+      if (repository.get(id)?.etag !== etag) throw new core.BackendError(412);
+      return repository.get(id).data;
+    };
+    if (method === 'POST' && collection === 'templates') {
+      return structuredClone(store('created-template', { ...body, 'pav:version': '0.0.1', 'bibo:status': 'bibo:draft' }));
+    }
+    if (method === 'POST' && id === 'check-update-template') return { data: impacts.shift() ?? { canBeUpdated: true } };
+    if (method === 'POST' && id === 'publish-create-draft-template') {
+      const source = current(rest);
+      const draft = store('draft-template', { ...body, 'pav:version': '0.0.2', 'bibo:status': 'bibo:draft', 'pav:previousVersion': source['@id'] });
+      return { data: { '@id': 'draft-template', resourceType: 'template' }, etag: draft.etag };
+    }
+    if (method === 'PUT') {
+      const stored = current(id);
+      if (['pav:version', 'bibo:status', 'pav:previousVersion'].some(key => stored[key] !== body[key])) throw new core.BackendError(400);
+      return { data: { '@id': id, resourceType: 'template' }, etag: store(id, body).etag };
+    }
+    if (method === 'GET' && !rest && repository.has(id)) {
+      const entry = repository.get(id);
+      if (entry instanceof Error) throw entry;
+      return structuredClone(entry);
+    }
+    return { data: { '@id': 'template-id', homeFolderId: 'home', currentUserPermissions: {capabilities: ['createInFolder', 'updateResource']} }, etag: '"one"' };
+  };
   const source = (await readFile(new URL('../app/scripts/host.mjs', import.meta.url), 'utf8'))
     .replace(/^import \{iconSvg\} from [^;]+;/m, 'const iconSvg = () => "";')
     .replace(/await import\(`\.\/host-core\.mjs\?v=\$\{version\}`\)/, 'core')
@@ -64,29 +111,143 @@ async function host(isDirty = true, languages = ['en-US'], existing = false, imp
   await run(window, document, location, fetch, { whenDefined: async () => {}, get: () => true },
     { randomUUID: () => 'session' }, { languages }, { ...core,
       canEdit: () => true,
-      createBackend: () => async () => ({ data: { '@id': 'template-id', homeFolderId: 'home', currentUserPermissions: {capabilities: ['createInFolder', 'updateResource']} }, etag: '"one"' }),
-      saveArtifact: options => impact ? options.confirmVersion(impact).then(confirmed => confirmed ? saved : null) : saved,
+      createBackend: () => request,
+      saveArtifact: realSave ? core.saveArtifact : options => impact ? options.confirmVersion(impact).then(confirmed => confirmed ? saved : null) : saved,
     }, i18n);
+  designer.started = true;
   assert.equal(node('save').disabled, false);
   // The e2e smokes match these English texts exactly.
   if (i18n.language === 'en') assert.equal(node('state').textContent, isDirty ? 'Modified' : 'Unmodified');
   const closeVersion = choice => { node('version-dialog').returnValue = choice; events.get('version-dialog:close')(); };
-  return { change: () => events.get('designer:dirtyChange')(), closeVersion, designer, document, unload, navigations, resolveSave, rejectSave, save: () => events.get('save:click')(), node };
+  return { change: () => events.get('designer:dirtyChange')(), closeVersion, designer, document, unload, navigations, resolveSave, rejectSave,
+    save: () => events.get('save:click')(), back: () => events.get('back:click')(), node, location, window, requests, repository, impacts };
 }
 
+const settle = () => new Promise(resolve => setImmediate(resolve));
+
 for (const dirty of [true, false]) {
-  test(`successful save returns to Workspace without prompting (dirty=${dirty})`, async () => {
+  test(`saving a new artifact stays in Designer at its edit address (dirty=${dirty})`, async () => {
     const h = await host(dirty);
+    const { search } = h.location;
     assert.equal(h.unload(), dirty);
     const saving = h.save();
     assert.equal(h.unload(), true, 'leaving during an unfinished save must still warn');
-    h.resolveSave({ data: { '@id': 'saved-template' } });
+    const stored = { '@id': 'saved-template', 'schema:name': 'Study', 'pav:version': '0.0.1', 'bibo:status': 'bibo:draft' };
+    h.repository.set('saved-template', { data: stored, etag: '"1"' });
+    h.resolveSave({ data: stored, etag: '"1"' });
     await saving;
+    assert.deepEqual(h.navigations, []);
+    assert.equal(h.location.pathname, '/templates/edit/saved-template');
+    assert.equal(h.location.search, search, 'the edit address keeps returnTo and folderId');
+    assert.deepEqual(h.requests.at(-1), { method: 'GET', url: 'https://resource.example/templates/saved-template' });
+    assert.deepEqual(h.designer.loads, [stored]);
     assert.equal(h.node('state').textContent, 'Saved');
     assert.equal(h.node('state').dataset.dirty, 'false');
-    assert.deepEqual(h.navigations, [{ url: 'https://workspace.example/dashboard', blocked: false }]);
+    assert.equal(h.node('message').textContent, '');
+    assert.equal(h.node('save').disabled, false);
+    assert.equal(h.unload(), false);
   });
 }
+
+test('saving an existing artifact keeps the open document, and the next save uses the ETag it returned', async () => {
+  const h = await host(true, ['en-US'], true, null, true);
+  h.designer.currentArtifact = { ...h.repository.get('template-id').data, 'schema:name': 'Study, revised' };
+  const address = h.location.href, before = h.requests.length;
+  await h.save();
+  assert.deepEqual(h.navigations, []);
+  assert.equal(h.location.href, address);
+  assert.equal(h.designer.loads.length, 1, 'the designer keeps the open document, and the author keeps their place in it');
+  assert.equal(h.node('state').textContent, 'Saved');
+  assert.equal(h.node('message').textContent, '');
+  assert.equal(h.unload(), false);
+  h.designer.currentArtifact = { ...h.designer.currentArtifact, 'schema:name': 'Study, second revision' };
+  h.change();
+  assert.equal(h.node('state').textContent, 'Modified');
+  await h.save();
+  assert.deepEqual(h.requests.slice(before), [
+    { method: 'POST', url: 'https://resource.example/command/check-update-template/template-id' },
+    { method: 'PUT', url: 'https://resource.example/templates/template-id', etag: '"one"' },
+    { method: 'POST', url: 'https://resource.example/command/check-update-template/template-id' },
+    { method: 'PUT', url: 'https://resource.example/templates/template-id', etag: '"1"' },
+  ]);
+  assert.equal(h.repository.get('template-id').data['schema:name'], 'Study, second revision');
+  assert.equal(h.node('state').textContent, 'Saved');
+  // Only Back to Workspace leaves Designer. With unsaved changes it asks first, and declining stays.
+  h.designer.currentArtifact = { ...h.designer.currentArtifact, 'schema:name': 'Study, unsaved' };
+  h.change();
+  h.window.answer = false;
+  h.back();
+  assert.deepEqual(h.window.confirmations, ['Discard your unsaved changes and return to Workspace?']);
+  assert.deepEqual(h.navigations, []);
+  h.window.answer = true;
+  h.back();
+  assert.deepEqual(h.navigations, [{ url: 'https://workspace.example/folders/folder-id', blocked: false }]);
+});
+
+test('a second save after creating an artifact updates it with the ETag the creation returned', async () => {
+  const h = await host(true, ['en-US'], false, null, true);
+  h.designer.currentArtifact = { 'schema:name': 'Study' };
+  const before = h.requests.length;
+  await h.save();
+  assert.equal(h.node('state').textContent, 'Saved');
+  assert.equal(h.location.pathname, '/templates/edit/created-template');
+  h.designer.currentArtifact = { ...h.designer.currentArtifact, 'schema:name': 'Study, revised' };
+  h.designer.isDirty = true;
+  h.change();
+  assert.equal(h.node('state').textContent, 'Modified');
+  await h.save();
+  assert.deepEqual(h.requests.slice(before), [
+    { method: 'POST', url: 'https://resource.example/templates?folder_id=folder-id' },
+    { method: 'GET', url: 'https://resource.example/templates/created-template' },
+    { method: 'POST', url: 'https://resource.example/command/check-update-template/created-template' },
+    { method: 'PUT', url: 'https://resource.example/templates/created-template', etag: '"1"' },
+  ]);
+  assert.equal(h.repository.get('created-template').data['schema:name'], 'Study, revised');
+  assert.equal(h.node('state').textContent, 'Saved');
+  assert.deepEqual(h.navigations, []);
+});
+
+test('confirming a new version opens the new draft, and the next save updates the draft', async () => {
+  const h = await host(true, ['en-US'], true, null, true);
+  h.designer.currentArtifact = { ...h.repository.get('template-id').data, 'schema:name': 'Study, revised' };
+  h.impacts.push({ canBeUpdated: false, numberOfInstances: 9, oldVersion: '0.0.1' });
+  const before = h.requests.length;
+  const saving = h.save();
+  while (!h.node('version-dialog').open) await settle();
+  h.closeVersion('confirm');
+  await saving;
+  assert.equal(h.location.pathname, '/templates/edit/draft-template');
+  assert.equal(h.designer.currentArtifact['pav:version'], '0.0.2');
+  assert.equal(h.node('state').textContent, 'Saved');
+  h.designer.currentArtifact = { ...h.designer.currentArtifact, 'schema:name': 'Study, second revision' };
+  h.designer.isDirty = true;
+  h.change();
+  await h.save();
+  assert.deepEqual(h.requests.slice(before), [
+    { method: 'POST', url: 'https://resource.example/command/check-update-template/template-id' },
+    { method: 'POST', url: 'https://resource.example/command/publish-create-draft-template/template-id', etag: '"one"' },
+    { method: 'GET', url: 'https://resource.example/templates/draft-template' },
+    { method: 'POST', url: 'https://resource.example/command/check-update-template/draft-template' },
+    { method: 'PUT', url: 'https://resource.example/templates/draft-template', etag: '"1"' },
+  ]);
+  assert.equal(h.repository.get('draft-template').data['schema:name'], 'Study, second revision');
+  assert.deepEqual(h.navigations, []);
+});
+
+test('a save whose stored artifact cannot be read back stays in Designer and asks for a reload', async () => {
+  const h = await host();
+  const saving = h.save();
+  h.repository.set('saved-template', new core.BackendError(0));
+  h.resolveSave({ data: { '@id': 'saved-template' }, etag: '"1"' });
+  await saving;
+  assert.deepEqual(h.navigations, []);
+  assert.equal(h.location.pathname, '/templates/edit/saved-template');
+  assert.equal(h.node('state').textContent, 'Reload required');
+  assert.equal(h.node('message').textContent, 'Saved. Reload the designer before saving again.');
+  assert.equal(h.node('save').disabled, true);
+  assert.equal(h.node('reload').hidden, false);
+  assert.equal(h.unload(), false);
+});
 
 for (const failed of [true, false]) {
   test(`${failed ? 'failed' : 'cancelled'} save retains unsaved-change protection`, async () => {

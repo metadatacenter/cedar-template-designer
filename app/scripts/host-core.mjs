@@ -1,5 +1,5 @@
-import { resourceSelector, resourcePathId, useDeploymentBase } from './resource-address.mjs';
-export { resourceSelector, resourcePathId, useDeploymentBase };
+import { resourceSelector, resourcePathId, useDeploymentApi } from './resource-address.mjs';
+export { resourceSelector, resourcePathId, useDeploymentApi };
 // Loading the maps with this module's query string keeps one shared instance with host.mjs,
 // which imports the same versioned URL and sets the active language on it.
 const { t } = await import(`./i18n.mjs${new URL(import.meta.url).search}`);

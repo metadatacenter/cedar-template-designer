@@ -9,8 +9,14 @@ for(const kind of ['template','element','field'])for(const mode of ['create','ed
     await edit(page,'');await edit(page,'',{setting:'name',shown:true,severity:'error'});await expect(save).toBeDisabled();
     await edit(page,'Named');
     if(!allowed){await expect(save).toBeDisabled();expect(state.writes).toHaveLength(0);return;}
-    await save.click();await expect(page.getByRole('heading',{name:'Workspace'})).toBeVisible();
+    await save.click();await expect(page.locator('#state')).toHaveText('Saved');
+    // The page stays in Designer, at the saved artifact's edit address.
+    await expect(page).toHaveURL(new RegExp(`/${kind}s/edit/${state.savedId}$`));
     expect(state.writes).toHaveLength(1);expect(state.writes[0].etag).toBe(mode==='edit'?'"opened"':undefined);
+    // The next save updates what the first stored, under the validator that write returned.
+    await edit(page,'Renamed');await save.click();await expect(page.locator('#state')).toHaveText('Saved');
+    expect(state.writes).toHaveLength(2);expect(state.writes[1].path).toMatch(new RegExp(`/${state.savedId}$`));
+    expect(state.writes[1].etag).toBe('"next"');expect(state.writes[1].body['schema:name']).toBe('Renamed');
   });
 }
 for(const depth of [1,3,8])for(const severity of ['errors','warnings']) {
@@ -23,7 +29,7 @@ for(const depth of [1,3,8])for(const severity of ['errors','warnings']) {
     await expect(page.locator('#server-issues')).toContainText('Invalid default IRI');
     if(severity==='errors')await expect(page.locator('#save')).toBeDisabled();else await expect(page.locator('#save')).toBeEnabled();
     await edit(page,'Corrected');await expect(page.locator('#server-issues')).toBeHidden();
-    state.failure=null;await page.locator('#save').click();await expect(page.getByRole('heading',{name:'Workspace'})).toBeVisible();
+    state.failure=null;await page.locator('#save').click();await expect(page.locator('#state')).toHaveText('Saved');
     expect(state.writes).toHaveLength(2);
   });
 }
@@ -58,7 +64,7 @@ for(const kind of ['template','element','field'])for(const mode of ['create','ed
     expect(await page.locator('#editor > *').evaluate(el=>el.currentArtifact['schema:name'])).toBe('Newer');
   }else{
     await expect(page.locator('#save')).toBeEnabled();await page.locator('#save').click();
-    await expect(page.getByRole('heading',{name:'Workspace'})).toBeVisible();
+    await expect(page.locator('#state')).toHaveText('Saved');
     expect(state.writes).toHaveLength(2);expect(state.writes[1].etag).toBe('"next"');
     expect(state.writes[1].body['schema:name']).toBe('Newer');expect(state.writes[1].body['@id']).toBe('item');
   }

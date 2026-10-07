@@ -61,8 +61,10 @@ Rules:
 4. Cross-application navigation uses `window.location.assign` (same tab) unless a
    user action explicitly requests a new tab. Angular `$location` is never used for
    another application's route.
-5. Successful Designer saves, cancel, close, and explicit “Back to Workspace”
-   actions use the return rule above.
+5. A successful save stays in the application that owns the artifact type. A
+   Designer save that creates an artifact or a new draft replaces the address
+   with that artifact's edit address and keeps the query string. Cancel, close
+   and explicit “Back to Workspace” actions use the return rule above.
 
 ## `returnTo` security
 

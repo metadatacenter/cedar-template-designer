@@ -3,7 +3,7 @@ document.getElementById('back-icon').innerHTML = iconSvg('back');
 // Workspace heads its Create Draft dialog with this icon, and this dialog also ends in a new draft.
 document.getElementById('version-icon').innerHTML = iconSvg('new-record');
 const version = encodeURIComponent(window.cedarCacheControl || 'local');
-const { resourceSelector, resourcePathId, useDeploymentBase, routeFor, workspaceReturn, canEdit, canCreate, createBackend, openingMessage, childSource, saveArtifact, DesignerCoordinator, waitForDesigner } = await import(`./host-core.mjs?v=${version}`);
+const { resourceSelector, resourcePathId, useDeploymentApi, routeFor, workspaceReturn, canEdit, canCreate, createBackend, openingMessage, childSource, saveArtifact, DesignerCoordinator, waitForDesigner } = await import(`./host-core.mjs?v=${version}`);
 // host-core.mjs imports this same versioned URL, so both modules share one active language.
 const { t, counted, detectLanguage, setLanguage, localizeDocument } = await import(`./i18n.mjs?v=${version}`);
 const language = setLanguage(detectLanguage(navigator.languages));
@@ -47,6 +47,23 @@ window.addEventListener('beforeunload', event => {
 function leave() {
   leaving = true;
   location.assign(returnUrl);
+}
+function artifactUrl() { return `${config.resourceRestAPI}/${route.collection}/${encodeURIComponent(resourcePathId(route.id))}`; }
+/**
+ * Open what a save stored in place of the document it submitted, as reopening the page would. A save
+ * that creates an artifact or a new draft gets its identity and lifecycle metadata from the server, and
+ * the next save must update that artifact rather than resubmit the draft. When the stored artifact
+ * cannot be adopted, nothing changes and the answer is false.
+ */
+async function reopen(attempt) {
+  let loaded;
+  try { loaded = await request(artifactUrl()); } catch { return false; }
+  const id = loaded?.data?.['@id'];
+  if (!attempt.current() || typeof id !== 'string' || resourcePathId(id) !== resourcePathId(route.id) || !state.matches(attempt, designer)) return false;
+  try { designer.loadArtifact(loaded.data); } catch { return false; }
+  state.loaded({ artifact: loaded.data, etag: loaded.etag, writable: state.writable });
+  state.reloadRequired = !loaded.etag;
+  return true;
 }
 ui.back.addEventListener('click', () => {
   if (!returnUrl || state.saving || (dirty() && !window.confirm(t('Message.ConfirmDiscard')))) return;
@@ -93,18 +110,24 @@ ui.save.addEventListener('click', async () => {
       throw new Error(t('Error.SaveUnconfirmed'));
     }
     saved = true;
-    if (!state.matches(attempt, designer)) {
-      const newIdentity = route.id !== result.data['@id'];
-      // A new draft has server-owned version metadata that the open document has not adopted.
-      state.committed(attempt, result.etag, newIdentity);
-      route.id = result.data['@id'];
-      const address = new URL(location.href);
-      address.pathname = `/${route.kind}s/edit/${encodeURIComponent(resourcePathId(route.id))}`;
-      window.history.replaceState(null, '', address.href);
-      message(t(newIdentity ? 'Message.SavedNewIdentity' : 'Message.SavedWithChanges') + (!result.etag ? ' ' + t('Error.NoValidator') : ''), state.reloadRequired);
+    // A successful save stays in Designer. A new artifact or draft takes its own edit address.
+    const newIdentity = route.id !== result.data['@id'];
+    route.id = result.data['@id'];
+    const address = new URL(location.href);
+    address.pathname = `/${route.kind}s/edit/${encodeURIComponent(resourcePathId(route.id))}`;
+    window.history.replaceState(null, '', address.href);
+    if (newIdentity && state.matches(attempt, designer) && await reopen(attempt)) {
+      message(state.reloadRequired ? t('Error.NoValidator') : '', state.reloadRequired);
       return;
     }
-    leave();
+    if (!attempt.current()) return;
+    // The open document stays in the designer, with the author's place in it, and the next update uses
+    // the ETag this save returned. A new artifact or draft the designer has not adopted needs a reload
+    // before another save.
+    const edited = !state.matches(attempt, designer);
+    state.committed(attempt, result.etag, newIdentity);
+    if (edited) message(t(newIdentity ? 'Message.SavedNewIdentity' : 'Message.SavedWithChanges') + (!result.etag ? ' ' + t('Error.NoValidator') : ''), state.reloadRequired);
+    else message(newIdentity ? t('Message.SavedReloadRequired') : !result.etag ? t('Error.NoValidator') : '', state.reloadRequired);
   } catch (error) {
     if (attempt && !attempt.current()) return;
     state.failed(error, attempt); message(error.message, true);
@@ -130,6 +153,7 @@ async function readJson(url, failure, options) {
 }
 try {
   config = await readJson(`config/host.json?v=${version}`, 'Error.ConfigurationLoad');
+  useDeploymentApi(config.resourceRestAPI);
   const params = new URLSearchParams(location.search);
   folderId = params.get('folderId');
   returnUrl = workspaceReturn(config.workspaceFrontend, params.get('returnTo'), folderId);
@@ -139,8 +163,6 @@ try {
   if (!authenticated) { auth.doLogin(); } else {
     request = createBackend(auth, crypto.randomUUID());
     const { data: profile } = await request(`${config.userRestAPI}/users/${encodeURIComponent(auth.getParsedToken().sub)}`);
-    // The home folder is an identity this deployment minted, so it names the base to shorten against.
-    useDeploymentBase(profile.homeFolderId);
     folderId ||= profile.homeFolderId;
     const manifest = await readJson(`components/manifest.json?v=${version}`, 'Error.ManifestLoad', { cache: 'no-store' });
     for (const name of ['cedar-embeddable-editor', 'cedar-embeddable-term-picker', 'cedar-embeddable-designer']) {
@@ -164,7 +186,7 @@ try {
     ui.editor.append(designer);
     if (typeof designer.loadArtifact !== 'function') throw new Error(t('Error.OutdatedBundle'));
     if (route.id) {
-      const url = `${config.resourceRestAPI}/${route.collection}/${encodeURIComponent(resourcePathId(route.id))}`;
+      const url = artifactUrl();
       const [loaded, report] = await Promise.all([request(url), request(`${url}/report`)]);
       if (!loaded.data || resourcePathId(loaded.data['@id']) !== resourcePathId(route.id)) throw new Error(t('Error.InvalidArtifact'));
       route.id = loaded.data['@id']; // Keep the stored identity for subsequent PUT bodies.

@@ -44,6 +44,7 @@ for(const {kind,mode,language,edited,outcome} of cases)
     if(outcome==='a network failure')state.failure='network';
     if(outcome==='an unidentified acknowledgement')state.savedId=null;
     if(outcome in VERSIONING)state.impact={canBeUpdated:false,numberOfInstances:3,oldVersion:'0.0.1'};
+    if(outcome==='a new version confirmed')state.savedId='new-draft';
     await expect(page.locator('html')).toHaveAttribute('lang',language);
     if(edited)await edit(page,'Edited');
     const name=edited?'Edited':'Opened';
@@ -59,7 +60,13 @@ for(const {kind,mode,language,edited,outcome} of cases)
       await dialog.locator(`button[value=${VERSIONING[outcome]}]`).click();
     }
     if(outcome==='saved'||outcome==='a new version confirmed'){
-      await expect(page.getByRole('heading',{name:'Workspace'})).toBeVisible();
+      // A successful save stays in Designer, at the edit address of what it stored, and holds that.
+      await expect(status).toHaveText(text(language,'State.Saved'));
+      await expect(page).toHaveURL(new RegExp(`/${kind}s/edit/${state.savedId}$`));
+      await expect(page.getByRole('heading',{name:'Workspace'})).toHaveCount(0);
+      await expect(message).toHaveText('');
+      expect(await designerName()).toBe(name);
+      await expect(save).toBeEnabled();await expect(reload).toBeHidden();
       expect(state.writes).toEqual([{
         path:outcome==='saved'?`/api/${COLLECTIONS[kind]}${mode==='edit'?'/item':''}`:'/api/command/publish-create-draft-template/item',
         body:expect.objectContaining({'schema:name':name}),

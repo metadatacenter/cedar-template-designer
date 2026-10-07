@@ -32,7 +32,8 @@
     "ServerFindings": "Server validation: {{count}} findings",
     "ServerFindingsOne": "Server validation: {{count}} finding",
     "SavedWithChanges": "Saved. Further changes remain in the designer.",
-    "SavedNewIdentity": "Saved as a new artifact. Further changes remain here; reload the saved artifact before saving again."
+    "SavedNewIdentity": "Saved as a new artifact. Further changes remain here; reload the saved artifact before saving again.",
+    "SavedReloadRequired": "Saved. Reload the designer before saving again."
   },
   "Version": {
     "Title": "Create a new template version?",
