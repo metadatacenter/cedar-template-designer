@@ -62,12 +62,14 @@ original and save a new draft without copying instances. Cancellation and failur
 keep the edits. Published artifacts and artifacts without `updateResource`
 capability are inert and cannot be saved.
 
-A successful save stays in Designer. The host then reads the stored artifact back
-and opens it, so the designer holds the identity, version metadata and child
-identifiers the server assigned. The next save updates that artifact, using the
-ETag the read returned. A new artifact or draft takes its own edit address and
-keeps the query string. Only the Workspace control returns to Workspace, and it
-asks first when changes are unsaved.
+A successful save stays in Designer. After saving a new artifact or a new draft,
+the host reads the stored artifact back, opens it and moves to its edit address,
+keeping the query string. The designer then holds the identity and version
+metadata the server assigned. Saving an existing artifact keeps the open document
+and the author's place in it. Its created and modified dates in the designer's
+metadata settings update when the artifact is next opened. Either way, the next
+save is a conditional update under the most recent ETag. Only the Workspace control
+returns to Workspace, and it asks first when changes are unsaved.
 
 The versioning command requires the original `If-Match` validator. The backend
 uses the same source snapshot for version allocation and conditional publication;

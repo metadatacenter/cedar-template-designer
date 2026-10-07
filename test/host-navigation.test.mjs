@@ -149,22 +149,31 @@ for (const dirty of [true, false]) {
   });
 }
 
-test('saving an existing artifact stays in Designer, which only Back to Workspace leaves', async () => {
-  const h = await host(true, ['en-US'], true);
-  const address = h.location.href;
-  const saving = h.save();
-  const stored = { ...h.repository.get('template-id').data, 'schema:name': 'Study, revised' };
-  h.repository.set('template-id', { data: stored, etag: '"two"' });
-  h.resolveSave({ data: { '@id': 'template-id', resourceType: 'template' }, etag: '"two"' });
-  await saving;
+test('saving an existing artifact keeps the open document, and the next save uses the ETag it returned', async () => {
+  const h = await host(true, ['en-US'], true, null, true);
+  h.designer.currentArtifact = { ...h.repository.get('template-id').data, 'schema:name': 'Study, revised' };
+  const address = h.location.href, before = h.requests.length;
+  await h.save();
   assert.deepEqual(h.navigations, []);
   assert.equal(h.location.href, address);
-  assert.deepEqual(h.designer.loads.at(-1), stored);
+  assert.equal(h.designer.loads.length, 1, 'the designer keeps the open document, and the author keeps their place in it');
   assert.equal(h.node('state').textContent, 'Saved');
   assert.equal(h.node('message').textContent, '');
   assert.equal(h.unload(), false);
-  // Leaving with unsaved changes asks first, and declining stays.
-  h.designer.isDirty = true;
+  h.designer.currentArtifact = { ...h.designer.currentArtifact, 'schema:name': 'Study, second revision' };
+  h.change();
+  assert.equal(h.node('state').textContent, 'Modified');
+  await h.save();
+  assert.deepEqual(h.requests.slice(before), [
+    { method: 'POST', url: 'https://resource.example/command/check-update-template/template-id' },
+    { method: 'PUT', url: 'https://resource.example/templates/template-id', etag: '"one"' },
+    { method: 'POST', url: 'https://resource.example/command/check-update-template/template-id' },
+    { method: 'PUT', url: 'https://resource.example/templates/template-id', etag: '"1"' },
+  ]);
+  assert.equal(h.repository.get('template-id').data['schema:name'], 'Study, second revision');
+  assert.equal(h.node('state').textContent, 'Saved');
+  // Only Back to Workspace leaves Designer. With unsaved changes it asks first, and declining stays.
+  h.designer.currentArtifact = { ...h.designer.currentArtifact, 'schema:name': 'Study, unsaved' };
   h.change();
   h.window.answer = false;
   h.back();
@@ -192,7 +201,6 @@ test('a second save after creating an artifact updates it with the ETag the crea
     { method: 'GET', url: 'https://resource.example/templates/created-template' },
     { method: 'POST', url: 'https://resource.example/command/check-update-template/created-template' },
     { method: 'PUT', url: 'https://resource.example/templates/created-template', etag: '"1"' },
-    { method: 'GET', url: 'https://resource.example/templates/created-template' },
   ]);
   assert.equal(h.repository.get('created-template').data['schema:name'], 'Study, revised');
   assert.equal(h.node('state').textContent, 'Saved');
@@ -221,7 +229,6 @@ test('confirming a new version opens the new draft, and the next save updates th
     { method: 'GET', url: 'https://resource.example/templates/draft-template' },
     { method: 'POST', url: 'https://resource.example/command/check-update-template/draft-template' },
     { method: 'PUT', url: 'https://resource.example/templates/draft-template', etag: '"1"' },
-    { method: 'GET', url: 'https://resource.example/templates/draft-template' },
   ]);
   assert.equal(h.repository.get('draft-template').data['schema:name'], 'Study, second revision');
   assert.deepEqual(h.navigations, []);

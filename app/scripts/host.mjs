@@ -50,10 +50,10 @@ function leave() {
 }
 function artifactUrl() { return `${config.resourceRestAPI}/${route.collection}/${encodeURIComponent(resourcePathId(route.id))}`; }
 /**
- * Open what a save stored in place of the document it submitted, as reopening the page would. A write
- * can assign the identity, lifecycle metadata and child identifiers, and the next save must update the
- * stored artifact rather than resubmit the draft. When the stored artifact cannot be adopted, nothing
- * changes and the answer is false.
+ * Open what a save stored in place of the document it submitted, as reopening the page would. A save
+ * that creates an artifact or a new draft gets its identity and lifecycle metadata from the server, and
+ * the next save must update that artifact rather than resubmit the draft. When the stored artifact
+ * cannot be adopted, nothing changes and the answer is false.
  */
 async function reopen(attempt) {
   let loaded;
@@ -116,17 +116,18 @@ ui.save.addEventListener('click', async () => {
     const address = new URL(location.href);
     address.pathname = `/${route.kind}s/edit/${encodeURIComponent(resourcePathId(route.id))}`;
     window.history.replaceState(null, '', address.href);
-    if (state.matches(attempt, designer) && await reopen(attempt)) {
+    if (newIdentity && state.matches(attempt, designer) && await reopen(attempt)) {
       message(state.reloadRequired ? t('Error.NoValidator') : '', state.reloadRequired);
       return;
     }
     if (!attempt.current()) return;
-    // Edits made during the save stay in the designer, which then holds a document the server has not
-    // stored. A reload must adopt what the server assigned before another save: always when the save
-    // created an artifact or draft, and when an unedited document could not be reopened.
+    // The open document stays in the designer, with the author's place in it, and the next update uses
+    // the ETag this save returned. A new artifact or draft the designer has not adopted needs a reload
+    // before another save.
     const edited = !state.matches(attempt, designer);
-    state.committed(attempt, result.etag, newIdentity || !edited);
-    message(edited ? t(newIdentity ? 'Message.SavedNewIdentity' : 'Message.SavedWithChanges') + (!result.etag ? ' ' + t('Error.NoValidator') : '') : t('Message.SavedReloadRequired'), state.reloadRequired);
+    state.committed(attempt, result.etag, newIdentity);
+    if (edited) message(t(newIdentity ? 'Message.SavedNewIdentity' : 'Message.SavedWithChanges') + (!result.etag ? ' ' + t('Error.NoValidator') : ''), state.reloadRequired);
+    else message(newIdentity ? t('Message.SavedReloadRequired') : !result.etag ? t('Error.NoValidator') : '', state.reloadRequired);
   } catch (error) {
     if (attempt && !attempt.current()) return;
     state.failed(error, attempt); message(error.message, true);
