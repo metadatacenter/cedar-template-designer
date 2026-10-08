@@ -152,12 +152,14 @@ async function readJson(url, failure, options) {
   try { return await response.json(); } catch { throw new Error(t(failure)); }
 }
 try {
+  route = routeFor(location.pathname === '/' ? '/templates/create' : location.pathname);
+  // The address says which designer this is, so the heading waits for nothing the page loads.
+  ui.title.textContent = t(`Header.Title.${route.kind}`);
   config = await readJson(`config/host.json?v=${version}`, 'Error.ConfigurationLoad');
   useDeploymentApi(config.resourceRestAPI);
   const params = new URLSearchParams(location.search);
   folderId = params.get('folderId');
   returnUrl = workspaceReturn(config.workspaceFrontend, params.get('returnTo'), folderId);
-  route = routeFor(location.pathname === '/' ? '/templates/create' : location.pathname);
   const auth = new window.KeycloakUserHandler();
   const authenticated = await new Promise((resolve, reject) => auth.initUserHandler(resolve, () => reject(new Error(t('Error.SignIn')))));
   if (!authenticated) { auth.doLogin(); } else {
@@ -209,7 +211,6 @@ try {
     designer.readOnly = !state.writable;
     ui.editor.hidden = false;
     for (const event of ['artifactChange', 'validationChange', 'dirtyChange']) designer.addEventListener(event, update);
-    ui.title.textContent = t(`Header.Title.${route.kind}`);
     if (!state.reloadRequired) message(state.writable ? '' : t('Message.ReadOnly'));
     update();
   }

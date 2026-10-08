@@ -47,3 +47,18 @@ for(const mode of ['create','edit'])for(const language of ['en','hu'])for(const 
       await expect(message).not.toContainText(/Failed to fetch|Cannot read|Unexpected token|JSON/);
     });
   }
+
+// The address says which designer opens, so the heading names it from the start and never shows
+// another designer's name while the page loads.
+for(const [kind,title] of [['template','Template Designer'],['element','Element Designer'],['field','Field Designer']])
+  test(`opening a ${kind} names only its own designer`,async({page})=>{
+    await page.addInitScript(()=>{
+      window.titles=[];
+      new MutationObserver(()=>{
+        const shown=document.getElementById('title')?.textContent;
+        if(shown&&shown!==window.titles.at(-1))window.titles.push(shown);
+      }).observe(document,{subtree:true,childList:true,characterData:true});
+    });
+    await host(page,kind,'edit');
+    expect(await page.evaluate(()=>window.titles)).toEqual([title]);
+  });
