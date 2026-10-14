@@ -175,7 +175,7 @@ export function storageArtifact(source, creating = false) {
 }
 
 /** Validators belong to the loaded representation, never a URL cache. */
-export async function saveArtifact({ request, base, route, artifact, etag, folderId, confirmVersion, stillCurrent = () => true }) {
+export async function saveArtifact({ request, base, route, artifact, etag, folderId, confirmVersion, stillCurrent = () => true, onWrite = () => {} }) {
   const name = artifact?.['schema:name'];
   if (typeof name !== 'string' || !name.trim()) {
     throw new Error(t(`Error.NameRequired.${route.kind}`));
@@ -183,10 +183,16 @@ export async function saveArtifact({ request, base, route, artifact, etag, folde
   artifact = storageArtifact(artifact, !route.id);
   const url = `${base}/${route.collection}`;
   const current = () => { if (!stillCurrent()) throw new Error(t('Error.DocumentChanged')); };
+  // Assessments do not write. Record only the operation that may store an artifact, so a
+  // failed assessment can be retried while a lost create response cannot create a duplicate.
+  const write = (url, options, createsIdentity = false) => {
+    onWrite({ createsIdentity });
+    return request(url, options);
+  };
   current();
   if (!route.id) {
     if (!folderId) throw new Error(t('Error.NoFolder'));
-    return request(`${url}?${new URLSearchParams({ folder_id: resourceSelector(folderId) })}`, { method: 'POST', body: artifact });
+    return write(`${url}?${new URLSearchParams({ folder_id: resourceSelector(folderId) })}`, { method: 'POST', body: artifact }, true);
   }
   if (!etag) throw new Error(t('Error.NoValidator'));
   artifact['@id'] = route.id; // Resolved from the loaded document, never from a short browser address.
@@ -200,8 +206,8 @@ export async function saveArtifact({ request, base, route, artifact, etag, folde
     if (!impact.canBeUpdated) {
       if (!await confirmVersion(impact)) return null;
       current();
-      return request(`${base}/command/publish-create-draft-template/${encodedId}`, { method: 'POST', body: artifact, etag });
+      return write(`${base}/command/publish-create-draft-template/${encodedId}`, { method: 'POST', body: artifact, etag }, true);
     }
   }
-  return request(`${url}/${encodedId}`, { method: 'PUT', body: artifact, etag });
+  return write(`${url}/${encodedId}`, { method: 'PUT', body: artifact, etag });
 }

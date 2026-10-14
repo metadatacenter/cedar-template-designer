@@ -26,12 +26,11 @@ function failure(outcome,language,mode){
   const say=(key,params)=>text(language,key,params);
   switch(outcome){
     case 400:return {message:say('Error.RequestFailed',{status:400,detail:VALIDATION.message}),reload:false,findings:1};
-    case 401:return {message:say('Error.SessionExpired'),reload:false};
+    case 401:return {message:say('Error.SessionExpired'),reload:true};
     case 403:return {message:say('Error.Forbidden'),reload:true};
     case 404:case 409:return {message:say('Error.RequestFailed',{status:outcome,detail:SERVER_MESSAGE}),reload:true};
     case 412:return {message:say('Error.Conflict'),reload:true};
-    case 500:return {message:say('Error.RequestFailed',{status:500,detail:SERVER_MESSAGE}),reload:false};
-    case 'a network failure':return {message:say('Error.Unreachable'),reload:false};
+    case 500:case 'a network failure':return {message:say('Error.SaveUnconfirmed'),reload:true,offerReload:mode==='edit'};
     // A creation the server did not identify may have happened, so the page offers no reload to repeat it.
     case 'an unidentified acknowledgement':return {message:say('Error.SaveUnconfirmed'),reload:true,offerReload:mode==='edit'};
   }

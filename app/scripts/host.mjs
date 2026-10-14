@@ -102,13 +102,14 @@ ui.save.addEventListener('click', async () => {
     update(); message(t('State.Saving'));
     const result = await saveArtifact({ request, base: config.resourceRestAPI, route,
       artifact: attempt.artifact, etag: state.etag, folderId, confirmVersion,
-      stillCurrent: () => state.matches(attempt, designer) });
+      stillCurrent: () => state.matches(attempt, designer), onWrite: write => { attempt.write = write; } });
     if (!attempt.current()) return;
     if (!result) { message(t(discarded ? 'Message.ChangesDiscarded' : 'Message.ChangesKept')); return; }
     if (!result.data || typeof result.data['@id'] !== 'string' || !result.data['@id'].trim()) {
-      state.reloadRequired = true; state.uncertainCreation = !route.id;
+      state.reloadRequired = true; state.uncertainCreation = attempt.write?.createsIdentity ?? !route.id;
       throw new Error(t('Error.SaveUnconfirmed'));
     }
+    attempt.write = undefined;
     saved = true;
     // A successful save stays in Designer. A new artifact or draft takes its own edit address.
     const newIdentity = route.id !== result.data['@id'];
@@ -130,7 +131,8 @@ ui.save.addEventListener('click', async () => {
     else message(newIdentity ? t('Message.SavedReloadRequired') : !result.etag ? t('Error.NoValidator') : '', state.reloadRequired);
   } catch (error) {
     if (attempt && !attempt.current()) return;
-    state.failed(error, attempt); message(error.message, true);
+    const unconfirmed = state.failed(error, attempt);
+    message(unconfirmed ? t('Error.SaveUnconfirmed') : error.message, true);
   } finally { state.finish(attempt); update(); }
 });
 async function loadScript(name, digest) {

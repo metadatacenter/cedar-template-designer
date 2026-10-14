@@ -86,7 +86,10 @@ export class DesignerCoordinator {
   }
   failed(error, attempt) {
     if (!attempt?.current()) return;
-    if ([403, 404, 409, 412, 428].includes(error.status)) this.reloadRequired = true;
+    const unconfirmed = Boolean(attempt.write && (error.status == null || error.status === 0 ||
+      (error.status >= 200 && error.status < 300) || error.status === 408 || error.status >= 500));
+    if (unconfirmed || [401, 403, 404, 409, 412, 428].includes(error.status)) this.reloadRequired = true;
+    if (unconfirmed && attempt.write.createsIdentity) this.uncertainCreation = true;
     const report = error.data?.objects?.validationReport ?? error.data?.validationReport;
     const issues = [];
     for (const severity of ['error', 'warning']) {
@@ -97,6 +100,7 @@ export class DesignerCoordinator {
       });
     }
     this.#server = { key: attempt.key, issues };
+    return unconfirmed;
   }
   finish(attempt) { if (attempt?.current()) this.saving = false; }
   failLoad() { this.#generation++; this.saving = false; this.ready = false; this.writable = false; this.loadFailed = true; }
