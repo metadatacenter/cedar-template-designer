@@ -60,7 +60,9 @@ ETag on PUT. Templates run the backend's `check-update-template` command first;
 when instances prevent an in-place update, a confirmation offers to publish the
 original and save a new draft without copying instances. Cancellation and failures
 keep the edits. Published artifacts and artifacts without `updateResource`
-capability are inert and cannot be saved.
+capability remain inspectable: tabs, expansion, outline and preview work, while editing
+controls are disabled and Save is unavailable. The host is inert only while loading,
+after a failed load, and while saving.
 
 A successful save stays in Designer. After saving a new artifact or a new draft,
 the host reads the stored artifact back, opens it and moves to its edit address,

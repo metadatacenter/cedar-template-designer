@@ -37,7 +37,10 @@ function update() {
   ui.state.dataset.dirty = String(!state.saving && state.writable && dirty());
   // Until it is edited, an artifact is unmodified, whether read from the server or new; only a save made here is reported as saved.
   ui.state.textContent = t(state.loadFailed ? 'State.LoadFailed' : !state.ready ? 'Page.Loading' : state.reloadRequired ? 'State.ReloadRequired' : state.saving ? 'State.Saving' : !state.writable ? 'State.ReadOnly' : dirty() ? 'State.Modified' : saved ? 'State.Saved' : 'State.Unmodified');
-  if (designer) designer.inert = !state.writable || state.saving;
+  if (designer) {
+    designer.readOnly = !state.writable;
+    designer.inert = !state.ready || state.loadFailed || state.saving;
+  }
 }
 window.addEventListener('pagehide', () => state.dispose());
 window.addEventListener('pageshow', event => { if (event.persisted) location.reload(); });

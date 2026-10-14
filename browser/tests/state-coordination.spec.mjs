@@ -113,3 +113,12 @@ for(const kind of ['template','element','field'])for(const language of ['en','hu
   await expect(page.locator('#save')).toBeDisabled();await expect(page.locator('#reload')).toBeHidden();
   expect(state.writes).toHaveLength(0);
 });
+
+for (const kind of ['template', 'element', 'field']) test(`${kind} read-only host permits inspection but cannot save`, async ({page}) => {
+  const state = await host(page, kind, 'edit', false);
+  const editor = page.locator('#editor > *');
+  expect(await editor.evaluate(el => ({inert: el.inert, readOnly: el.readOnly}))).toEqual({inert:false, readOnly:true});
+  await expect(page.locator('#save')).toBeDisabled();
+  await page.locator('#save').dispatchEvent('click');
+  expect(state.writes).toHaveLength(0);
+});
