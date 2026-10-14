@@ -92,3 +92,9 @@ error retention, token refresh and repository child search without the stack.
 The live CED host smoke covers create/update without leaving Designer, stale-save
 rejection, versioning with metadata instances, cancellation and the return to Workspace.
 It is in `cedar-development/ops/e2e/ced-host-smoke.mjs`.
+
+A successful first save or new-draft save adopts the stored artifact through
+`loadArtifact(data, { preserveView: true })`, preserving matching settings tabs and
+expansion while receiving the server identity. The coordinator still verifies the
+submitted document is current before adoption. Ordinary loads and explicit reloads
+reset the view.

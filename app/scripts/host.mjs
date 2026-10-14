@@ -63,7 +63,7 @@ async function reopen(attempt) {
   try { loaded = await request(artifactUrl()); } catch { return false; }
   const id = loaded?.data?.['@id'];
   if (!attempt.current() || typeof id !== 'string' || resourcePathId(id) !== resourcePathId(route.id) || !state.matches(attempt, designer)) return false;
-  try { designer.loadArtifact(loaded.data); } catch { return false; }
+  try { designer.loadArtifact(loaded.data, { preserveView: true }); } catch { return false; }
   state.loaded({ artifact: loaded.data, etag: loaded.etag, writable: state.writable });
   state.reloadRequired = !loaded.etag;
   return true;

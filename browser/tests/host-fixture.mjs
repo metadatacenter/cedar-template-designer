@@ -58,11 +58,11 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
     if(path==='/components/manifest.json')return route.fulfill({json:Object.fromEntries(['cedar-embeddable-editor','cedar-embeddable-term-picker','cedar-embeddable-designer'].map(name=>[name,{sha256:'fixture'}]))});
     if(path==='/components/cedar-embeddable-designer.js')return route.fulfill({contentType:'text/javascript',body:`
       class Designer extends HTMLElement {
-        currentArtifact={}; baseline=''; report={valid:true,canSave:true,issues:[]};
+        currentArtifact={}; baseline=''; viewState={}; report={valid:true,canSave:true,issues:[]};
         connectedCallback(){this.textContent='Designer fixture'}
         get canSave(){return this.report.canSave}get validationReport(){return this.report}validate(){return this.report}
         get isDirty(){return JSON.stringify(this.currentArtifact)!==this.baseline}
-        loadArtifact(value){if(value.unreadable)throw new Error('Child schema uses a reserved instance property name at /properties/@foo/');this.currentArtifact=structuredClone(value);this.baseline=JSON.stringify(value)}
+        loadArtifact(value,options){if(!options?.preserveView)this.viewState={};if(value.unreadable)throw new Error('Child schema uses a reserved instance property name at /properties/@foo/');this.currentArtifact=structuredClone(value);this.baseline=JSON.stringify(value)}
         newArtifact(){this.loadArtifact({'schema:name':''});this.report={valid:false,canSave:false,issues:[{setting:'name',shown:false,severity:'error'}]}}
       }
       setTimeout(()=>{

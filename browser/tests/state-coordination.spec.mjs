@@ -122,3 +122,22 @@ for (const kind of ['template', 'element', 'field']) test(`${kind} read-only hos
   await page.locator('#save').dispatchEvent('click');
   expect(state.writes).toHaveLength(0);
 });
+
+for (const kind of ['template','element','field']) for (const mode of (kind === 'template' ? ['create','edit','new-version'] : ['create','edit'])) {
+  test(`${kind} ${mode} save retains open settings and selection`, async ({page}) => {
+    const state=await host(page,kind,mode==='create'?'create':'edit');
+    if(mode==='new-version'){state.impact={canBeUpdated:false};state.savedId='new-draft';}
+    await edit(page,'Study');
+    const view={tab:'Metadata',expanded:true,selection:'Value'};
+    await page.locator('#editor > *').evaluate((el,view)=>{el.viewState=view;},view);
+    await page.locator('#save').click();
+    if(mode==='new-version')await page.locator('#version-dialog button[value="confirm"]').click();
+    await expect(page.locator('#state')).toHaveText('Saved');
+    expect(await page.locator('#editor > *').evaluate(el=>el.viewState)).toEqual(view);
+    await edit(page,'Updated');
+    await page.locator('#save').click();
+    if(mode==='new-version')await page.locator('#version-dialog button[value="confirm"]').click();
+    await expect(page.locator('#state')).toHaveText('Saved');
+    expect(await page.locator('#editor > *').evaluate(el=>el.viewState)).toEqual(view);
+  });
+}
