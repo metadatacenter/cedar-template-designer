@@ -8,7 +8,7 @@ const { resourceSelector, resourcePathId, useDeploymentApi, routeFor, workspaceR
 const { t, counted, detectLanguage, setLanguage, localizeDocument } = await import(`./i18n.mjs?v=${version}`);
 const language = setLanguage(detectLanguage(navigator.languages));
 localizeDocument(document);
-const ui = Object.fromEntries(['back', 'save', 'save-help', 'title', 'state', 'message', 'editor', 'version-dialog', 'version-message', 'version-explanation', 'reload', 'check-save', 'server-issues', 'server-issues-title', 'server-issues-list'].map(id => [id, document.getElementById(id)]));
+const ui = Object.fromEntries(['back', 'save', 'save-help', 'title', 'state', 'message', 'editor', 'version-dialog', 'version-message', 'version-explanation', 'reload', 'check-save', 'recheck-access', 'server-issues', 'server-issues-title', 'server-issues-list'].map(id => [id, document.getElementById(id)]));
 const state = new DesignerCoordinator();
 let designer, leaving = false, discarded = false, returnUrl, route, saved = false, folderId, request, config;
 // The stored artifact is one the designer cannot read, so reloading it cannot help.
@@ -27,6 +27,8 @@ function update() {
   ui.reload.disabled = state.saving || state.checking;
   ui['check-save'].hidden = !state.canCheckSave;
   ui['check-save'].disabled = state.saving || state.checking;
+  ui['recheck-access'].hidden = !state.canRecheckAccess;
+  ui['recheck-access'].disabled = state.saving || state.checking;
   ui['server-issues'].hidden = !report.server.length;
   ui['server-issues-title'].textContent = counted('Message.ServerFindings', report.server.length);
   ui['server-issues-list'].replaceChildren();
@@ -91,10 +93,11 @@ ui.reload.addEventListener('click', () => {
   if (state.saving || state.checking || state.uncertainCreation || (dirty() && !window.confirm(t('Message.ConfirmReload')))) return;
   leaving = true; location.reload();
 });
-ui['check-save'].addEventListener('click', async () => {
+async function checkRecovery() {
+  const access = state.canRecheckAccess;
   const check = state.beginCheck();
   if (!check) return;
-  update(); message(t('Message.CheckingSave'));
+  update(); message(t(access ? 'Message.CheckingAccess' : 'Message.CheckingSave'));
   try {
     const url = artifactUrl();
     const [latest, report] = await Promise.all([request(url), request(`${url}/report`)]);
@@ -102,12 +105,14 @@ ui['check-save'].addEventListener('click', async () => {
     const result = state.checked(check, latest, canEdit(report.data, latest.data));
     if (result === 'saved') saved = true;
     const recovered = result === 'saved' || result === 'unchanged';
-    message(t(result === 'saved' ? 'Message.SaveConfirmed' : result === 'unchanged' ? 'Message.SaveUnchanged' :
+    message(t(result === 'saved' ? 'Message.SaveConfirmed' : result === 'unchanged' ? (access ? 'Message.AccessRestored' : 'Message.SaveUnchanged') :
       result === 'readonly' ? 'Error.RecoveryReadOnly' : 'Error.RecoveryUnresolved'), !recovered);
   } catch {
-    if (check.current()) message(t('Error.RecoveryUnavailable'), true);
+    if (check.current()) message(t(access ? 'Error.AccessUnavailable' : 'Error.RecoveryUnavailable'), true);
   } finally { state.finishCheck(check); update(); }
-});
+}
+ui['check-save'].addEventListener('click', checkRecovery);
+ui['recheck-access'].addEventListener('click', checkRecovery);
 function confirmVersion(impact) {
   const count = impact.numberOfInstances;
   const ofVersion = impact.oldVersion ? 'OfVersion' : '';

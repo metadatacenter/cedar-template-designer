@@ -13,7 +13,8 @@
       "field": "Mezőtervező"
     },
     "Reload": "Tervező újratöltése",
-    "CheckSave": "Mentés állapotának ellenőrzése"
+    "CheckSave": "Mentés állapotának ellenőrzése",
+    "RecheckAccess": "Hozzáférés újraellenőrzése"
   },
   "State": {
     "Saving": "Mentés…",
@@ -37,7 +38,9 @@
     "SavedReloadRequired": "Mentve. Újabb mentés előtt töltse újra a tervezőt.",
     "CheckingSave": "Mentés állapotának ellenőrzése…",
     "SaveConfirmed": "A tárolt változat megegyezik az elküldött módosításokkal. A jelenlegi szerkesztések megmaradtak.",
-    "SaveUnchanged": "A tárolt változat nem változott. Újra megpróbálhatja a mentést."
+    "SaveUnchanged": "A tárolt változat nem változott. Újra megpróbálhatja a mentést.",
+    "CheckingAccess": "Hozzáférés ellenőrzése…",
+    "AccessRestored": "A hozzáférés helyreállt, és a tárolt változat nem változott. A szerkesztések megmaradtak; újra menthet."
   },
   "Version": {
     "Title": "Létrehoz egy új sablonverziót?",
@@ -90,6 +93,7 @@
     "ManifestLoad": "A komponensjegyzék nem tölthető be. Építse újra és telepítse a helyi komponenseket.",
     "RecoveryReadOnly": "Jelenleg nincs jogosultsága az elem módosításához. A szerkesztések megmaradtak; a mentés továbbra is le van tiltva.",
     "RecoveryUnresolved": "A tárolt változatot nem sikerült egyeztetni a mentéssel. A szerkesztések megmaradtak; a mentés továbbra is le van tiltva.",
-    "RecoveryUnavailable": "Nem sikerült ellenőrizni a mentés állapotát. A szerkesztések megmaradtak. Ellenőrizze a kapcsolatot és a hozzáférést, majd próbálja újra."
+    "RecoveryUnavailable": "Nem sikerült ellenőrizni a mentés állapotát. A szerkesztések megmaradtak. Ellenőrizze a kapcsolatot és a hozzáférést, majd próbálja újra.",
+    "AccessUnavailable": "Nem sikerült ellenőrizni a hozzáférést. A szerkesztések megmaradtak. Jelentkezzen be, vagy ellenőrizze a kapcsolatot, majd próbálja újra."
   }
 }

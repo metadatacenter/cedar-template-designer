@@ -101,9 +101,10 @@ export class DesignerCoordinator {
     const unconfirmed = Boolean(attempt.write && (error.status == null || error.status === 0 ||
       (error.status >= 200 && error.status < 300) || error.status === 408 || error.status >= 500));
     if (unconfirmed || [401, 403, 404, 409, 412, 428].includes(error.status)) this.reloadRequired = true;
-    if (unconfirmed && !attempt.write.createsIdentity && this.stored && this.etag) {
+    const accessRefused = [401, 403].includes(error.status);
+    if ((unconfirmed && !attempt.write.createsIdentity || accessRefused) && this.stored && this.etag) {
       this.#pendingUpdate = {attempt, opened: structuredClone(this.stored),
-        submitted: structuredClone(attempt.write.body ?? attempt.artifact), etag: this.etag};
+        submitted: structuredClone(attempt.write?.body ?? attempt.artifact), etag: this.etag, purpose: accessRefused ? 'access' : 'save'};
     }
     if (unconfirmed && attempt.write.createsIdentity) this.uncertainCreation = true;
     const report = error.data?.objects?.validationReport ?? error.data?.validationReport;
@@ -118,9 +119,10 @@ export class DesignerCoordinator {
     this.#server = { key: attempt.key, issues };
     return unconfirmed;
   }
-  get canCheckSave() { return this.#active && Boolean(this.#pendingUpdate) && !this.uncertainCreation; }
+  get canCheckSave() { return this.#active && this.#pendingUpdate?.purpose === 'save' && !this.uncertainCreation; }
+  get canRecheckAccess() { return this.#active && this.#pendingUpdate?.purpose === 'access' && !this.uncertainCreation; }
   beginCheck() {
-    if (!this.canCheckSave || this.saving || this.checking) return null;
+    if (!(this.canCheckSave || this.canRecheckAccess) || this.saving || this.checking) return null;
     const generation = ++this.#generation;
     this.checking = true;
     return { current: () => this.#active && generation === this.#generation };
@@ -129,6 +131,7 @@ export class DesignerCoordinator {
     if (!check?.current() || !this.#pendingUpdate) return 'obsolete';
     if (!writable) return 'readonly';
     const result = updateOutcome(this.#pendingUpdate, latest);
+    if (this.#pendingUpdate.purpose === 'access' && result !== 'unchanged') return 'changed';
     if (result !== 'saved' && result !== 'unchanged') return result;
     if (result === 'saved') {
       this.stored = structuredClone(latest.data);
