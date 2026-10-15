@@ -96,5 +96,17 @@
     "RecoveryUnresolved": "A tárolt változatot nem sikerült egyeztetni a mentéssel. A szerkesztések megmaradtak; a mentés továbbra is le van tiltva.",
     "RecoveryUnavailable": "Nem sikerült ellenőrizni a mentés állapotát. A szerkesztések megmaradtak. Ellenőrizze a kapcsolatot és a hozzáférést, majd próbálja újra.",
     "AccessUnavailable": "Nem sikerült ellenőrizni a hozzáférést. A szerkesztések megmaradtak. Jelentkezzen be, vagy ellenőrizze a kapcsolatot, majd próbálja újra."
+  },
+  "Draft": {
+    "StorageError": "A böngésző nem tudta megőrizni a piszkozatot. Távozás előtt töltse le.",
+    "Offer": "Ebben a lapban befejezetlen munka található. Mentés előtt állítsa vissza vagy vesse el.",
+    "Restore": "Piszkozat visszaállítása",
+    "Discard": "Megőrzött piszkozat elvetése",
+    "Download": "Helyreállítási fájl letöltése",
+    "Import": "Helyreállítási fájl importálása",
+    "Restored": "A piszkozat visszaállítása sikerült.",
+    "RestoredGuarded": "A piszkozat visszaállítása sikerült. Újabb mentés előtt ellenőrizze a hozzáférést és a mentés állapotát.",
+    "Invalid": "Ez a helyreállítási fájl itt nem állítható vissza. Használja ugyanazt a fiókot, telepítést és erőforrást.",
+    "UnknownCreate": "Az előző létrehozási vagy verzióművelet eredménye ismeretlen. Őrizze meg a helyreállítási fájlt, és újabb erőforrás létrehozása előtt ellenőrizze a munkaterületet."
   }
 }

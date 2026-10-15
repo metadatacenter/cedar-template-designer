@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import * as core from '../app/scripts/host-core.mjs';
+import * as drafts from '../app/scripts/host-draft.mjs';
 import * as i18n from '../app/scripts/i18n.mjs';
 
 // Exercise the real DOM wiring and navigation order with controlled I/O. In particular,
@@ -104,16 +105,17 @@ async function host(isDirty = true, languages = ['en-US'], existing = false, imp
   const source = (await readFile(new URL('../app/scripts/host.mjs', import.meta.url), 'utf8'))
     .replace(/^import \{iconSvg\} from [^;]+;/m, 'const iconSvg = () => "";')
     .replace(/await import\(`\.\/host-core\.mjs\?v=\$\{version\}`\)/, 'core')
+    .replace(/await import\(`\.\/host-draft\.mjs\?v=\$\{version\}`\)/, 'drafts')
     .replace(/await import\(`\.\/i18n\.mjs\?v=\$\{version\}`\)/, 'i18n');
   const run = new (Object.getPrototypeOf(async function() {}).constructor)(
-    'window', 'document', 'location', 'fetch', 'customElements', 'crypto', 'navigator', 'core', 'i18n', source,
+    'window', 'document', 'location', 'fetch', 'customElements', 'crypto', 'navigator', 'core', 'i18n', 'drafts', source,
   );
   await run(window, document, location, fetch, { whenDefined: async () => {}, get: () => true },
     { randomUUID: () => 'session' }, { languages }, { ...core,
       canEdit: () => true,
       createBackend: () => request,
       saveArtifact: realSave ? core.saveArtifact : options => impact ? options.confirmVersion(impact).then(confirmed => confirmed ? saved : null) : saved,
-    }, i18n);
+    }, i18n, drafts);
   designer.started = true;
   assert.equal(node('save').disabled, false);
   // The e2e smokes match these English texts exactly.

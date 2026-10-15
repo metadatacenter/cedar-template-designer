@@ -63,6 +63,8 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
         get canSave(){return this.report.canSave}get validationReport(){return this.report}validate(){return this.report}
         get isDirty(){return JSON.stringify(this.currentArtifact)!==this.baseline}
         loadArtifact(value,options){if(!options?.preserveView)this.viewState={};if(value.unreadable)throw new Error('Child schema uses a reserved instance property name at /properties/@foo/');this.currentArtifact=structuredClone(value);this.baseline=JSON.stringify(value)}
+        captureDraft(){return {format:'cedar-designer-draft',version:1,kind:'template',state:JSON.stringify({artifact:this.currentArtifact,baseline:this.baseline,report:this.report})}}
+        restoreDraft(value){const data=JSON.parse(value.state);this.currentArtifact=data.artifact;this.baseline=data.baseline;this.report=data.report}
         newArtifact(){this.loadArtifact({'schema:name':''});this.report={valid:false,canSave:false,issues:[{setting:'name',shown:false,severity:'error'}]}}
       }
       setTimeout(()=>{

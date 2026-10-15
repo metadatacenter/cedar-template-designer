@@ -72,3 +72,5 @@ dialog form button[value=discard] { margin-inline-end: auto; }
 textarea {
   resize: none;
 }
+
+#import-draft { font: inherit; max-width: 100%; }

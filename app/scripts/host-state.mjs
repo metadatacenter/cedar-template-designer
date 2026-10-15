@@ -1,5 +1,5 @@
 import { applyAuthorChanges } from './author-changes.mjs';
-import { updateOutcome } from './save-recovery.mjs';
+import { sameRevision, updateOutcome } from './save-recovery.mjs';
 
 /** Compare documents independently of object key order. */
 export function artifactKey(value) {
@@ -45,6 +45,41 @@ export class DesignerCoordinator {
     this.loadFailed = false;
     this.#server = undefined;
     this.#committed = false;
+  }
+  captureRecovery(attempt) {
+    const pending = this.#pendingUpdate;
+    const write = attempt?.write;
+    return structuredClone({
+      stored: this.stored, projection: this.#projection, etag: this.etag,
+      committed: this.#committed, reloadRequired: this.reloadRequired || Boolean(write),
+      uncertainCreation: this.uncertainCreation || Boolean(write?.createsIdentity),
+      pending: write && !write.createsIdentity && this.stored && this.etag
+        ? { opened: this.stored, submitted: write.body, etag: this.etag, purpose: 'save', projection: attempt.projection }
+        : pending ? { opened: pending.opened, submitted: pending.submitted, etag: pending.etag,
+          purpose: pending.purpose, projection: pending.attempt.projection } : undefined,
+    });
+  }
+  restoreRecovery(value) {
+    const copy = structuredClone(value);
+    const object = value => value && typeof value === 'object' && !Array.isArray(value);
+    if (!object(copy) || typeof copy.committed !== 'boolean' || typeof copy.reloadRequired !== 'boolean' ||
+      typeof copy.uncertainCreation !== 'boolean' || (copy.stored !== undefined && !object(copy.stored)) ||
+      (copy.projection !== undefined && !object(copy.projection)) || (copy.etag !== undefined && typeof copy.etag !== 'string')) throw new Error();
+    if (copy.pending && (!object(copy.pending.opened) || !object(copy.pending.submitted) || !object(copy.pending.projection) ||
+      typeof copy.pending.etag !== 'string' || !['save', 'access', 'acknowledgement'].includes(copy.pending.purpose))) throw new Error();
+    const same = this.ready && (copy.stored === undefined ? this.stored === undefined :
+      sameRevision(copy.etag, this.etag) && artifactKey(copy.stored) === artifactKey(this.stored));
+    this.#generation++;
+    this.stored = copy.stored; this.#projection = copy.projection; this.etag = copy.etag;
+    this.#committed = copy.committed;
+    this.#pendingUpdate = copy.pending ? { ...copy.pending, attempt: { projection: copy.pending.projection } } : undefined;
+    this.reloadRequired = copy.reloadRequired || !same || !this.writable;
+    this.uncertainCreation = copy.uncertainCreation;
+    if (this.reloadRequired && !this.uncertainCreation && !this.#pendingUpdate && copy.stored && copy.etag && copy.projection)
+      this.#pendingUpdate = { opened: copy.stored, submitted: copy.stored, etag: copy.etag,
+        purpose: 'access', attempt: { projection: copy.projection } };
+    this.#server = undefined;
+    this.ready = true; this.loadFailed = false;
   }
   report(designer, validation = designer?.validationReport) {
     let readable = true;

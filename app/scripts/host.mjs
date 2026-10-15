@@ -4,17 +4,40 @@ document.getElementById('back-icon').innerHTML = iconSvg('back');
 document.getElementById('version-icon').innerHTML = iconSvg('new-record');
 const version = encodeURIComponent(window.cedarCacheControl || 'local');
 const { resourceSelector, resourcePathId, useDeploymentApi, routeFor, workspaceReturn, canEdit, canCreate, createBackend, openingMessage, childSource, saveArtifact, DesignerCoordinator, waitForDesigner } = await import(`./host-core.mjs?v=${version}`);
+const { DesignerDraftStore, draftScope, readDraft } = await import(`./host-draft.mjs?v=${version}`);
 // host-core.mjs imports this same versioned URL, so both modules share one active language.
 const { t, counted, detectLanguage, setLanguage, localizeDocument } = await import(`./i18n.mjs?v=${version}`);
 const language = setLanguage(detectLanguage(navigator.languages));
 localizeDocument(document);
-const ui = Object.fromEntries(['back', 'save', 'save-help', 'title', 'state', 'message', 'editor', 'version-dialog', 'version-message', 'version-explanation', 'reload', 'check-save', 'recheck-access', 'server-issues', 'server-issues-title', 'server-issues-list'].map(id => [id, document.getElementById(id)]));
+const ui = Object.fromEntries(['back', 'save', 'save-help', 'title', 'state', 'message', 'editor', 'version-dialog', 'version-message', 'version-explanation', 'reload', 'check-save', 'recheck-access', 'server-issues', 'server-issues-title', 'server-issues-list', 'draft-offer', 'restore-draft', 'discard-draft', 'download-draft', 'import-draft', 'draft-storage-error'].map(id => [id, document.getElementById(id)]));
 const state = new DesignerCoordinator();
-let designer, leaving = false, discarded = false, returnUrl, route, saved = false, folderId, request, config;
+let designer, leaving = false, discarded = false, returnUrl, route, saved = false, folderId, request, config, auth, draftStore, offeredDraft;
 // The stored artifact is one the designer cannot read, so reloading it cannot help.
 let unreadable = false, forwardedFindings;
 function message(text, error = false) { ui.message.textContent = text; ui.message.dataset.tone = error ? 'error' : 'info'; }
 function dirty() { return !leaving && state.dirty(designer); }
+function keepDraft(attempt) {
+  if (leaving || !draftStore || !designer || offeredDraft || !state.ready || (state.saving && !attempt?.write) || typeof designer.captureDraft !== 'function') return;
+  try {
+    if (dirty() || state.reloadRequired || attempt?.write) draftStore.write(draftStore.capture(designer, state, attempt));
+    else draftStore.clear();
+  } catch { ui['draft-storage-error'].hidden = false; }
+}
+function clearDraft() {
+  try { draftStore?.clear(); offeredDraft = null; } catch { ui['draft-storage-error'].hidden = false; }
+}
+function selectDraftStore() {
+  const previous = draftStore;
+  const scope = draftScope(config.resourceRestAPI, auth.getParsedToken().sub,
+    { ...route, id: route.id ? resourcePathId(route.id) : '' }, folderId);
+  const next = new DesignerDraftStore(scope);
+  if (previous && previous.scope !== scope) {
+    // Store the confirmed identity before removing the old route's journal.
+    try { next.write(next.capture(designer, state)); previous.clear(); }
+    catch { ui['draft-storage-error'].hidden = false; }
+  }
+  draftStore = next;
+}
 function update() {
   const report = state.report(designer);
   const findingsKey = JSON.stringify(report.server);
@@ -22,7 +45,12 @@ function update() {
     forwardedFindings = findingsKey;
     designer.validationFindings = report.server.map(({location, message, severity}) => ({location: location || '', message, severity}));
   }
-  ui.save.disabled = !report.canSave;
+  ui.save.disabled = !report.canSave || Boolean(offeredDraft);
+  ui['draft-offer'].hidden = !offeredDraft;
+  ui['download-draft'].disabled = state.saving || (!offeredDraft && !designer);
+  ui['import-draft'].disabled = state.saving || state.checking;
+  ui['restore-draft'].disabled = state.saving || state.checking || !designer;
+  ui['discard-draft'].disabled = state.saving || state.checking;
   ui.reload.hidden = !(state.loadFailed || state.reloadRequired) || state.uncertainCreation || unreadable;
   ui.reload.disabled = state.saving || state.checking;
   ui['check-save'].hidden = !state.canCheckSave;
@@ -55,12 +83,14 @@ function update() {
   ui.state.textContent = t(state.loadFailed ? 'State.LoadFailed' : !state.ready ? 'Page.Loading' : state.reloadRequired ? 'State.ReloadRequired' : state.saving ? 'State.Saving' : !state.writable ? 'State.ReadOnly' : dirty() ? 'State.Modified' : saved ? 'State.Saved' : 'State.Unmodified');
   if (designer) {
     designer.readOnly = !state.writable;
-    designer.inert = !state.ready || state.loadFailed || state.saving;
+    designer.inert = !state.ready || state.loadFailed || state.saving || Boolean(offeredDraft);
   }
+  keepDraft();
 }
 window.addEventListener('pagehide', () => state.dispose());
 window.addEventListener('pageshow', event => { if (event.persisted) location.reload(); });
 window.addEventListener('beforeunload', event => {
+  keepDraft();
   if (!leaving && (dirty() || state.saving)) { event.preventDefault(); event.returnValue = ''; }
 });
 function leave() {
@@ -87,11 +117,12 @@ async function reopen(attempt) {
 }
 ui.back.addEventListener('click', () => {
   if (!returnUrl || state.saving || (dirty() && !window.confirm(t('Message.ConfirmDiscard')))) return;
+  if (!state.reloadRequired && !offeredDraft) clearDraft();
   leave();
 });
 ui.reload.addEventListener('click', () => {
   if (state.saving || state.checking || state.uncertainCreation || (dirty() && !window.confirm(t('Message.ConfirmReload')))) return;
-  leaving = true; location.reload();
+  clearDraft(); leaving = true; location.reload();
 });
 async function checkRecovery() {
   const access = state.canRecheckAccess;
@@ -113,6 +144,40 @@ async function checkRecovery() {
 }
 ui['check-save'].addEventListener('click', checkRecovery);
 ui['recheck-access'].addEventListener('click', checkRecovery);
+ui['restore-draft'].addEventListener('click', () => {
+  if (!offeredDraft || !designer || state.saving || state.checking) return;
+  if (dirty() && !window.confirm(t('Message.ConfirmDiscard'))) return;
+  try {
+    // Validate host state separately before the component atomically adopts its snapshot.
+    const candidate = new DesignerCoordinator(); candidate.restoreRecovery(offeredDraft.coordinator);
+    designer.restoreDraft(offeredDraft.draft);
+    state.restoreRecovery(offeredDraft.coordinator);
+    offeredDraft = null; ui.editor.hidden = false;
+    message(t(state.reloadRequired ? 'Draft.RestoredGuarded' : 'Draft.Restored'), state.reloadRequired);
+    update();
+  } catch { message(t('Draft.Invalid'), true); }
+});
+ui['discard-draft'].addEventListener('click', () => {
+  if (!offeredDraft || state.saving || state.checking) return;
+  if (offeredDraft.coordinator.uncertainCreation) { message(t('Draft.UnknownCreate'), true); return; }
+  if (window.confirm(t('Message.ConfirmDiscard'))) { clearDraft(); update(); }
+});
+ui['download-draft'].addEventListener('click', () => {
+  try {
+    const value = offeredDraft ?? draftStore?.capture(designer, state);
+    if (!value) return;
+    const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: 'application/json' }));
+    const link = document.createElement('a'); link.href = url; link.download = 'cedar-designer-recovery.json';
+    link.click(); setTimeout(() => URL.revokeObjectURL(url), 0);
+  } catch { message(t('Draft.Invalid'), true); }
+});
+ui['import-draft'].addEventListener('change', async event => {
+  const file = event.target.files?.[0]; event.target.value = '';
+  if (!file || !draftStore || state.saving || state.checking) return;
+  if (state.uncertainCreation || offeredDraft?.coordinator.uncertainCreation) { message(t('Draft.UnknownCreate'), true); return; }
+  try { offeredDraft = readDraft(await file.text(), draftStore.scope); update(); }
+  catch { message(t('Draft.Invalid'), true); }
+});
 function confirmVersion(impact) {
   const count = impact.numberOfInstances;
   const ofVersion = impact.oldVersion ? 'OfVersion' : '';
@@ -137,12 +202,13 @@ function confirmVersion(impact) {
 ui.save.addEventListener('click', async () => {
   let attempt;
   try {
+    if (offeredDraft) return;
     attempt = state.beginSave(designer);
     if (!attempt) return;
     update(); message(t('State.Saving'));
     const result = await saveArtifact({ request, base: config.resourceRestAPI, route,
       artifact: attempt.artifact, etag: state.etag, folderId, confirmVersion,
-      stillCurrent: () => state.matches(attempt, designer), onWrite: write => { attempt.write = write; } });
+      stillCurrent: () => state.matches(attempt, designer), onWrite: write => { attempt.write = write; keepDraft(attempt); } });
     if (!attempt.current()) return;
     if (!result) { message(t(discarded ? 'Message.ChangesDiscarded' : 'Message.ChangesKept')); return; }
     if (!result.data || typeof result.data['@id'] !== 'string' || !result.data['@id'].trim()) {
@@ -159,6 +225,7 @@ ui.save.addEventListener('click', async () => {
     address.pathname = `/${route.kind}s/edit/${encodeURIComponent(resourcePathId(route.id))}`;
     window.history.replaceState(null, '', address.href);
     if (newIdentity && state.matches(attempt, designer) && await reopen(attempt)) {
+      selectDraftStore();
       message(state.reloadRequired ? t('Error.NoValidator') : '', state.reloadRequired);
       return;
     }
@@ -168,6 +235,7 @@ ui.save.addEventListener('click', async () => {
     // before another save.
     const edited = !state.matches(attempt, designer);
     state.committed(attempt, result.etag, newIdentity, confirmedWrite);
+    if (newIdentity) selectDraftStore();
     if (state.canCheckSave) message(t('Error.SavedVerificationUnavailable'), true);
     else if (edited) message(t(newIdentity ? 'Message.SavedNewIdentity' : 'Message.SavedWithChanges') + (!result.etag ? ' ' + t('Error.NoValidator') : ''), state.reloadRequired);
     else message(newIdentity ? t('Message.SavedReloadRequired') : !result.etag ? t('Error.NoValidator') : '', state.reloadRequired);
@@ -204,12 +272,14 @@ try {
   const params = new URLSearchParams(location.search);
   folderId = params.get('folderId');
   returnUrl = workspaceReturn(config.workspaceFrontend, params.get('returnTo'), folderId);
-  const auth = new window.KeycloakUserHandler();
+  auth = new window.KeycloakUserHandler();
   const authenticated = await new Promise((resolve, reject) => auth.initUserHandler(resolve, () => reject(new Error(t('Error.SignIn')))));
   if (!authenticated) { auth.doLogin(); } else {
     request = createBackend(auth, crypto.randomUUID());
     const { data: profile } = await request(`${config.userRestAPI}/users/${encodeURIComponent(auth.getParsedToken().sub)}`);
     folderId ||= profile.homeFolderId;
+    selectDraftStore();
+    try { offeredDraft = draftStore.read(); } catch { ui['draft-storage-error'].hidden = false; }
     const manifest = await readJson(`components/manifest.json?v=${version}`, 'Error.ManifestLoad', { cache: 'no-store' });
     for (const name of ['cedar-embeddable-editor', 'cedar-embeddable-term-picker', 'cedar-embeddable-designer']) {
       const digest = manifest?.[name]?.sha256;
@@ -231,6 +301,7 @@ try {
     ui.editor.hidden = true;
     ui.editor.append(designer);
     if (typeof designer.loadArtifact !== 'function') throw new Error(t('Error.OutdatedBundle'));
+    for (const event of ['artifactChange', 'validationChange', 'dirtyChange']) designer.addEventListener(event, update);
     if (route.id) {
       const url = artifactUrl();
       const [loaded, report] = await Promise.all([request(url), request(`${url}/report`)]);
@@ -256,13 +327,14 @@ try {
     }
     designer.readOnly = !state.writable;
     ui.editor.hidden = false;
-    for (const event of ['artifactChange', 'validationChange', 'dirtyChange']) designer.addEventListener(event, update);
     if (!state.reloadRequired) message(state.writable ? '' : t('Message.ReadOnly'));
     update();
   }
 } catch (error) {
-  ui.editor.replaceChildren();
-  designer = null;
+  // A freshly loaded component can restore a retained draft even if the server read failed.
+  if (!offeredDraft || typeof designer?.restoreDraft !== 'function') {
+    ui.editor.replaceChildren(); designer = null;
+  }
   state.failLoad();
   update();
   message(openingMessage(error, !route?.id), true);

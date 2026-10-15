@@ -1,0 +1,56 @@
+import {test, expect} from '@playwright/test';
+import {host, edit, text} from './host-fixture.mjs';
+
+for (const kind of ['template', 'element', 'field']) {
+  for (const status of [null, 401, 403, 412, 503]) {
+    test(`${kind} draft survives reload after ${status ?? 'editing'}`, async ({page}) => {
+      const server = await host(page, kind);
+      await edit(page, 'Retained author work');
+      if (status) {
+        server.failure = {status, json:{message:'Refused'}};
+        await page.locator('#save').click();
+        await expect(page.locator('#state')).toHaveText(text('en','State.ReloadRequired'));
+      }
+      const writesBeforeReload = server.writes.length;
+      page.on('dialog', dialog => dialog.accept());
+      await page.reload();
+      await expect(page.locator('#draft-offer')).toBeVisible();
+      await expect(page.locator('#save')).toBeDisabled();
+      await page.locator('#restore-draft').click();
+      await expect(page.locator('#draft-offer')).toBeHidden();
+      expect(await page.locator('#editor > *').evaluate(el=>el.currentArtifact['schema:name'])).toBe('Retained author work');
+      if (status) await expect(page.locator('#save')).toBeDisabled();
+      else await expect(page.locator('#save')).toBeEnabled();
+      if ([401,403,503].includes(status)) {
+        server.failure = null;
+        await page.locator(status===503?'#check-save':'#recheck-access').click();
+        await expect(page.locator('#save')).toBeEnabled();
+      }
+      expect(server.writes).toHaveLength(writesBeforeReload);
+    });
+  }
+}
+test('an uncertain create stays guarded after reload and cannot be discarded into a duplicate', async ({page}) => {
+  const server = await host(page,'template','create');
+  await edit(page); server.failure='network';
+  await page.locator('#save').click();
+  await expect(page.locator('#state')).toHaveText(text('en','State.ReloadRequired'));
+  page.on('dialog',dialog=>dialog.accept()); await page.reload();
+  await expect(page.locator('#draft-offer')).toBeVisible();
+  await page.locator('#discard-draft').click();
+  await expect(page.locator('#draft-offer')).toBeVisible();
+  await page.locator('#restore-draft').click();
+  await expect(page.locator('#save')).toBeDisabled();
+  await expect(page.locator('#reload')).toBeHidden();
+  expect(server.writes).toHaveLength(1);
+});
+test('a retained draft can be opened read-only while the artifact read is unavailable', async ({page}) => {
+  const server = await host(page); await edit(page,'Offline draft');
+  server.brokenLoad=true;
+  page.on('dialog',dialog=>dialog.accept()); await page.reload();
+  await expect(page.locator('#draft-offer')).toBeVisible();
+  await page.locator('#restore-draft').click();
+  await expect(page.locator('#editor')).toBeVisible();
+  expect(await page.locator('#editor > *').evaluate(el=>[el.currentArtifact['schema:name'],el.readOnly])).toEqual(['Offline draft',true]);
+  await expect(page.locator('#save')).toBeDisabled();
+});

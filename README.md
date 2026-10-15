@@ -98,3 +98,18 @@ A successful first save or new-draft save adopts the stored artifact through
 expansion while receiving the server identity. The coordinator still verifies the
 submitted document is current before adoption. Ordinary loads and explicit reloads
 reset the view.
+
+Unfinished Designer work is retained in this tab's `sessionStorage`, scoped to the
+signed-in account, deployment, artifact kind and identity (or create folder).
+Reload offers explicit restoration after fresh server reads; a restored draft does
+not inherit permission or an ETag from the recovery file. Download/import recovery
+files retain unfinished controls and the evidence for interrupted writes. A failed
+storage write is reported so the author can download before leaving.
+
+The host journals immediately before dispatching a write. Uncertain create and
+version operations remain blocked through reload, including attempted discard or
+import; checking Workspace is still necessary because the server has no durable
+operation identifier for resolving these outcomes. Update recovery rechecks the
+stored revision and access before permitting another conditional write. Explicit
+confirmed discard clears ordinary drafts. Closing a tab ends automatic retention;
+a downloaded recovery file can be imported at the same account and route later.
