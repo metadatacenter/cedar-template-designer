@@ -13,6 +13,17 @@ function setup(depth = 1, writable = true) {
   state.loaded({artifact:designer.currentArtifact,etag:'"one"',writable});
   return {state,designer};
 }
+test('forwarded host warnings remain advisory and host errors are not counted twice', () => {
+  const {state, designer} = setup();
+  const attempt = state.beginSave(designer);
+  state.failed(new BackendError(400, {objects: {validationReport: {errors: [{location: '/schema:name', message: 'Rejected'}]}}}), attempt);
+  state.finish(attempt);
+  designer.validationReport = {valid: false, canSave: false, issues: [{source: 'host', severity: 'error', message: 'Rejected'}]};
+  assert.equal(state.report(designer).issues.length, 1);
+  designer.currentArtifact['schema:name'] = 'Corrected';
+  designer.validationReport = {valid: true, canSave: true, issues: [{source: 'host', severity: 'warning', message: 'Advisory'}]};
+  assert.ok(state.beginSave(designer));
+});
 for (const setting of ['name','default','occurrences']) for (const depth of [0,1,3,8]) for (const shown of [false,true]) {
   test(`${setting} depth ${depth}: invalid settings block save before and after disclosure=${shown}`, () => {
     const {state,designer} = setup(depth);

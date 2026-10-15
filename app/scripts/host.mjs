@@ -12,11 +12,16 @@ const ui = Object.fromEntries(['back', 'save', 'save-help', 'title', 'state', 'm
 const state = new DesignerCoordinator();
 let designer, leaving = false, discarded = false, returnUrl, route, saved = false, folderId, request, config;
 // The stored artifact is one the designer cannot read, so reloading it cannot help.
-let unreadable = false;
+let unreadable = false, forwardedFindings;
 function message(text, error = false) { ui.message.textContent = text; ui.message.dataset.tone = error ? 'error' : 'info'; }
 function dirty() { return !leaving && state.dirty(designer); }
 function update() {
   const report = state.report(designer);
+  const findingsKey = JSON.stringify(report.server);
+  if (designer && typeof designer.revealValidationFinding === 'function' && findingsKey !== forwardedFindings) {
+    forwardedFindings = findingsKey;
+    designer.validationFindings = report.server.map(({location, message, severity}) => ({location: location || '', message, severity}));
+  }
   ui.save.disabled = !report.canSave;
   ui.reload.hidden = !(state.loadFailed || state.reloadRequired) || state.uncertainCreation || unreadable;
   ui.reload.disabled = state.saving;
@@ -25,7 +30,14 @@ function update() {
   ui['server-issues-list'].replaceChildren();
   for (const issue of report.server) {
     const row = document.createElement('li');
-    row.textContent = `${issue.location || '/'}: ${issue.message}`;
+    const text = `${issue.location || '/'}: ${issue.message}`;
+    const mapped = designer?.validationReport?.issues.some(finding => finding.source === 'host' && finding.location === (issue.location || '') && !finding.unmapped);
+    if (mapped && typeof designer.revealValidationFinding === 'function') {
+      const link = document.createElement('button');
+      link.type = 'button'; link.className = 'finding-link'; link.textContent = text;
+      link.addEventListener('click', () => designer.revealValidationFinding(issue.location || ''));
+      row.append(link);
+    } else row.textContent = text;
     ui['server-issues-list'].append(row);
   }
   // While the designer lists errors, Save says why it is refused. An error it holds back, such as a name nobody has touched, is not yet one to point at.

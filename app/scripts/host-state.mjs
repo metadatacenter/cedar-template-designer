@@ -7,7 +7,7 @@ export function artifactKey(value) {
 }
 
 function validReport(report) {
-  return report?.valid !== false && report?.canSave === true && Array.isArray(report.issues) && report.issues.length === 0;
+  return report?.valid !== false && report?.canSave === true && Array.isArray(report.issues) && report.issues.every(issue => issue?.severity === 'warning');
 }
 
 /** Owns the host's readiness, pending write and reports about its submitted document. */
@@ -52,7 +52,7 @@ export class DesignerCoordinator {
       catch { readable = false; }
     }
     const complete = Array.isArray(validation?.issues) && validation.issues.every(issue => issue && typeof issue === 'object');
-    const local = complete ? validation.issues : [];
+    const local = complete ? validation.issues.filter(issue => issue.source !== 'host') : [];
     const server = this.#server?.issues ?? [];
     return {
       canSave: this.#active && this.ready && this.writable && !this.saving && !this.reloadRequired &&

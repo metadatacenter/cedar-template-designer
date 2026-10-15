@@ -38,6 +38,7 @@ button:focus-visible { outline: var(--cedar-focus-ring-width) solid var(--cedar-
 #save:is(:hover, :active):not(:disabled), #version-dialog button[value=confirm]:is(:hover, :active):not(:disabled) { background: var(--cedar-color-primary-strong); border-color: var(--cedar-color-primary-strong); }
 button:disabled { opacity: var(--cedar-control-disabled-opacity); cursor: default; }
 #message:empty { display: none; }
+.finding-link { border: 0; padding: 0; background: transparent; color: inherit; font: inherit; text-align: start; text-decoration: underline; cursor: pointer; }
 cedar-embeddable-designer { display: block; height: calc(100dvh - 100px); }
 dialog { max-width: 34rem; color: var(--cedar-text-primary); font: inherit; border: 1px solid var(--cedar-border-rule); border-radius: var(--cedar-radius); padding: var(--cedar-space-6); background: var(--cedar-surface-raised); box-shadow: var(--cedar-shadow-overlay); }
 dialog::backdrop { background: var(--cedar-dialog-backdrop); }
