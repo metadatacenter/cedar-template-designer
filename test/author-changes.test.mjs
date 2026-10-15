@@ -5,7 +5,7 @@ import {DesignerCoordinator} from '../app/scripts/host-state.mjs';
 
 const legacy = () => ({'@id': 'template', 'schema:name': 'Old', 'schema:description': 'Original',
   _annotations: {note: {'@value': 'Retain'}},
-  properties: {Field: {'@id': 'field', 'schema:description': 'Field description',
+  properties: {Field: {'@id': 'field', _ui: {inputType: 'textfield'}, 'schema:description': 'Field description',
     _valueConstraints: {requiredValue: false, recommendedValue: false},
     properties: {'@type': {oneOf: [{type: 'string'}, {type: 'array', items: {type: 'string'}}]}}}},
   _ui: {order: ['Field']}});
@@ -77,6 +77,61 @@ test('a new artifact has no imported representation to preserve', () => {
   const {state, designer} = setup();
   state.loaded({writable: true});
   assert.deepEqual(state.beginSave(designer).artifact, designer.currentArtifact);
+});
+test('renaming a child key preserves its older definition while applying simultaneous edits', () => {
+  const {stored, projection, state, designer} = setup();
+  designer.currentArtifact.properties.Renamed = designer.currentArtifact.properties.Field;
+  delete designer.currentArtifact.properties.Field;
+  designer.currentArtifact.properties.Renamed['schema:description'] = 'Authored during rename';
+  designer.currentArtifact._ui.order = ['Renamed'];
+  const expected = structuredClone(stored);
+  expected.properties.Renamed = expected.properties.Field;
+  delete expected.properties.Field;
+  expected.properties.Renamed['schema:description'] = 'Authored during rename';
+  expected._ui.order = ['Renamed'];
+  const attempt = state.beginSave(designer);
+  assert.deepEqual(attempt.artifact, expected);
+  state.committed(attempt, '"renamed"'); state.finish(attempt);
+  designer.currentArtifact.properties.Renamed['schema:description'] = 'Next edit';
+  expected.properties.Renamed['schema:description'] = 'Next edit';
+  assert.deepEqual(state.beginSave(designer).artifact, expected);
+  assert.deepEqual(projection, project(stored));
+});
+test('renamed repeated definitions retain the old items shape', () => {
+  const stored = legacy(), opened = project(stored);
+  stored.properties.Field = {type: 'array', minItems: 0, items: stored.properties.Field};
+  opened.properties.Field = {type: 'array', minItems: 0, items: opened.properties.Field};
+  const edited = {...opened, properties: {Renamed: structuredClone(opened.properties.Field)}};
+  assert.deepEqual(applyAuthorChanges(stored, opened, edited).properties.Renamed, stored.properties.Field);
+});
+test('swapped keys follow definitions rather than inheriting the other field details', () => {
+  const stored = legacy();
+  stored.properties.Other = {...structuredClone(stored.properties.Field), '@id': 'other', _annotations: {note: 'Other'}};
+  const opened = project(stored), edited = structuredClone(opened);
+  [edited.properties.Field, edited.properties.Other] = [edited.properties.Other, edited.properties.Field];
+  const result = applyAuthorChanges(stored, opened, edited);
+  assert.deepEqual(result.properties.Other, stored.properties.Field);
+  assert.deepEqual(result.properties.Field, stored.properties.Other);
+});
+test('distinct property IRIs disambiguate renamed uses of the same library definition', () => {
+  const stored = legacy();
+  stored.properties.Other = {...structuredClone(stored.properties.Field), _annotations: {note: 'Other'}};
+  stored.properties['@context'] = {properties: {Field: {enum: ['https://example.org/field']}, Other: {enum: ['https://example.org/other']}}};
+  const opened = project(stored), edited = structuredClone(opened);
+  edited.properties.Renamed = edited.properties.Field;
+  delete edited.properties.Field;
+  edited.properties['@context'].properties.Renamed = edited.properties['@context'].properties.Field;
+  delete edited.properties['@context'].properties.Field;
+  const result = applyAuthorChanges(stored, opened, edited);
+  assert.deepEqual(result.properties.Renamed, stored.properties.Field);
+  assert.deepEqual(result.properties.Other, stored.properties.Other);
+});
+test('adding a duplicate identity does not copy hidden content from an existing child', () => {
+  const stored = legacy(), opened = project(stored), edited = structuredClone(opened);
+  edited.properties.Copy = structuredClone(edited.properties.Field);
+  const result = applyAuthorChanges(stored, opened, edited);
+  assert.deepEqual(result.properties.Field, stored.properties.Field);
+  assert.deepEqual(result.properties.Copy, edited.properties.Copy);
 });
 test('JSON property names cannot mutate the result prototype', () => {
   const result = applyAuthorChanges({}, {}, JSON.parse('{"__proto__":{"polluted":true}}'));
