@@ -33,6 +33,23 @@ for(const depth of [1,3,8])for(const severity of ['errors','warnings']) {
     expect(state.writes).toHaveLength(2);
   });
 }
+// The page never scrolls: a long field scrolls within the editor area, and a long list of findings within itself.
+for(const kind of ['template','field'])test(`${kind}: the header and server findings stay in view however long either runs`,async({page})=>{
+  await page.setViewportSize({width:1280,height:600});
+  const state=await host(page,kind);
+  const errors=Array.from({length:40},(_,i)=>({location:`/properties/Field${i}`,message:'Invalid default IRI'}));
+  state.failure={status:400,json:{message:'Validation failed',objects:{validationReport:{errors}}}};
+  await edit(page);await page.locator('#save').click();
+  await page.locator('#server-issues summary').click();
+  await expect(page.locator('#server-issues li')).toHaveCount(40);
+  await page.locator('#editor > *').evaluate(designer=>{designer.style.display='block';designer.style.minHeight='3000px';});
+  await page.mouse.move(640,580);await page.mouse.wheel(0,3000);
+  if(kind==='field')await expect.poll(()=>page.locator('#editor').evaluate(editor=>editor.scrollTop)).toBeGreaterThan(0);
+  expect(await page.evaluate(()=>[window.scrollY,document.documentElement.scrollHeight-innerHeight])).toEqual([0,0]);
+  await expect(page.locator('header')).toBeInViewport({ratio:1});
+  await expect(page.locator('#server-issues summary')).toBeInViewport({ratio:1});
+  expect((await page.locator('#editor').boundingBox()).height).toBeGreaterThan(100);
+});
 for(const status of [403,412])test(`write ${status} keeps the edit and offers explicit reload`,async({page})=>{
   const state=await host(page);state.failure={status,json:{message:'Cannot save'}};
   await edit(page,'Unsaved');await page.locator('#save').click();await expect(page.locator('#save')).toBeDisabled();
