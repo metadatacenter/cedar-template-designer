@@ -12,7 +12,8 @@
       "element": "Element Designer",
       "field": "Field Designer"
     },
-    "Reload": "Reload designer"
+    "Reload": "Reload designer",
+    "CheckSave": "Check save status"
   },
   "State": {
     "Saving": "Saving…",
@@ -33,7 +34,10 @@
     "ServerFindingsOne": "Server validation: {{count}} finding",
     "SavedWithChanges": "Saved. Further changes remain in the designer.",
     "SavedNewIdentity": "Saved as a new artifact. Further changes remain here; reload the saved artifact before saving again.",
-    "SavedReloadRequired": "Saved. Reload the designer before saving again."
+    "SavedReloadRequired": "Saved. Reload the designer before saving again.",
+    "CheckingSave": "Checking save status…",
+    "SaveConfirmed": "The stored version matches your submitted changes. Your current edits have been kept.",
+    "SaveUnchanged": "The stored version is unchanged. You can retry Save."
   },
   "Version": {
     "Title": "Create a new template version?",
@@ -83,6 +87,9 @@
     "ForbiddenCreate": "You do not have permission to create an artifact here.",
     "ReloadToRetry": "Reload to try again.",
     "UnreadableAnswer": "The server sent an answer the Designer cannot read. Reload to try again.",
-    "ManifestLoad": "The component manifest could not be loaded. Rebuild and stage the local components."
+    "ManifestLoad": "The component manifest could not be loaded. Rebuild and stage the local components.",
+    "RecoveryReadOnly": "You do not currently have permission to update this artifact. Your edits have been kept; saving remains blocked.",
+    "RecoveryUnresolved": "The stored version could not be reconciled with your save. Your edits have been kept; saving remains blocked.",
+    "RecoveryUnavailable": "Save status could not be checked. Your edits have been kept. Check your connection and access, then try again."
   }
 }

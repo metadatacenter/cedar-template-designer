@@ -186,7 +186,7 @@ export async function saveArtifact({ request, base, route, artifact, etag, folde
   // Assessments do not write. Record only the operation that may store an artifact, so a
   // failed assessment can be retried while a lost create response cannot create a duplicate.
   const write = (url, options, createsIdentity = false) => {
-    onWrite({ createsIdentity });
+    onWrite({ createsIdentity, body: structuredClone(options.body) });
     return request(url, options);
   };
   current();

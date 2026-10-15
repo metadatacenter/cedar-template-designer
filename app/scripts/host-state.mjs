@@ -1,4 +1,5 @@
 import { applyAuthorChanges } from './author-changes.mjs';
+import { updateOutcome } from './save-recovery.mjs';
 
 /** Compare documents independently of object key order. */
 export function artifactKey(value) {
@@ -15,6 +16,7 @@ export class DesignerCoordinator {
   ready = false;
   writable = false;
   saving = false;
+  checking = false;
   reloadRequired = false;
   uncertainCreation = false;
   loadFailed = false;
@@ -25,11 +27,14 @@ export class DesignerCoordinator {
   #server;
   #committed = false;
   #projection;
+  #pendingUpdate;
 
   loaded({ artifact, projection = artifact, etag, writable }) {
     if (!this.#active) return;
     this.#generation++;
     this.saving = false;
+    this.checking = false;
+    this.#pendingUpdate = undefined;
     this.stored = structuredClone(artifact);
     this.#projection = structuredClone(projection);
     this.etag = etag;
@@ -55,7 +60,7 @@ export class DesignerCoordinator {
     const local = complete ? validation.issues.filter(issue => issue.source !== 'host') : [];
     const server = this.#server?.issues ?? [];
     return {
-      canSave: this.#active && this.ready && this.writable && !this.saving && !this.reloadRequired &&
+      canSave: this.#active && this.ready && this.writable && !this.saving && !this.checking && !this.reloadRequired &&
         readable && validReport(validation) &&
         !server.some(issue => issue.severity === 'error'),
       issues: [...local, ...server], server,
@@ -96,6 +101,10 @@ export class DesignerCoordinator {
     const unconfirmed = Boolean(attempt.write && (error.status == null || error.status === 0 ||
       (error.status >= 200 && error.status < 300) || error.status === 408 || error.status >= 500));
     if (unconfirmed || [401, 403, 404, 409, 412, 428].includes(error.status)) this.reloadRequired = true;
+    if (unconfirmed && !attempt.write.createsIdentity && this.stored && this.etag) {
+      this.#pendingUpdate = {attempt, opened: structuredClone(this.stored),
+        submitted: structuredClone(attempt.write.body ?? attempt.artifact), etag: this.etag};
+    }
     if (unconfirmed && attempt.write.createsIdentity) this.uncertainCreation = true;
     const report = error.data?.objects?.validationReport ?? error.data?.validationReport;
     const issues = [];
@@ -109,7 +118,34 @@ export class DesignerCoordinator {
     this.#server = { key: attempt.key, issues };
     return unconfirmed;
   }
+  get canCheckSave() { return this.#active && Boolean(this.#pendingUpdate) && !this.uncertainCreation; }
+  beginCheck() {
+    if (!this.canCheckSave || this.saving || this.checking) return null;
+    const generation = ++this.#generation;
+    this.checking = true;
+    return { current: () => this.#active && generation === this.#generation };
+  }
+  checked(check, latest, writable) {
+    if (!check?.current() || !this.#pendingUpdate) return 'obsolete';
+    if (!writable) return 'readonly';
+    const result = updateOutcome(this.#pendingUpdate, latest);
+    if (result !== 'saved' && result !== 'unchanged') return result;
+    if (result === 'saved') {
+      this.stored = structuredClone(latest.data);
+      this.#projection = structuredClone(this.#pendingUpdate.attempt.projection);
+      this.etag = latest.etag;
+      this.#committed = true;
+    }
+    // An unchanged revision permits another conditional update. A late first
+    // commit still wins only once: the server refuses the stale retry with 412.
+    this.reloadRequired = false;
+    this.writable = true;
+    this.#server = undefined;
+    this.#pendingUpdate = undefined;
+    return result;
+  }
+  finishCheck(check) { if (check?.current()) this.checking = false; }
   finish(attempt) { if (attempt?.current()) this.saving = false; }
-  failLoad() { this.#generation++; this.saving = false; this.ready = false; this.writable = false; this.loadFailed = true; }
+  failLoad() { this.#generation++; this.checking = false; this.#pendingUpdate = undefined; this.saving = false; this.ready = false; this.writable = false; this.loadFailed = true; }
   dispose() { this.#active = false; this.#generation++; }
 }

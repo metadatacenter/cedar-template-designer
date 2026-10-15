@@ -12,7 +12,8 @@
       "element": "Elemtervező",
       "field": "Mezőtervező"
     },
-    "Reload": "Tervező újratöltése"
+    "Reload": "Tervező újratöltése",
+    "CheckSave": "Mentés állapotának ellenőrzése"
   },
   "State": {
     "Saving": "Mentés…",
@@ -33,7 +34,10 @@
     "ServerFindingsOne": "Kiszolgálóoldali ellenőrzés: {{count}} megállapítás",
     "SavedWithChanges": "Mentve. További módosítások maradtak a tervezőben.",
     "SavedNewIdentity": "Új erőforrásként mentve. A további módosítások itt maradnak; újabb mentés előtt töltse be újra a mentett erőforrást.",
-    "SavedReloadRequired": "Mentve. Újabb mentés előtt töltse újra a tervezőt."
+    "SavedReloadRequired": "Mentve. Újabb mentés előtt töltse újra a tervezőt.",
+    "CheckingSave": "Mentés állapotának ellenőrzése…",
+    "SaveConfirmed": "A tárolt változat megegyezik az elküldött módosításokkal. A jelenlegi szerkesztések megmaradtak.",
+    "SaveUnchanged": "A tárolt változat nem változott. Újra megpróbálhatja a mentést."
   },
   "Version": {
     "Title": "Létrehoz egy új sablonverziót?",
@@ -83,6 +87,9 @@
     "ForbiddenCreate": "Nincs jogosultsága itt artefaktumot létrehozni.",
     "ReloadToRetry": "Töltse újra az oldalt, és próbálja újra.",
     "UnreadableAnswer": "A kiszolgáló olyan választ küldött, amelyet a Designer nem tud értelmezni. Töltse újra az oldalt, és próbálja újra.",
-    "ManifestLoad": "A komponensjegyzék nem tölthető be. Építse újra és telepítse a helyi komponenseket."
+    "ManifestLoad": "A komponensjegyzék nem tölthető be. Építse újra és telepítse a helyi komponenseket.",
+    "RecoveryReadOnly": "Jelenleg nincs jogosultsága az elem módosításához. A szerkesztések megmaradtak; a mentés továbbra is le van tiltva.",
+    "RecoveryUnresolved": "A tárolt változatot nem sikerült egyeztetni a mentéssel. A szerkesztések megmaradtak; a mentés továbbra is le van tiltva.",
+    "RecoveryUnavailable": "Nem sikerült ellenőrizni a mentés állapotát. A szerkesztések megmaradtak. Ellenőrizze a kapcsolatot és a hozzáférést, majd próbálja újra."
   }
 }
