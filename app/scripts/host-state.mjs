@@ -1,3 +1,5 @@
+import { applyAuthorChanges } from './author-changes.mjs';
+
 /** Compare documents independently of object key order. */
 export function artifactKey(value) {
   return JSON.stringify(value, (_key, node) => node && typeof node === 'object' && !Array.isArray(node)
@@ -22,12 +24,14 @@ export class DesignerCoordinator {
   #active = true;
   #server;
   #committed = false;
+  #projection;
 
-  loaded({ artifact, etag, writable }) {
+  loaded({ artifact, projection = artifact, etag, writable }) {
     if (!this.#active) return;
     this.#generation++;
     this.saving = false;
     this.stored = structuredClone(artifact);
+    this.#projection = structuredClone(projection);
     this.etag = etag;
     this.writable = writable === true;
     this.ready = true;
@@ -61,10 +65,12 @@ export class DesignerCoordinator {
   beginSave(designer) {
     if (!this.#active || !this.ready || !this.writable || this.saving || this.reloadRequired) return null;
     if (!this.report(designer, designer.validate()).canSave) return null;
-    const artifact = structuredClone(designer.currentArtifact);
+    const projection = structuredClone(designer.currentArtifact);
+    const artifact = this.stored === undefined ? structuredClone(projection)
+      : applyAuthorChanges(this.stored, this.#projection, projection);
     const generation = ++this.#generation;
     this.saving = true;
-    return { artifact, key: artifactKey(artifact), current: () => this.#active && generation === this.#generation };
+    return { artifact, projection, key: artifactKey(projection), current: () => this.#active && generation === this.#generation };
   }
   unchanged(attempt, artifact) { return attempt.current() && attempt.key === artifactKey(artifact); }
   matches(attempt, designer) {
@@ -74,6 +80,7 @@ export class DesignerCoordinator {
   committed(attempt, etag, requiresReload = false) {
     if (!attempt.current()) return;
     this.stored = structuredClone(attempt.artifact);
+    this.#projection = structuredClone(attempt.projection);
     this.etag = etag;
     this.reloadRequired = requiresReload || !etag;
     this.#committed = true;
@@ -81,7 +88,7 @@ export class DesignerCoordinator {
   }
   dirty(designer) {
     if (!this.#committed) return Boolean(designer?.isDirty);
-    try { return artifactKey(designer.currentArtifact) !== artifactKey(this.stored) || designer.validationReport.issues.some(issue => issue.source === 'draft'); }
+    try { return artifactKey(designer.currentArtifact) !== artifactKey(this.#projection) || designer.validationReport.issues.some(issue => issue.source === 'draft'); }
     catch { return true; }
   }
   failed(error, attempt) {

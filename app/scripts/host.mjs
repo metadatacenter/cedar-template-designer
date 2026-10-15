@@ -63,8 +63,9 @@ async function reopen(attempt) {
   try { loaded = await request(artifactUrl()); } catch { return false; }
   const id = loaded?.data?.['@id'];
   if (!attempt.current() || typeof id !== 'string' || resourcePathId(id) !== resourcePathId(route.id) || !state.matches(attempt, designer)) return false;
-  try { designer.loadArtifact(loaded.data, { preserveView: true }); } catch { return false; }
-  state.loaded({ artifact: loaded.data, etag: loaded.etag, writable: state.writable });
+  let projection;
+  try { designer.loadArtifact(loaded.data, { preserveView: true }); projection = designer.currentArtifact; } catch { return false; }
+  state.loaded({ artifact: loaded.data, projection, etag: loaded.etag, writable: state.writable });
   state.reloadRequired = !loaded.etag;
   return true;
 }
@@ -197,15 +198,17 @@ try {
       const [loaded, report] = await Promise.all([request(url), request(`${url}/report`)]);
       if (!loaded.data || resourcePathId(loaded.data['@id']) !== resourcePathId(route.id)) throw new Error(t('Error.InvalidArtifact'));
       route.id = loaded.data['@id']; // Keep the stored identity for subsequent PUT bodies.
+      let projection;
       try {
         designer.loadArtifact(loaded.data);
+        projection = designer.currentArtifact;
       } catch (error) {
         // The reader refuses an artifact it cannot read, such as one whose child is stored under a
         // reserved key, and says why in its own words, which name the place in the artifact.
         unreadable = true;
         throw new Error(t('Error.Unreadable', { detail: error.message }));
       }
-      state.loaded({ artifact: loaded.data, etag: loaded.etag, writable: canEdit(report.data, loaded.data) });
+      state.loaded({ artifact: loaded.data, projection, etag: loaded.etag, writable: canEdit(report.data, loaded.data) });
       if (state.writable && !loaded.etag) { state.reloadRequired = true; message(t('Error.NoValidator'), true); }
     } else {
       if (!folderId) throw new Error(t('Error.NoFolder'));
