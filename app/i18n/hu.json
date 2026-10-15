@@ -73,6 +73,7 @@
     },
     "NoFolder": "Nem áll rendelkezésre célmappa. A létrehozást egy Munkaterület-mappából indítsa.",
     "NoValidator": "A kiszolgáló nem adott meg verzióellenőrzőt. Mentés előtt nyissa meg újra az artefaktumot.",
+    "SavedVerificationUnavailable": "Mentve, de a kiszolgáló nem adott meg verzióellenőrzőt. A jelenlegi módosításai a tervezőben maradtak. Újabb mentés előtt ellenőrizze a mentés állapotát.",
     "ComponentLoad": "A(z) {{name}} nem tölthető be. Építse újra és telepítse a helyi komponenseket.",
     "ConfigurationLoad": "A frontend konfigurációja nem tölthető be.",
     "SignIn": "A bejelentkezés nem inicializálható. Töltse újra az oldalt, és próbálja újra.",

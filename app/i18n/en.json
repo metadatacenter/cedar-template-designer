@@ -73,6 +73,7 @@
     },
     "NoFolder": "No destination folder is available. Open Create from a Workspace folder.",
     "NoValidator": "The server did not provide a version validator. Reopen this artifact before saving.",
+    "SavedVerificationUnavailable": "Saved, but the server did not provide a version validator. Your current edits remain in Designer. Use Check save status before saving again.",
     "ComponentLoad": "Could not load {{name}}. Rebuild and stage the local components.",
     "ConfigurationLoad": "Frontend configuration could not be loaded.",
     "SignIn": "Sign-in could not be initialized. Reload to try again.",

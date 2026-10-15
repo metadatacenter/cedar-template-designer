@@ -82,8 +82,12 @@ export class DesignerCoordinator {
     try { return validReport(designer.validate()) && this.unchanged(attempt, designer.currentArtifact); }
     catch { return false; }
   }
-  committed(attempt, etag, requiresReload = false) {
+  committed(attempt, etag, requiresReload = false, write = attempt.write) {
     if (!attempt.current()) return;
+    if (!etag && !requiresReload && write?.createsIdentity === false && write.body && this.stored && this.etag) {
+      this.#pendingUpdate = {attempt, opened: structuredClone(this.stored),
+        submitted: structuredClone(write.body), etag: this.etag, purpose: 'acknowledgement'};
+    }
     this.stored = structuredClone(attempt.artifact);
     this.#projection = structuredClone(attempt.projection);
     this.etag = etag;
@@ -119,7 +123,7 @@ export class DesignerCoordinator {
     this.#server = { key: attempt.key, issues };
     return unconfirmed;
   }
-  get canCheckSave() { return this.#active && this.#pendingUpdate?.purpose === 'save' && !this.uncertainCreation; }
+  get canCheckSave() { return this.#active && ['save', 'acknowledgement'].includes(this.#pendingUpdate?.purpose) && !this.uncertainCreation; }
   get canRecheckAccess() { return this.#active && this.#pendingUpdate?.purpose === 'access' && !this.uncertainCreation; }
   beginCheck() {
     if (!(this.canCheckSave || this.canRecheckAccess) || this.saving || this.checking) return null;
@@ -132,6 +136,7 @@ export class DesignerCoordinator {
     if (!writable) return 'readonly';
     const result = updateOutcome(this.#pendingUpdate, latest);
     if (this.#pendingUpdate.purpose === 'access' && result !== 'unchanged') return 'changed';
+    if (this.#pendingUpdate.purpose === 'acknowledgement' && result === 'unchanged') return 'changed';
     if (result !== 'saved' && result !== 'unchanged') return result;
     if (result === 'saved') {
       this.stored = structuredClone(latest.data);

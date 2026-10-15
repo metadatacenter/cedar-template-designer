@@ -149,6 +149,7 @@ ui.save.addEventListener('click', async () => {
       state.reloadRequired = true; state.uncertainCreation = attempt.write?.createsIdentity ?? !route.id;
       throw new Error(t('Error.SaveUnconfirmed'));
     }
+    const confirmedWrite = attempt.write;
     attempt.write = undefined;
     saved = true;
     // A successful save stays in Designer. A new artifact or draft takes its own edit address.
@@ -166,8 +167,9 @@ ui.save.addEventListener('click', async () => {
     // the ETag this save returned. A new artifact or draft the designer has not adopted needs a reload
     // before another save.
     const edited = !state.matches(attempt, designer);
-    state.committed(attempt, result.etag, newIdentity);
-    if (edited) message(t(newIdentity ? 'Message.SavedNewIdentity' : 'Message.SavedWithChanges') + (!result.etag ? ' ' + t('Error.NoValidator') : ''), state.reloadRequired);
+    state.committed(attempt, result.etag, newIdentity, confirmedWrite);
+    if (state.canCheckSave) message(t('Error.SavedVerificationUnavailable'), true);
+    else if (edited) message(t(newIdentity ? 'Message.SavedNewIdentity' : 'Message.SavedWithChanges') + (!result.etag ? ' ' + t('Error.NoValidator') : ''), state.reloadRequired);
     else message(newIdentity ? t('Message.SavedReloadRequired') : !result.etag ? t('Error.NoValidator') : '', state.reloadRequired);
   } catch (error) {
     if (attempt && !attempt.current()) return;

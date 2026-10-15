@@ -80,7 +80,11 @@ for(const reason of ['new-version','missing-validator','invalid-draft','unreadab
   if(reason==='invalid-draft')await edit(page,'Submitted',{source:'draft',setting:'default',shown:true});
   else if(reason==='unreadable-draft')await page.locator('#editor > *').evaluate(el=>Object.defineProperty(el,'currentArtifact',{get(){throw new Error('Unserializable draft');}}));
   else await edit(page,'Newer');
-  release();await expect(page.locator('#message')).toContainText('Further changes remain');
+  release();await expect(page.locator('#message')).toContainText(reason==='missing-validator'?'Use Check save status':'Further changes remain');
+  if(reason==='missing-validator'){
+    await expect(page.locator('#check-save')).toBeVisible();
+    expect(await page.locator('#editor > *').evaluate(el=>el.currentArtifact['schema:name'])).toBe('Newer');
+  }
   await expect(page.locator('#save')).toBeDisabled();
   if(reason==='new-version')await expect(page).toHaveURL(/\/templates\/edit\/new-draft/);
   if(reason==='new-version'||reason==='missing-validator')await expect(page.locator('#reload')).toBeVisible();
