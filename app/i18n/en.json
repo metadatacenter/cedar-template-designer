@@ -107,6 +107,7 @@
     "Restored": "Your draft has been restored.",
     "RestoredGuarded": "Your draft has been restored. Check access and save status before saving again.",
     "Invalid": "This recovery file cannot be restored here. Use the same account, deployment and artifact.",
-    "UnknownCreate": "The previous create or version operation is unresolved. Keep this recovery file and check Workspace before creating another artifact."
+    "UnknownCreate": "The previous create or version operation is unresolved. Keep this recovery file and check Workspace before creating another artifact.",
+    "SignInAgain": "Sign in again"
   }
 }

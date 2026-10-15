@@ -9,7 +9,7 @@ const { DesignerDraftStore, draftScope, readDraft } = await import(`./host-draft
 const { t, counted, detectLanguage, setLanguage, localizeDocument } = await import(`./i18n.mjs?v=${version}`);
 const language = setLanguage(detectLanguage(navigator.languages));
 localizeDocument(document);
-const ui = Object.fromEntries(['back', 'save', 'save-help', 'title', 'state', 'message', 'editor', 'version-dialog', 'version-message', 'version-explanation', 'reload', 'check-save', 'recheck-access', 'server-issues', 'server-issues-title', 'server-issues-list', 'draft-offer', 'restore-draft', 'discard-draft', 'download-draft', 'import-draft', 'draft-storage-error'].map(id => [id, document.getElementById(id)]));
+const ui = Object.fromEntries(['back', 'save', 'save-help', 'title', 'state', 'message', 'editor', 'version-dialog', 'version-message', 'version-explanation', 'reload', 'check-save', 'recheck-access', 'server-issues', 'server-issues-title', 'server-issues-list', 'draft-offer', 'restore-draft', 'discard-draft', 'download-draft', 'import-draft', 'draft-storage-error', 'sign-in-again'].map(id => [id, document.getElementById(id)]));
 const state = new DesignerCoordinator();
 let designer, leaving = false, discarded = false, returnUrl, route, saved = false, folderId, request, config, auth, draftStore, offeredDraft;
 // The stored artifact is one the designer cannot read, so reloading it cannot help.
@@ -21,6 +21,7 @@ function keepDraft(attempt) {
   try {
     if (dirty() || state.reloadRequired || attempt?.write) draftStore.write(draftStore.capture(designer, state, attempt));
     else draftStore.clear();
+    ui['draft-storage-error'].hidden = true;
   } catch { ui['draft-storage-error'].hidden = false; }
 }
 function clearDraft() {
@@ -56,6 +57,8 @@ function update() {
   ui['check-save'].hidden = !state.canCheckSave;
   ui['check-save'].disabled = state.saving || state.checking;
   ui['recheck-access'].hidden = !state.canRecheckAccess;
+  ui['sign-in-again'].hidden = !state.canRecheckAccess;
+  ui['sign-in-again'].disabled = state.saving || state.checking;
   ui['recheck-access'].disabled = state.saving || state.checking;
   ui['server-issues'].hidden = !report.server.length;
   ui['server-issues-title'].textContent = counted('Message.ServerFindings', report.server.length);
@@ -144,6 +147,14 @@ async function checkRecovery() {
 }
 ui['check-save'].addEventListener('click', checkRecovery);
 ui['recheck-access'].addEventListener('click', checkRecovery);
+ui['sign-in-again'].addEventListener('click', () => {
+  if (!draftStore || !auth || state.saving || state.checking) return;
+  try {
+    draftStore.write(offeredDraft ?? draftStore.capture(designer, state));
+    ui['draft-storage-error'].hidden = true;
+    auth.doLogin();
+  } catch { ui['draft-storage-error'].hidden = false; }
+});
 ui['restore-draft'].addEventListener('click', () => {
   if (!offeredDraft || !designer || state.saving || state.checking) return;
   if (dirty() && !window.confirm(t('Message.ConfirmDiscard'))) return;

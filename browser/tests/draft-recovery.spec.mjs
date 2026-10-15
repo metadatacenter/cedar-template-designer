@@ -54,3 +54,13 @@ test('a retained draft can be opened read-only while the artifact read is unavai
   expect(await page.locator('#editor > *').evaluate(el=>[el.currentArtifact['schema:name'],el.readOnly])).toEqual(['Offline draft',true]);
   await expect(page.locator('#save')).toBeDisabled();
 });
+test('sign-in retains the draft first and storage failure keeps the author on the page',async({page})=>{
+  const server=await host(page);await edit(page,'Keep through sign-in');
+  server.failure={status:401,json:{message:'Expired'}};await page.locator('#save').click();
+  const signIn=page.locator('#sign-in-again');await expect(signIn).toBeVisible();await signIn.click();
+  expect(await page.evaluate(()=>window.signInCalls)).toBe(1);
+  expect(await page.evaluate(()=>Object.values(sessionStorage).some(raw=>raw.includes('Keep through sign-in')))).toBe(true);
+  await page.evaluate(()=>{Storage.prototype.setItem=()=>{throw new Error('Full')}});
+  await signIn.click();await expect(page.locator('#draft-storage-error')).toBeVisible();
+  expect(await page.evaluate(()=>window.signInCalls)).toBe(1);
+});

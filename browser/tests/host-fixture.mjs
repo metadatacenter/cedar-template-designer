@@ -54,7 +54,7 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
     }
     if(path==='/config/host.json')return route.fulfill({json:{workspaceFrontend:'https://workspace.test',resourceRestAPI:'https://designer.test/api',userRestAPI:'https://designer.test/api'}});
     if(path==='/config/version.js')return route.fulfill({contentType:'text/javascript',body:"window.cedarCacheControl='fixture';"});
-    if(path==='/scripts/handlers/KeycloakUserHandler.js')return route.fulfill({contentType:'text/javascript',body:`window.KeycloakUserHandler=class{initUserHandler(ok){ok(true)}getParsedToken(){return{sub:'user'}}getToken(){return 'test'}refreshToken(_n,ok){ok(true)}};`});
+    if(path==='/scripts/handlers/KeycloakUserHandler.js')return route.fulfill({contentType:'text/javascript',body:`window.KeycloakUserHandler=class{initUserHandler(ok){ok(true)}doLogin(){window.signInCalls=(window.signInCalls||0)+1}getParsedToken(){return{sub:'user'}}getToken(){return 'test'}refreshToken(_n,ok){ok(true)}};`});
     if(path==='/components/manifest.json')return route.fulfill({json:Object.fromEntries(['cedar-embeddable-editor','cedar-embeddable-term-picker','cedar-embeddable-designer'].map(name=>[name,{sha256:'fixture'}]))});
     if(path==='/components/cedar-embeddable-designer.js')return route.fulfill({contentType:'text/javascript',body:`
       class Designer extends HTMLElement {
