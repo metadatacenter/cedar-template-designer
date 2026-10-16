@@ -52,6 +52,7 @@ export class DesignerCoordinator {
     return structuredClone({
       stored: this.stored, projection: this.#projection, etag: this.etag,
       committed: this.#committed, reloadRequired: this.reloadRequired || Boolean(write),
+      server: this.#server,
       uncertainCreation: this.uncertainCreation || Boolean(write?.createsIdentity),
       pending: write && !write.createsIdentity && this.stored && this.etag
         ? { opened: this.stored, submitted: write.body, etag: this.etag, purpose: 'save', projection: attempt.projection }
@@ -67,6 +68,9 @@ export class DesignerCoordinator {
       (copy.projection !== undefined && !object(copy.projection)) || (copy.etag !== undefined && typeof copy.etag !== 'string')) throw new Error();
     if (copy.pending && (!object(copy.pending.opened) || !object(copy.pending.submitted) || !object(copy.pending.projection) ||
       typeof copy.pending.etag !== 'string' || !['save', 'access', 'acknowledgement'].includes(copy.pending.purpose))) throw new Error();
+    if (copy.server && (typeof copy.server.key !== 'string' || !Array.isArray(copy.server.issues) ||
+      !copy.server.issues.every(issue => object(issue) && typeof issue.message === 'string' &&
+        typeof issue.location === 'string' && ['error', 'warning'].includes(issue.severity) && issue.source === 'server'))) throw new Error();
     const same = this.ready && (copy.stored === undefined ? this.stored === undefined :
       sameRevision(copy.etag, this.etag) && artifactKey(copy.stored) === artifactKey(this.stored));
     this.#generation++;
@@ -78,7 +82,7 @@ export class DesignerCoordinator {
     if (this.reloadRequired && !this.uncertainCreation && !this.#pendingUpdate && copy.stored && copy.etag && copy.projection)
       this.#pendingUpdate = { opened: copy.stored, submitted: copy.stored, etag: copy.etag,
         purpose: 'access', attempt: { projection: copy.projection } };
-    this.#server = undefined;
+    this.#server = copy.server;
     this.ready = true; this.loadFailed = false;
   }
   report(designer, validation = designer?.validationReport) {

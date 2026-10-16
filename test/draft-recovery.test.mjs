@@ -29,3 +29,13 @@ test('storage isolates deployment, account, collection, identity and create fold
   assert.throws(()=>readDraft(JSON.stringify({...value,coordinator:{...value.coordinator,stored:{'@id':'other'}}}),scope));
   store.clear();assert.equal(store.read(),null);
 });
+for(const severity of ['errors','warnings'])test(`restored ${severity} stay bound to their rejected draft until it changes`,()=>{
+  const component={...designer,currentArtifact:structuredClone(designer.currentArtifact)};
+  const state=fresh(),attempt=state.beginSave(component);
+  state.failed({status:400,data:{validationReport:{[severity]:[{location:'/schema:name',message:'Review the name'}]}}},attempt);state.finish(attempt);
+  const restored=fresh();restored.restoreRecovery(JSON.parse(JSON.stringify(state.captureRecovery())));
+  assert.equal(restored.report(component).server[0]?.message,'Review the name');
+  assert.equal(restored.report(component).canSave,severity==='warnings');
+  component.currentArtifact['schema:name']='Corrected';
+  assert.equal(restored.report(component).server.length,0);assert.equal(restored.report(component).canSave,true);
+});

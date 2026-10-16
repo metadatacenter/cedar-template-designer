@@ -1,6 +1,21 @@
 import {test, expect} from '@playwright/test';
 import {host, edit, text} from './host-fixture.mjs';
 
+for(const severity of ['errors','warnings'])test(`restoring a rejected draft retains server ${severity}`,async({page})=>{
+  const server=await host(page);await edit(page,'Rejected name');
+  server.failure={status:400,json:{objects:{validationReport:{[severity]:[{location:'/schema:name',message:'Review the name'}]}}}};
+  await page.locator('#save').click();await expect(page.locator('#server-issues')).toBeVisible();
+  page.on('dialog',dialog=>dialog.accept());await page.reload();await page.locator('#restore-draft').click();
+  await expect(page.locator('#server-issues')).toBeVisible();await page.locator('#server-issues summary').click();
+  await expect(page.locator('#server-issues-list')).toContainText('Review the name');
+  if(severity==='errors')await expect(page.locator('#save')).toBeDisabled();
+  else await expect(page.locator('#save')).toBeEnabled();
+  expect(server.writes).toHaveLength(1);
+  await edit(page,'Corrected name');await expect(page.locator('#server-issues')).toBeHidden();
+  server.failure=null;await page.locator('#save').click();await expect(page.locator('#state')).toHaveText('Saved');
+  expect(server.writes).toHaveLength(2);
+});
+
 for (const kind of ['template', 'element', 'field']) {
   for (const status of [null, 401, 403, 412, 503]) {
     test(`${kind} draft survives reload after ${status ?? 'editing'}`, async ({page}) => {
