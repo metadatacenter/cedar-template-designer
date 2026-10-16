@@ -186,7 +186,12 @@ ui['import-draft'].addEventListener('change', async event => {
   const file = event.target.files?.[0]; event.target.value = '';
   if (!file || !draftStore || state.saving || state.checking) return;
   if (state.uncertainCreation || offeredDraft?.coordinator.uncertainCreation) { message(t('Draft.UnknownCreate'), true); return; }
-  try { offeredDraft = readDraft(await file.text(), draftStore.scope); update(); }
+  try {
+    const store = draftStore;
+    const value = readDraft(await file.text(), store.scope);
+    if (leaving || draftStore !== store || state.saving || state.checking || state.uncertainCreation || offeredDraft?.coordinator.uncertainCreation) return;
+    offeredDraft = value; update();
+  }
   catch { message(t('Draft.Invalid'), true); }
 });
 function confirmVersion(impact) {

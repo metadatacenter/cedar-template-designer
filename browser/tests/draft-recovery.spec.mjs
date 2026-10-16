@@ -64,3 +64,13 @@ test('sign-in retains the draft first and storage failure keeps the author on th
   await signIn.click();await expect(page.locator('#draft-storage-error')).toBeVisible();
   expect(await page.evaluate(()=>window.signInCalls)).toBe(1);
 });
+test('a slow recovery-file read cannot replace a newly uncertain create journal',async({page})=>{
+  const server=await host(page,'template','create');await edit(page,'Current create');
+  const raw=await page.evaluate(()=>Object.values(sessionStorage).find(value=>value.includes('Current create')));
+  await page.evaluate(()=>{window.releaseRecoveryFile=undefined;File.prototype.text=()=>new Promise(resolve=>{window.releaseRecoveryFile=resolve})});
+  await page.locator('#import-draft').setInputFiles({name:'recovery.json',mimeType:'application/json',buffer:Buffer.from(raw)});
+  server.failure='network';await page.locator('#save').click();await expect(page.locator('#state')).toHaveText('Reload required');
+  await page.evaluate(raw=>window.releaseRecoveryFile(raw),raw);
+  await expect(page.locator('#draft-offer')).toBeHidden();
+  expect(await page.evaluate(()=>JSON.parse(Object.values(sessionStorage)[0]).coordinator.uncertainCreation)).toBe(true);
+});
