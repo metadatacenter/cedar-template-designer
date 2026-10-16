@@ -61,7 +61,7 @@ function update() {
   ui['check-save'].hidden = !state.canCheckSave;
   ui['check-save'].disabled = state.saving || state.checking;
   ui['recheck-access'].hidden = !(state.canRecheckAccess || canRecheckOpeningAccess());
-  ui['sign-in-again'].hidden = !(canRecheckOpeningAccess() || state.canRecheckAccess || (state.reloadRequired && !route?.id && !state.uncertainCreation));
+  ui['sign-in-again'].hidden = !(openingAccessRefused || canRecheckOpeningAccess() || state.canRecheckAccess || (state.reloadRequired && !route?.id && !state.uncertainCreation));
   ui['sign-in-again'].disabled = state.saving || state.checking;
   ui['recheck-access'].disabled = state.saving || state.checking;
   ui['server-issues'].hidden = !report.server.length;
@@ -129,7 +129,8 @@ ui.back.addEventListener('click', () => {
 });
 ui.reload.addEventListener('click', () => {
   if (state.saving || state.checking || state.uncertainCreation || (dirty() && !window.confirm(t('Message.ConfirmReload')))) return;
-  clearDraft(); leaving = true; location.reload();
+  if (!state.loadFailed) clearDraft();
+  leaving = true; location.reload();
 });
 async function checkRecovery() {
   // A clean read-only opening has no local work to reconcile; fetch content and access together again.
@@ -304,10 +305,17 @@ try {
   const authenticated = await new Promise((resolve, reject) => auth.initUserHandler(resolve, () => reject(new Error(t('Error.SignIn')))));
   if (!authenticated) { auth.doLogin(); } else {
     request = createBackend(auth, crypto.randomUUID());
+    // Existing records and explicit destinations can find their scoped recovery file before profile loading.
+    if (route.id || folderId) {
+      selectDraftStore();
+      try { offeredDraft = draftStore.read(); } catch { ui['draft-storage-error'].hidden = false; }
+    }
     const { data: profile } = await request(`${config.userRestAPI}/users/${encodeURIComponent(auth.getParsedToken().sub)}`);
     folderId ||= profile.homeFolderId;
-    selectDraftStore();
-    try { offeredDraft = draftStore.read(); } catch { ui['draft-storage-error'].hidden = false; }
+    if (!draftStore) {
+      selectDraftStore();
+      try { offeredDraft = draftStore.read(); } catch { ui['draft-storage-error'].hidden = false; }
+    }
     const manifest = await readJson(`components/manifest.json?v=${version}`, 'Error.ManifestLoad', { cache: 'no-store' });
     for (const name of ['cedar-embeddable-editor', 'cedar-embeddable-term-picker', 'cedar-embeddable-designer']) {
       const digest = manifest?.[name]?.sha256;

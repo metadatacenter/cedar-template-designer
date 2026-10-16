@@ -102,3 +102,16 @@ test('restoration waits until the fresh opening read settles',async({page})=>{
   release();await expect(page.locator('#restore-draft')).toBeEnabled();await page.locator('#restore-draft').click();
   expect(await component.evaluate(el=>el.currentArtifact['schema:name'])).toBe('Draft while opening');
 });
+
+for(const dependency of ['profile','manifest','component','artifact','report'])test(`retained work survives ${dependency} failure and opening retry`,async({page})=>{
+  const server=await host(page);await edit(page,'Retained through '+dependency);
+  server.openingFailure={request:dependency,answer:route=>route.fulfill({status:503,json:{message:'Unavailable'}})};
+  page.on('dialog',dialog=>dialog.accept());await page.reload();
+  await expect(page.locator('#state')).toHaveText('Unable to load');
+  await expect(page.locator('#draft-offer')).toBeVisible();
+  expect(await page.evaluate(()=>Object.values(sessionStorage).some(raw=>raw.includes('Retained through')))).toBe(true);
+  server.openingFailure=null;await page.locator('#reload').click();
+  await expect(page.locator('#draft-offer')).toBeVisible();await page.locator('#restore-draft').click();
+  expect(await page.locator('#editor > *').evaluate(el=>el.currentArtifact['schema:name'])).toBe('Retained through '+dependency);
+  expect(server.writes).toHaveLength(0);
+});
