@@ -16,6 +16,9 @@ let designer, leaving = false, discarded = false, returnUrl, route, saved = fals
 let unreadable = false, forwardedFindings;
 function message(text, error = false) { ui.message.textContent = text; ui.message.dataset.tone = error ? 'error' : 'info'; }
 function dirty() { return !leaving && state.dirty(designer); }
+function canRecheckOpeningAccess() {
+  return state.ready && !state.writable && !state.reloadRequired && !offeredDraft && !dirty();
+}
 function keepDraft(attempt) {
   if (leaving || !draftStore || !designer || offeredDraft || !state.ready || (state.saving && !attempt?.write) || typeof designer.captureDraft !== 'function') return;
   try {
@@ -56,8 +59,8 @@ function update() {
   ui.reload.disabled = state.saving || state.checking;
   ui['check-save'].hidden = !state.canCheckSave;
   ui['check-save'].disabled = state.saving || state.checking;
-  ui['recheck-access'].hidden = !state.canRecheckAccess;
-  ui['sign-in-again'].hidden = !(state.canRecheckAccess || (state.reloadRequired && !route?.id && !state.uncertainCreation));
+  ui['recheck-access'].hidden = !(state.canRecheckAccess || canRecheckOpeningAccess());
+  ui['sign-in-again'].hidden = !(canRecheckOpeningAccess() || state.canRecheckAccess || (state.reloadRequired && !route?.id && !state.uncertainCreation));
   ui['sign-in-again'].disabled = state.saving || state.checking;
   ui['recheck-access'].disabled = state.saving || state.checking;
   ui['server-issues'].hidden = !report.server.length;
@@ -128,6 +131,8 @@ ui.reload.addEventListener('click', () => {
   clearDraft(); leaving = true; location.reload();
 });
 async function checkRecovery() {
+  // A clean read-only opening has no local work to reconcile; fetch content and access together again.
+  if (canRecheckOpeningAccess() && !state.saving && !state.checking) { location.reload(); return; }
   const access = state.canRecheckAccess;
   const check = state.beginCheck();
   if (!check) return;
@@ -149,6 +154,7 @@ ui['check-save'].addEventListener('click', checkRecovery);
 ui['recheck-access'].addEventListener('click', checkRecovery);
 ui['sign-in-again'].addEventListener('click', () => {
   if (!draftStore || !auth || state.saving || state.checking) return;
+  if (canRecheckOpeningAccess()) { auth.doLogin(); return; }
   try {
     draftStore.write(offeredDraft ?? draftStore.capture(designer, state));
     ui['draft-storage-error'].hidden = true;

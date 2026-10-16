@@ -26,7 +26,7 @@ export const OPENING_REQUESTS={
 const root = new URL('../../app/', import.meta.url);
 const source = name => readFileSync(new URL(name, root), 'utf8');
 export async function host(page, kind='template', mode='edit', allowed=true, initial={}) {
-  const state={language:'en',writes:[],stored:new Map(),failure:null,impact:{canBeUpdated:true},brokenLoad:false,holdWrite:null,savedId:mode==='edit'?'item':'saved',nextEtag:'"next"',loadedId:'item',loadedEtag:'"opened"',...initial};
+  const state={allowed,language:'en',writes:[],stored:new Map(),failure:null,impact:{canBeUpdated:true},brokenLoad:false,holdWrite:null,savedId:mode==='edit'?'item':'saved',nextEtag:'"next"',loadedId:'item',loadedEtag:'"opened"',...initial};
   await page.route('https://workspace.test/**',route=>route.fulfill({contentType:'text/html',body:'<h1>Workspace</h1>'}));
   await page.route('https://designer.test/**',async route=>{
     const url=new URL(route.request().url()),path=url.pathname;
@@ -35,8 +35,8 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
     if(failing&&OPENING_REQUESTS[failing.request](path,route.request().method()))return failing.answer(route);
     if(path.startsWith('/api/')) {
       if(path==='/api/users/user')return route.fulfill({json:{homeFolderId:'home'}});
-      if(path.startsWith('/api/folders/'))return route.fulfill({json:{currentUserPermissions:{capabilities:allowed?['createInFolder']:[]}}});
-      if(path.endsWith('/report'))return route.fulfill({json:{currentUserPermissions:{capabilities:allowed?['updateResource']:[]}}});
+      if(path.startsWith('/api/folders/'))return route.fulfill({json:{currentUserPermissions:{capabilities:state.allowed?['createInFolder']:[]}}});
+      if(path.endsWith('/report'))return route.fulfill({json:{currentUserPermissions:{capabilities:state.allowed?['updateResource']:[]}}});
       if(path.includes('/check-update-template/'))return route.fulfill({json:state.impact});
       if(route.request().method()!=='GET'){
         state.writes.push({path,body:route.request().postDataJSON(),etag:route.request().headers()['if-match']});
