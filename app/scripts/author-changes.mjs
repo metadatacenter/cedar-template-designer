@@ -1,6 +1,9 @@
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const keyOf = value => JSON.stringify(value, (_key, node) => object(node)
   ? Object.fromEntries(Object.keys(node).sort().map(key => [key, node[key]])) : node);
+const definition = value => object(value) && object(value._ui) && object(value.properties) &&
+  typeof value['@id'] === 'string' && value['@id'];
+const sameDefinition = (left, right) => definition(left) && definition(right) && left['@id'] === right['@id'];
 
 // A key is a placement name, not the identity of the definition placed there.
 // Reused definitions can share an @id: their property IRI disambiguates placements.
@@ -39,6 +42,12 @@ function childSources(opened, edited) {
 export function applyAuthorChanges(stored, opened, edited) {
   if (keyOf(opened) === keyOf(edited)) return structuredClone(stored);
   if (!object(opened) || !object(edited)) return structuredClone(edited);
+  // Repeat cardinality moves a definition under `items`; it does not replace
+  // that definition with the component's normalized projection of it.
+  if (edited.type === 'array' && sameDefinition(opened, edited.items))
+    return { ...structuredClone(edited), items: applyAuthorChanges(stored, opened, edited.items) };
+  if (opened.type === 'array' && sameDefinition(opened.items, edited))
+    return applyAuthorChanges(stored?.items, opened.items, edited);
   const result = object(stored) ? structuredClone(stored) : {};
   const sources = childSources(opened, edited);
   for (const key of new Set([...Object.keys(opened), ...Object.keys(edited)])) {

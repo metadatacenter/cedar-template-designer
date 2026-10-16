@@ -139,3 +139,24 @@ test('JSON property names cannot mutate the result prototype', () => {
   assert.equal(Object.hasOwn(result, '__proto__'), true);
   assert.equal({}.polluted, undefined);
 });
+for(const rename of [false,true])test(`changing repeat cardinality retains the older definition${rename?' while renaming it':''}`,()=>{
+  const stored=legacy(),opened=project(stored),edited=structuredClone(opened),key=rename?'Renamed':'Field';
+  const definition=edited.properties.Field;
+  definition['schema:description']='Authored while wrapping';
+  if(rename)delete edited.properties.Field;
+  edited.properties[key]={type:'array',minItems:2,maxItems:5,items:definition};
+  const wrapped=applyAuthorChanges(stored,opened,edited);
+  assert.deepEqual(wrapped.properties[key],{type:'array',minItems:2,maxItems:5,items:{...stored.properties.Field,'schema:description':'Authored while wrapping'}});
+  const next=structuredClone(edited);next.properties[key]=next.properties[key].items;
+  next.properties[key]._valueConstraints.requiredValue=true;
+  const unwrapped=applyAuthorChanges(wrapped,edited,next);
+  assert.deepEqual(unwrapped.properties[key],{...stored.properties.Field,'schema:description':'Authored while wrapping',_valueConstraints:{requiredValue:true,recommendedValue:false}});
+});
+test('a replacement definition does not inherit the previous scalar or repeated definition',()=>{
+  const stored=legacy(),opened=project(stored),edited=structuredClone(opened);
+  edited.properties.Field={type:'array',minItems:0,items:{...edited.properties.Field,'@id':'replacement'}};
+  assert.deepEqual(applyAuthorChanges(stored,opened,edited).properties.Field,edited.properties.Field);
+  const repeated=structuredClone(opened);repeated.properties.Field={type:'array',items:repeated.properties.Field};
+  const replacement=structuredClone(opened);replacement.properties.Field['@id']='replacement';
+  assert.deepEqual(applyAuthorChanges(repeated,repeated,replacement).properties.Field,replacement.properties.Field);
+});
