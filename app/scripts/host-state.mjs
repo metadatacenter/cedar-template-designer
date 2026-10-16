@@ -73,7 +73,7 @@ export class DesignerCoordinator {
     this.stored = copy.stored; this.#projection = copy.projection; this.etag = copy.etag;
     this.#committed = copy.committed;
     this.#pendingUpdate = copy.pending ? { ...copy.pending, attempt: { projection: copy.pending.projection } } : undefined;
-    this.reloadRequired = copy.reloadRequired || !same || !this.writable;
+    this.reloadRequired = (copy.stored !== undefined && copy.reloadRequired) || copy.uncertainCreation || !same || !this.writable;
     this.uncertainCreation = copy.uncertainCreation;
     if (this.reloadRequired && !this.uncertainCreation && !this.#pendingUpdate && copy.stored && copy.etag && copy.projection)
       this.#pendingUpdate = { opened: copy.stored, submitted: copy.stored, etag: copy.etag,

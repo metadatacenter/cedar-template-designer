@@ -84,3 +84,10 @@ test('confirmed creation with failed readback retains its draft under the new id
   expect(await page.locator('#editor > *').evaluate(el=>el.currentArtifact['schema:name'])).toBe('Created but not reopened');
   await expect(page.locator('#save')).toBeDisabled();expect(server.writes).toHaveLength(1);
 });
+for(const status of [401,403])test(`a definitively refused create can be restored after access returns (${status})`,async({page})=>{
+  const server=await host(page,'template','create');await edit(page,'Refused create');
+  server.failure={status,json:{message:'Refused'}};await page.locator('#save').click();
+  await expect(page.locator('#sign-in-again')).toBeVisible();server.failure=null;
+  page.on('dialog',dialog=>dialog.accept());await page.reload();await page.locator('#restore-draft').click();
+  await expect(page.locator('#save')).toBeEnabled();await page.locator('#save').click();await expect(page.locator('#state')).toHaveText('Saved');
+});

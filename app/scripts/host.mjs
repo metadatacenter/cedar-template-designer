@@ -57,7 +57,7 @@ function update() {
   ui['check-save'].hidden = !state.canCheckSave;
   ui['check-save'].disabled = state.saving || state.checking;
   ui['recheck-access'].hidden = !state.canRecheckAccess;
-  ui['sign-in-again'].hidden = !state.canRecheckAccess;
+  ui['sign-in-again'].hidden = !(state.canRecheckAccess || (state.reloadRequired && !route?.id && !state.uncertainCreation));
   ui['sign-in-again'].disabled = state.saving || state.checking;
   ui['recheck-access'].disabled = state.saving || state.checking;
   ui['server-issues'].hidden = !report.server.length;
