@@ -1,3 +1,4 @@
+import { resourcePathId } from './resource-address.mjs';
 /** One tab, deployment, account and route own a draft; credentials are never stored. */
 export const draftScope = (base, user, route, folder) => JSON.stringify([base, user, route.collection, route.id || '', route.id ? '' : folder]);
 export function readDraft(raw, scope) {
@@ -5,6 +6,10 @@ export function readDraft(raw, scope) {
   if (value?.format !== 'cedar-host-draft' || value.version !== 1 || value.scope !== scope ||
       value.draft?.format !== 'cedar-designer-draft' || value.draft.version !== 1 ||
       typeof value.draft.state !== 'string' || !value.coordinator) throw new Error();
+  const [, , , id] = JSON.parse(scope);
+  const matches = artifact => typeof artifact?.['@id'] === 'string' && resourcePathId(artifact['@id']) === id;
+  if ((id && !matches(value.coordinator.stored)) || (!id && value.coordinator.stored !== undefined) ||
+    (value.coordinator.pending && (!matches(value.coordinator.pending.opened) || !matches(value.coordinator.pending.submitted)))) throw new Error();
   return value;
 }
 export class DesignerDraftStore {

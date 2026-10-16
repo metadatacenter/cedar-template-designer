@@ -251,7 +251,12 @@ ui.save.addEventListener('click', async () => {
     // before another save.
     const edited = !state.matches(attempt, designer);
     state.committed(attempt, result.etag, newIdentity, confirmedWrite);
-    if (newIdentity) selectDraftStore();
+    if (newIdentity) {
+      // The reply establishes the identity even when readback cannot establish content.
+      // Keep the reload guard and bind the retained draft to that confirmed identity.
+      state.stored['@id'] = route.id;
+      selectDraftStore();
+    }
     if (state.canCheckSave) message(t('Error.SavedVerificationUnavailable'), true);
     else if (edited) message(t(newIdentity ? 'Message.SavedNewIdentity' : 'Message.SavedWithChanges') + (!result.etag ? ' ' + t('Error.NoValidator') : ''), state.reloadRequired);
     else message(newIdentity ? t('Message.SavedReloadRequired') : !result.etag ? t('Error.NoValidator') : '', state.reloadRequired);

@@ -21,10 +21,11 @@ test('a changed stored revision or current permission never becomes writable fro
   }
 });
 test('storage isolates deployment, account, collection, identity and create folder',()=>{
-  const scope=draftScope('api','u',{collection:'templates',id:'a'},'home');
+  const scope=draftScope('api','u',{collection:'templates',id:'item'},'home');
   for(const other of [draftScope('api2','u',{collection:'templates',id:'a'},'home'),draftScope('api','v',{collection:'templates',id:'a'},'home'),draftScope('api','u',{collection:'fields',id:'a'},'home'),draftScope('api','u',{collection:'templates',id:'b'},'home'),draftScope('api','u',{collection:'templates'},'home')])assert.notEqual(other,scope);
   const storage=new Map(),store=new DesignerDraftStore(scope,{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)});
   const value={format:'cedar-host-draft',version:1,scope,draft:{format:'cedar-designer-draft',version:1,state:'{}'},coordinator:fresh().captureRecovery()};
   store.write(value);assert.deepEqual(store.read(),JSON.parse(JSON.stringify(value)));assert.throws(()=>readDraft(JSON.stringify(value),'another'));
+  assert.throws(()=>readDraft(JSON.stringify({...value,coordinator:{...value.coordinator,stored:{'@id':'other'}}}),scope));
   store.clear();assert.equal(store.read(),null);
 });

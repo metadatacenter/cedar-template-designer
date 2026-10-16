@@ -74,3 +74,13 @@ test('a slow recovery-file read cannot replace a newly uncertain create journal'
   await expect(page.locator('#draft-offer')).toBeHidden();
   expect(await page.evaluate(()=>JSON.parse(Object.values(sessionStorage)[0]).coordinator.uncertainCreation)).toBe(true);
 });
+test('confirmed creation with failed readback retains its draft under the new identity',async({page})=>{
+  const server=await host(page,'template','create');await edit(page,'Created but not reopened');
+  await page.route('**/api/templates/saved',route=>route.fulfill({status:503,json:{message:'Unavailable'}}));
+  await page.locator('#save').click();await expect(page.locator('#state')).toHaveText('Reload required');
+  await expect(page).toHaveURL(/templates\/edit\/saved/);
+  page.on('dialog',dialog=>dialog.accept());await page.reload();
+  await expect(page.locator('#draft-offer')).toBeVisible();await page.locator('#restore-draft').click();
+  expect(await page.locator('#editor > *').evaluate(el=>el.currentArtifact['schema:name'])).toBe('Created but not reopened');
+  await expect(page.locator('#save')).toBeDisabled();expect(server.writes).toHaveLength(1);
+});
