@@ -20,12 +20,14 @@ for (const kind of ['template', 'element', 'field']) {
   for (const status of [null, 401, 403, 412, 503]) {
     test(`${kind} draft survives reload after ${status ?? 'editing'}`, async ({page}) => {
       const server = await host(page, kind);
+      await expect(page.locator('#download-draft, #import-draft')).toHaveCount(0);
       await edit(page, 'Retained author work');
       if (status) {
         server.failure = {status, json:{message:'Refused'}};
         await page.locator('#save').click();
         await expect(page.locator('#state')).toHaveText(text('en','State.ReloadRequired'));
       }
+      await expect(page.locator('#download-draft, #import-draft')).toHaveCount(0);
       const writesBeforeReload = server.writes.length;
       page.on('dialog', dialog => dialog.accept());
       await page.reload();
@@ -41,12 +43,14 @@ for (const kind of ['template', 'element', 'field']) {
         await page.locator(status===503?'#check-save':'#recheck-access').click();
         await expect(page.locator('#save')).toBeEnabled();
       }
+      await expect(page.locator('#download-draft, #import-draft')).toHaveCount(0);
       expect(server.writes).toHaveLength(writesBeforeReload);
     });
   }
 }
 test('an uncertain create stays guarded after reload and cannot be discarded into a duplicate', async ({page}) => {
   const server = await host(page,'template','create');
+  await expect(page.locator('#download-draft, #import-draft')).toHaveCount(0);
   await edit(page); server.failure='network';
   await page.locator('#save').click();
   await expect(page.locator('#state')).toHaveText(text('en','State.ReloadRequired'));
@@ -78,16 +82,6 @@ test('sign-in retains the draft first and storage failure keeps the author on th
   await page.evaluate(()=>{Storage.prototype.setItem=()=>{throw new Error('Full')}});
   await signIn.click();await expect(page.locator('#draft-storage-error')).toBeVisible();
   expect(await page.evaluate(()=>window.signInCalls)).toBe(1);
-});
-test('a slow recovery-file read cannot replace a newly uncertain create journal',async({page})=>{
-  const server=await host(page,'template','create');await edit(page,'Current create');
-  const raw=await page.evaluate(()=>Object.values(sessionStorage).find(value=>value.includes('Current create')));
-  await page.evaluate(()=>{window.releaseRecoveryFile=undefined;File.prototype.text=()=>new Promise(resolve=>{window.releaseRecoveryFile=resolve})});
-  await page.locator('#import-draft').setInputFiles({name:'recovery.json',mimeType:'application/json',buffer:Buffer.from(raw)});
-  server.failure='network';await page.locator('#save').click();await expect(page.locator('#state')).toHaveText('Reload required');
-  await page.evaluate(raw=>window.releaseRecoveryFile(raw),raw);
-  await expect(page.locator('#draft-offer')).toBeHidden();
-  expect(await page.evaluate(()=>JSON.parse(Object.values(sessionStorage)[0]).coordinator.uncertainCreation)).toBe(true);
 });
 test('confirmed creation with failed readback retains its draft under the new identity',async({page})=>{
   const server=await host(page,'template','create');await edit(page,'Created but not reopened');

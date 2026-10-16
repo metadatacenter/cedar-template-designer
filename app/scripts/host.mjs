@@ -4,12 +4,12 @@ document.getElementById('back-icon').innerHTML = iconSvg('back');
 document.getElementById('version-icon').innerHTML = iconSvg('new-record');
 const version = encodeURIComponent(window.cedarCacheControl || 'local');
 const { resourceSelector, resourcePathId, useDeploymentApi, routeFor, workspaceReturn, canEdit, canCreate, createBackend, openingMessage, childSource, saveArtifact, DesignerCoordinator, waitForDesigner } = await import(`./host-core.mjs?v=${version}`);
-const { DesignerDraftStore, draftScope, readDraft } = await import(`./host-draft.mjs?v=${version}`);
+const { DesignerDraftStore, draftScope } = await import(`./host-draft.mjs?v=${version}`);
 // host-core.mjs imports this same versioned URL, so both modules share one active language.
 const { t, counted, detectLanguage, setLanguage, localizeDocument } = await import(`./i18n.mjs?v=${version}`);
 const language = setLanguage(detectLanguage(navigator.languages));
 localizeDocument(document);
-const ui = Object.fromEntries(['back', 'save', 'save-help', 'title', 'state', 'message', 'editor', 'version-dialog', 'version-message', 'version-explanation', 'reload', 'check-save', 'recheck-access', 'server-issues', 'server-issues-title', 'server-issues-list', 'draft-offer', 'restore-draft', 'discard-draft', 'download-draft', 'import-draft', 'draft-storage-error', 'sign-in-again'].map(id => [id, document.getElementById(id)]));
+const ui = Object.fromEntries(['back', 'save', 'save-help', 'title', 'state', 'message', 'editor', 'version-dialog', 'version-message', 'version-explanation', 'reload', 'check-save', 'recheck-access', 'server-issues', 'server-issues-title', 'server-issues-list', 'draft-offer', 'restore-draft', 'discard-draft', 'draft-storage-error', 'sign-in-again'].map(id => [id, document.getElementById(id)]));
 const state = new DesignerCoordinator();
 let designer, leaving = false, discarded = false, returnUrl, route, saved = false, folderId, request, config, auth, draftStore, offeredDraft;
 // The stored artifact is one the designer cannot read, so reloading it cannot help.
@@ -52,8 +52,6 @@ function update() {
   }
   ui.save.disabled = !report.canSave || Boolean(offeredDraft);
   ui['draft-offer'].hidden = !offeredDraft;
-  ui['download-draft'].disabled = state.saving || (!offeredDraft && !designer);
-  ui['import-draft'].disabled = state.saving || state.checking;
   ui['restore-draft'].disabled = state.saving || state.checking || !designer || (!state.ready && !state.loadFailed);
   ui['discard-draft'].disabled = state.saving || state.checking;
   ui.reload.hidden = !(state.loadFailed || state.reloadRequired) || state.uncertainCreation || unreadable || canRecheckOpeningAccess();
@@ -181,27 +179,6 @@ ui['discard-draft'].addEventListener('click', () => {
   if (offeredDraft.coordinator.uncertainCreation) { message(t('Draft.UnknownCreate'), true); return; }
   if (window.confirm(t('Message.ConfirmDiscard'))) { clearDraft(); update(); }
 });
-ui['download-draft'].addEventListener('click', () => {
-  try {
-    const value = offeredDraft ?? draftStore?.capture(designer, state);
-    if (!value) return;
-    const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: 'application/json' }));
-    const link = document.createElement('a'); link.href = url; link.download = 'cedar-designer-recovery.json';
-    link.click(); setTimeout(() => URL.revokeObjectURL(url), 0);
-  } catch { message(t('Draft.Invalid'), true); }
-});
-ui['import-draft'].addEventListener('change', async event => {
-  const file = event.target.files?.[0]; event.target.value = '';
-  if (!file || !draftStore || state.saving || state.checking) return;
-  if (state.uncertainCreation || offeredDraft?.coordinator.uncertainCreation) { message(t('Draft.UnknownCreate'), true); return; }
-  try {
-    const store = draftStore;
-    const value = readDraft(await file.text(), store.scope);
-    if (leaving || draftStore !== store || state.saving || state.checking || state.uncertainCreation || offeredDraft?.coordinator.uncertainCreation) return;
-    offeredDraft = value; update();
-  }
-  catch { message(t('Draft.Invalid'), true); }
-});
 function confirmVersion(impact) {
   const count = impact.numberOfInstances;
   const ofVersion = impact.oldVersion ? 'OfVersion' : '';
@@ -305,7 +282,7 @@ try {
   const authenticated = await new Promise((resolve, reject) => auth.initUserHandler(resolve, () => reject(new Error(t('Error.SignIn')))));
   if (!authenticated) { auth.doLogin(); } else {
     request = createBackend(auth, crypto.randomUUID());
-    // Existing records and explicit destinations can find their scoped recovery file before profile loading.
+    // Existing records and explicit destinations can find their scoped retained draft before profile loading.
     if (route.id || folderId) {
       selectDraftStore();
       try { offeredDraft = draftStore.read(); } catch { ui['draft-storage-error'].hidden = false; }

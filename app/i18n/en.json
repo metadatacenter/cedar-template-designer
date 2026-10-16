@@ -98,16 +98,14 @@
     "AccessUnavailable": "Access could not be checked. Your edits have been kept. Sign in or check your connection, then try again."
   },
   "Draft": {
-    "StorageError": "This browser could not retain the draft. Download it before leaving.",
+    "StorageError": "This browser could not retain the draft. Keep this page open to avoid losing your changes.",
     "Offer": "Unfinished work from this tab is available. Restore it or discard it before saving.",
     "Restore": "Restore draft",
     "Discard": "Discard retained draft",
-    "Download": "Download recovery file",
-    "Import": "Import recovery file",
     "Restored": "Your draft has been restored.",
     "RestoredGuarded": "Your draft has been restored. Check access and save status before saving again.",
-    "Invalid": "This recovery file cannot be restored here. Use the same account, deployment and artifact.",
-    "UnknownCreate": "The previous create or version operation is unresolved. Keep this recovery file and check Workspace before creating another artifact.",
+    "Invalid": "This retained draft cannot be restored here. Use the same account, deployment and artifact.",
+    "UnknownCreate": "The previous create or version operation is unresolved. Keep this page open and check Workspace before creating another artifact.",
     "SignInAgain": "Sign in again"
   }
 }
