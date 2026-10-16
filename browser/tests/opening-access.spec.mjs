@@ -27,3 +27,15 @@ test('read-only sign-in does not invent a recovery draft',async({page})=>{
   expect(await page.evaluate(()=>window.signInCalls)).toBe(1);
   expect(await page.evaluate(()=>Object.keys(sessionStorage))).toEqual([]);
 });
+
+for(const mode of ['edit','create']) for(const status of [401,403]) {
+  test(`${mode} recovers an opening refusal (${status}) through a fresh access check`,async({page})=>{
+    const server=await host(page,'template',mode,true,{openingFailure:{request:mode==='edit'?'artifact':'folder',answer:route=>route.fulfill({status,json:{message:'Access refused'}})}});
+    await expect(page.locator('#recheck-access')).toBeVisible();
+    await expect(page.locator('#sign-in-again')).toBeVisible();
+    await page.locator('#recheck-access').click();await expect(page.locator('#state')).toHaveText('Unable to load');
+    await expect(page.locator('#save')).toBeDisabled();expect(server.writes).toHaveLength(0);
+    server.openingFailure=null;await page.locator('#recheck-access').click();await expect(page.locator('#state')).toHaveText('Unmodified');
+    await edit(page,'Access granted');await page.locator('#save').click();await expect(page.locator('#state')).toHaveText('Saved');
+  });
+}

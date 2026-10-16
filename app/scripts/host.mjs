@@ -13,11 +13,12 @@ const ui = Object.fromEntries(['back', 'save', 'save-help', 'title', 'state', 'm
 const state = new DesignerCoordinator();
 let designer, leaving = false, discarded = false, returnUrl, route, saved = false, folderId, request, config, auth, draftStore, offeredDraft;
 // The stored artifact is one the designer cannot read, so reloading it cannot help.
-let unreadable = false, forwardedFindings;
+let unreadable = false, openingAccessRefused = false, forwardedFindings;
 function message(text, error = false) { ui.message.textContent = text; ui.message.dataset.tone = error ? 'error' : 'info'; }
 function dirty() { return !leaving && state.dirty(designer); }
 function canRecheckOpeningAccess() {
-  return state.ready && !state.writable && !state.reloadRequired && !offeredDraft && !dirty();
+  return !offeredDraft && !dirty() && ((state.loadFailed && openingAccessRefused) ||
+    (state.ready && !state.writable && !state.reloadRequired));
 }
 function keepDraft(attempt) {
   if (leaving || !draftStore || !designer || offeredDraft || !state.ready || (state.saving && !attempt?.write) || typeof designer.captureDraft !== 'function') return;
@@ -55,7 +56,7 @@ function update() {
   ui['import-draft'].disabled = state.saving || state.checking;
   ui['restore-draft'].disabled = state.saving || state.checking || !designer || (!state.ready && !state.loadFailed);
   ui['discard-draft'].disabled = state.saving || state.checking;
-  ui.reload.hidden = !(state.loadFailed || state.reloadRequired) || state.uncertainCreation || unreadable;
+  ui.reload.hidden = !(state.loadFailed || state.reloadRequired) || state.uncertainCreation || unreadable || canRecheckOpeningAccess();
   ui.reload.disabled = state.saving || state.checking;
   ui['check-save'].hidden = !state.canCheckSave;
   ui['check-save'].disabled = state.saving || state.checking;
@@ -362,6 +363,7 @@ try {
   if (!offeredDraft || typeof designer?.restoreDraft !== 'function') {
     ui.editor.replaceChildren(); designer = null;
   }
+  openingAccessRefused = [401, 403].includes(error.status);
   state.failLoad();
   update();
   message(openingMessage(error, !route?.id), true);
