@@ -91,3 +91,14 @@ for(const status of [401,403])test(`a definitively refused create can be restore
   page.on('dialog',dialog=>dialog.accept());await page.reload();await page.locator('#restore-draft').click();
   await expect(page.locator('#save')).toBeEnabled();await page.locator('#save').click();await expect(page.locator('#state')).toHaveText('Saved');
 });
+test('restoration waits until the fresh opening read settles',async({page})=>{
+  await host(page);await edit(page,'Draft while opening');
+  let release;const gate=new Promise(resolve=>{release=resolve});
+  await page.route('**/api/templates/item/report',async route=>{await gate;await route.fulfill({json:{currentUserPermissions:{capabilities:['updateResource']}}})});
+  page.on('dialog',dialog=>dialog.accept());await page.reload({waitUntil:'domcontentloaded'});
+  const component=page.locator('#editor > *');await component.waitFor({state:'attached'});
+  await component.evaluate(el=>el.dispatchEvent(new CustomEvent('artifactChange')));
+  await expect(page.locator('#draft-offer')).toBeVisible();await expect(page.locator('#restore-draft')).toBeDisabled();
+  release();await expect(page.locator('#restore-draft')).toBeEnabled();await page.locator('#restore-draft').click();
+  expect(await component.evaluate(el=>el.currentArtifact['schema:name'])).toBe('Draft while opening');
+});

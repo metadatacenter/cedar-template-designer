@@ -50,7 +50,7 @@ function update() {
   ui['draft-offer'].hidden = !offeredDraft;
   ui['download-draft'].disabled = state.saving || (!offeredDraft && !designer);
   ui['import-draft'].disabled = state.saving || state.checking;
-  ui['restore-draft'].disabled = state.saving || state.checking || !designer;
+  ui['restore-draft'].disabled = state.saving || state.checking || !designer || (!state.ready && !state.loadFailed);
   ui['discard-draft'].disabled = state.saving || state.checking;
   ui.reload.hidden = !(state.loadFailed || state.reloadRequired) || state.uncertainCreation || unreadable;
   ui.reload.disabled = state.saving || state.checking;
@@ -156,7 +156,7 @@ ui['sign-in-again'].addEventListener('click', () => {
   } catch { ui['draft-storage-error'].hidden = false; }
 });
 ui['restore-draft'].addEventListener('click', () => {
-  if (!offeredDraft || !designer || state.saving || state.checking) return;
+  if (!offeredDraft || !designer || state.saving || state.checking || (!state.ready && !state.loadFailed)) return;
   if (dirty() && !window.confirm(t('Message.ConfirmDiscard'))) return;
   try {
     // Validate host state separately before the component atomically adopts its snapshot.
