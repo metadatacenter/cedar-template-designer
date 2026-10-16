@@ -1,11 +1,15 @@
 import {test,expect} from '@playwright/test';
 import {host,edit,text} from './host-fixture.mjs';
 
-// Save in the Designer host, across the kind of artifact, creating or editing, the language, whether
-// the open artifact was edited, and how the server answers. Each case asserts where the page ends up,
-// what it says and in which language, whether Save and Reload are offered, what the designer still
-// holds, and what was written. Saving a template that metadata already uses asks first whether to
-// create a new version, so editing a template adds the three answers to that question.
+// Save in the Designer host, across the kind of artifact, creating or editing, whether the open
+// artifact was edited, and how the server answers. Each case asserts where the page ends up, what it
+// says and in which language, whether Save and Reload are offered, what the designer still holds,
+// and what was written. Saving a template that metadata already uses asks first whether to create a
+// new version, so editing a template adds the three answers to that question.
+//
+// The language selects only the catalogue a message comes from and never a branch in the code
+// under test, so every case runs in English. A case runs in Hungarian as well when it is the first
+// to leave its message, so that each message a save can leave appears once in Hungarian.
 
 const COLLECTIONS={template:'templates',element:'template-elements',field:'template-fields'};
 const OUTCOMES=['saved',400,401,403,404,409,412,500,'a network failure','an unidentified acknowledgement'];
@@ -14,12 +18,24 @@ const VERSIONING={'a new version confirmed':'confirm','a new version declined':'
 const SERVER_MESSAGE='Server says no';
 const VALIDATION={message:'Validation failed',objects:{validationReport:{errors:[{location:'/properties/Link',message:'Invalid default IRI'}]}}};
 
-const cases=[];
-for(const kind of Object.keys(COLLECTIONS))for(const mode of ['create','edit'])for(const language of ['en','hu'])
+const cases=[],shownInHungarian=new Set();
+for(const kind of Object.keys(COLLECTIONS))for(const mode of ['create','edit'])
   // A new artifact cannot be saved until it is named, so creating always edits.
   for(const edited of mode==='create'?[true]:[true,false])
-    for(const outcome of [...OUTCOMES,...(kind==='template'&&mode==='edit'?Object.keys(VERSIONING):[])])
-      cases.push({kind,mode,language,edited,outcome});
+    for(const outcome of [...OUTCOMES,...(kind==='template'&&mode==='edit'?Object.keys(VERSIONING):[])]){
+      const hungarian=messageAfter(outcome,'hu',mode);
+      const languages=shownInHungarian.has(hungarian)?['en']:['en','hu'];
+      shownInHungarian.add(hungarian);
+      for(const language of languages)cases.push({kind,mode,language,edited,outcome});
+    }
+
+/** What #message says once a save with this outcome has ended. */
+function messageAfter(outcome,language,mode){
+  if(outcome==='saved'||outcome==='a new version confirmed')return '';
+  if(outcome==='a new version declined')return text(language,'Message.ChangesKept');
+  if(outcome==='a new version discarded')return text(language,'Message.ChangesDiscarded');
+  return failure(outcome,language,mode).message;
+}
 
 // What the page says after each failed save, and whether the open artifact must be reloaded first.
 function failure(outcome,language,mode){
