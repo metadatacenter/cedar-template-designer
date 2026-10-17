@@ -57,17 +57,33 @@ export class BackendError extends Error {
   constructor(status, data, { unreadable = false } = {}) {
     // A server-supplied message is shown as the server wrote it; only the host's own text is translated.
     // Status 0 means no answer arrived.
-    super(unreadable ? t('Error.UnreadableAnswer') :
+    const named = unreadable ? t('Error.UnreadableAnswer') :
       status === 0 ? t('Error.Unreachable') :
       status === 412 ? t('Error.Conflict') :
       status === 401 ? t('Error.SessionExpired') :
       ownerOnlyRefusal({ status, data }) ? t('Error.VersioningOnlyByOwner') :
-      status === 403 ? t('Error.Forbidden') :
-      t('Error.RequestFailed', { status, detail: data?.message || data?.errorMessage || t('Error.EditsKept') }));
+      status === 403 ? t('Error.Forbidden') : null;
+    const serverMessage = named === null ? data?.message || data?.errorMessage : undefined;
+    super(named ?? t('Error.RequestFailed', { status, detail: serverMessage || t('Error.EditsKept') }));
     this.status = status;
     this.data = data;
     this.unreadable = unreadable;
+    // The message shown for a refused save extends the server's, so the general refusal records the one it reports.
+    this.serverMessage = serverMessage || undefined;
   }
+}
+
+/**
+ * The message shown when a save fails. A refusal leaves the edits in the designer, and the general refusal
+ * says so after the server's message as well as in place of a missing one. Every other failure keeps its
+ * own text.
+ */
+export function saveMessage(error) {
+  const reported = error instanceof BackendError ? String(error.serverMessage ?? '').trim() : '';
+  if (!reported) return error?.message ?? String(error);
+  // The reassurance is a sentence of its own, so a message without closing punctuation gains a full stop.
+  const sentence = /[.!?]$/.test(reported) ? reported : `${reported}.`;
+  return t('Error.RequestFailed', { status: error.status, detail: `${sentence} ${t('Error.EditsKept')}` });
 }
 
 /**

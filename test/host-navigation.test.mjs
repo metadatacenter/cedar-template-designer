@@ -297,6 +297,33 @@ for (const failed of [true, false]) {
   });
 }
 
+// A refused create or update leaves the edits in the designer. Its message says so after the server's
+// message as well as without one, and a server message that ends with a full stop takes no second one.
+for (const [language, languages, withoutMessage, withMessage] of [
+  ['English', ['en-US'], 'Request failed (400). Your edits have been kept.', 'Request failed (400). Invalid folder identifier. Your edits have been kept.'],
+  ['Hungarian', ['hu-HU'], 'A kérés sikertelen (400). A szerkesztései megmaradtak.', 'A kérés sikertelen (400). Invalid folder identifier. A szerkesztései megmaradtak.'],
+]) for (const existing of [false, true]) for (const data of [null, { message: 'Invalid folder identifier' }, { message: 'Invalid folder identifier.' }]) {
+  test(`a refused ${existing ? 'update' : 'create'} in ${language} ${data ? `with the server message "${data.message}"` : 'without a server message'} says the edits are kept`, async t => {
+    t.after(() => i18n.setLanguage('en'));
+    minting(t);
+    const h = await host(true, languages, existing, null, true);
+    h.designer.currentArtifact = { ...(existing ? h.repository.get('template-id').data : {}), 'schema:name': 'Study, revised' };
+    const before = structuredClone([...h.repository]);
+    // The error is made in the page's language, as the host's request makes it.
+    h.faults.push({ refused: new core.BackendError(400, data) });
+    await h.save();
+    // The refusal answered the write itself.
+    assert.equal(h.requests.at(-1).method, 'PUT');
+    assert.equal(h.requests.at(-1).url.startsWith(`https://resource.example/templates/${existing ? 'template-id' : UUID}`), true);
+    assert.equal(h.node('message').textContent, data ? withMessage : withoutMessage);
+    assert.equal(h.node('message').dataset.tone, 'error');
+    assert.equal(h.designer.currentArtifact['schema:name'], 'Study, revised');
+    assert.deepEqual([...h.repository], before);
+    assert.equal(h.node('save').disabled, false);
+    assert.equal(h.unload(), true);
+  });
+}
+
 test('the host detects its language, labels the page with it and passes it to CED', async t => {
   t.after(() => i18n.setLanguage('en'));
   const english = await host(false);
@@ -467,7 +494,7 @@ for (const [label, refusal, message] of [
   ['refused permission', new core.BackendError(403), 'You do not have permission to save this artifact.'],
   ['refused permission to create in its folder', new core.BackendError(403, { errorKey: 'noWriteAccessToFolder' }), 'You do not have permission to save this artifact.'],
   ['refused validation', new core.BackendError(400, { message: 'Validation failed', objects: { validationReport: { errors: [{ location: '/properties/Link', message: 'Invalid default IRI' }] } } }),
-    'Request failed (400). Validation failed'],
+    'Request failed (400). Validation failed. Your edits have been kept.'],
 ]) test(`a new version with ${label} stays on the template with the edits and creates the draft once corrected`, async t => {
   minting(t);
   const h = await host(true, ['en-US'], true, null, true);

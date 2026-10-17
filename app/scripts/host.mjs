@@ -3,7 +3,7 @@ document.getElementById('back-icon').innerHTML = iconSvg('back');
 // Workspace heads its Create Draft dialog with this icon, and this dialog also ends in a new draft.
 document.getElementById('version-icon').innerHTML = iconSvg('new-record');
 const version = encodeURIComponent(window.cedarCacheControl || 'local');
-const { resourceSelector, resourcePathId, useDeploymentApi, mintIdentity, routeFor, workspaceReturn, canEdit, canCreate, createBackend, openingMessage, childSource, saveArtifact, DesignerCoordinator, waitForDesigner } = await import(`./host-core.mjs?v=${version}`);
+const { resourceSelector, resourcePathId, useDeploymentApi, mintIdentity, routeFor, workspaceReturn, canEdit, canCreate, createBackend, openingMessage, saveMessage, childSource, saveArtifact, DesignerCoordinator, waitForDesigner } = await import(`./host-core.mjs?v=${version}`);
 const { DesignerDraftStore, draftScope, discardable } = await import(`./host-draft.mjs?v=${version}`);
 // host-core.mjs imports this same versioned URL, so both modules share one active language.
 const { t, counted, detectLanguage, setLanguage, localizeDocument } = await import(`./i18n.mjs?v=${version}`);
@@ -306,7 +306,7 @@ ui.save.addEventListener('click', async () => {
   } catch (error) {
     if (attempt && !attempt.current()) return;
     const unconfirmed = state.failed(error, attempt);
-    message(unconfirmed ? t('Error.SaveUnconfirmed') : error.message, true);
+    message(unconfirmed ? t('Error.SaveUnconfirmed') : saveMessage(error), true);
   } finally { state.finish(attempt); update(); }
 });
 async function loadScript(name, digest) {

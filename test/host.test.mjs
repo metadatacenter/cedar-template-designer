@@ -38,6 +38,13 @@ test('return URLs reject foreign origins, credentials and script schemes', () =>
   }
   assert.equal(workspaceReturn('https://workspace.example', 'https://workspace.example/dashboard?q=a#result'), 'https://workspace.example/dashboard?q=a#result');
 });
+test('a return without a folder identifier names no folder, so Workspace opens the home folder', () => {
+  // A designer opened without folderId, for example from OpenView's login link, is asked for no folder by its return.
+  for (const missing of [null, undefined, '']) {
+    assert.equal(workspaceReturn('https://workspace.example', null, missing), 'https://workspace.example/dashboard');
+    assert.doesNotMatch(workspaceReturn('https://workspace.example', 'https://evil.example/', missing), /undefined|null/);
+  }
+});
 test('permissions fail closed and published artifacts stay locked', () => {
   assert.equal(canEdit({}, {}), false);
   const report = { currentUserPermissions: { capabilities: ['updateResource'] } };

@@ -47,11 +47,13 @@ function messageAfter(outcome,language,mode){
 function failure(outcome,language,mode,version=false){
   const say=(key,params)=>text(language,key,params);
   const lost={message:say('Error.SaveUnconfirmed'),reload:true,offerReload:mode==='edit'&&!version,check:true};
+  // A refusal says the edits are kept after the server's message, which ends without a full stop.
+  const kept=message=>`${message}. ${say('Error.EditsKept')}`;
   switch(outcome){
-    case 400:return {message:say('Error.RequestFailed',{status:400,detail:VALIDATION.message}),reload:false,findings:1};
+    case 400:return {message:say('Error.RequestFailed',{status:400,detail:kept(VALIDATION.message)}),reload:false,findings:1};
     case 401:return {message:say('Error.SessionExpired'),reload:true,recheck:mode==='edit'};
     case 403:return {message:say('Error.Forbidden'),reload:true,recheck:mode==='edit'};
-    case 404:case 409:return {message:say('Error.RequestFailed',{status:outcome,detail:SERVER_MESSAGE}),reload:true};
+    case 404:case 409:return {message:say('Error.RequestFailed',{status:outcome,detail:kept(SERVER_MESSAGE)}),reload:true};
     case 412:return mode==='create'?{...lost,offerReload:false}:{message:say('Error.Conflict'),reload:true};
     case 500:case 'a network failure':case 'an unidentified acknowledgement':return lost;
   }
