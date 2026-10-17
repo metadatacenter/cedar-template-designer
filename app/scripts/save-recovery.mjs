@@ -21,7 +21,7 @@ export function sameRevision(expected, actual) {
 export function updateOutcome({opened, submitted, etag}, latest) {
   if (!latest.etag || !latest.data || !opened?.['@id'] || latest.data['@id'] !== opened['@id']) return 'unresolved';
   if (sameRevision(etag, latest.etag)) return authoredKey(opened) === authoredKey(latest.data) ? 'unchanged' : 'unresolved';
-  return authoredKey(submitted) === authoredKey(latest.data) ? 'saved' : 'changed';
+  return sameWritten(latest.data, submitted) ? 'saved' : 'changed';
 }
 
 const PROVENANCE = ['pav:createdOn', 'pav:createdBy', 'pav:lastUpdatedOn', 'oslc:modifiedBy'];

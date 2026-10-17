@@ -7,15 +7,28 @@ const opened = {'@id':'urn:item','schema:name':'Opened','pav:lastUpdatedOn':'old
 const submitted = {...opened, 'schema:name':'Submitted'};
 const pending = {opened, submitted, etag:'"10--gzip"'};
 const latest = () => ({data:{...structuredClone(submitted),'pav:lastUpdatedOn':'new','oslc:modifiedBy':'urn:user'},etag:'"11"'});
-for (const change of ['name','annotation','child identity','child provenance','term','unknown']) test(`a different ${change} cannot be mistaken for the submitted save`,()=>{
+for (const change of ['name','annotation','child identity','term','unknown']) test(`a different ${change} cannot be mistaken for the submitted save`,()=>{
   const reply=latest();
   if(change==='name')reply.data['schema:name']='Other';
   if(change==='annotation')reply.data._annotations={'urn:note':{'@value':'Other'}};
   if(change==='child identity')reply.data.properties.Term['@id']='urn:other';
-  if(change==='child provenance')reply.data.properties.Term['pav:lastUpdatedOn']='new';
   if(change==='term')reply.data.properties.Term._valueConstraints.classes[0].uri='urn:other';
   if(change==='unknown')reply.data.extra='Other';
   assert.equal(updateOutcome(pending,reply),'changed');
+});
+// The server stamps a changed child with fresh modification provenance, gives a new child a creation
+// record, and replaces a temporary child identifier with one of its own. A save that did only that is
+// the submitted save; a child holding other content is not.
+test('provenance and identifiers the server assigns to children still read as the submitted save',()=>{
+  const sent={...structuredClone(submitted),properties:{...structuredClone(submitted.properties),
+    Added:{'@id':'tmp-1760650000000-added','schema:name':'Added'}}};
+  const reply={data:{...structuredClone(sent),'pav:lastUpdatedOn':'new','oslc:modifiedBy':'urn:user'},etag:'"11"'};
+  reply.data.properties.Term={...reply.data.properties.Term,'pav:lastUpdatedOn':'new','oslc:modifiedBy':'urn:user'};
+  reply.data.properties.Added={...reply.data.properties.Added,'@id':'https://repo.test/template-fields/9f8e7d6c-5b4a-4392-8170-6f5e4d3c2b1a',
+    'pav:createdOn':'new','pav:createdBy':'urn:user','pav:lastUpdatedOn':'new','oslc:modifiedBy':'urn:user'};
+  assert.equal(updateOutcome({...pending,submitted:sent},reply),'saved');
+  reply.data.properties.Added['schema:name']='Someone else';
+  assert.equal(updateOutcome({...pending,submitted:sent},reply),'changed');
 });
 test('only root update provenance and object order may differ in a matching save',()=>{
   assert.equal(updateOutcome(pending,latest()),'saved');

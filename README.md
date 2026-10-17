@@ -101,10 +101,12 @@ reset the view.
 
 Unfinished Designer work is retained in this tab's `sessionStorage`, scoped to the
 signed-in account, deployment, artifact kind and identity (or create folder).
-Reload offers explicit restoration after fresh server reads; a restored draft does
-not inherit permission or an ETag from the recovery file. Download/import recovery
-files retain unfinished controls and the evidence for interrupted writes. A failed
-storage write is reported so the author can download before leaving.
+After a reload the host offers to restore it once fresh server reads have finished,
+and a restored draft takes neither permission nor an ETag from what was retained.
+The retained draft keeps the designer's unfinished work and the evidence of
+interrupted writes.
+If the browser cannot retain the draft, the host says so, and the author must keep
+the page open to avoid losing the changes.
 
 The host journals immediately before dispatching a write. A create is a PUT under
 an identity the host mints on the deployment's base, and a new version names the
