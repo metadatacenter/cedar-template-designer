@@ -56,11 +56,15 @@ test('an uncertain create stays guarded after reload and cannot be discarded int
   await expect(page.locator('#state')).toHaveText(text('en','State.ReloadRequired'));
   page.on('dialog',dialog=>dialog.accept()); await page.reload();
   await expect(page.locator('#draft-offer')).toBeVisible();
+  await expect(page.locator('#check-save')).toBeHidden();
   await page.locator('#discard-draft').click();
+  await expect(page.locator('#message')).toHaveText(text('en','Draft.UnknownCreate'));
   await expect(page.locator('#draft-offer')).toBeVisible();
   await page.locator('#restore-draft').click();
+  await expect(page.locator('#message')).toHaveText(text('en','Draft.RestoredGuarded'));
   await expect(page.locator('#save')).toBeDisabled();
   await expect(page.locator('#reload')).toBeHidden();
+  await expect(page.locator('#check-save')).toBeVisible();
   expect(server.writes).toHaveLength(1);
 });
 test('a retained draft can be opened read-only while the artifact read is unavailable', async ({page}) => {
@@ -85,9 +89,10 @@ test('sign-in retains the draft first and storage failure keeps the author on th
 });
 test('confirmed creation with failed readback retains its draft under the new identity',async({page})=>{
   const server=await host(page,'template','create');await edit(page,'Created but not reopened');
-  await page.route('**/api/templates/saved',route=>route.fulfill({status:503,json:{message:'Unavailable'}}));
+  const unavailable=route=>route.request().method()==='GET'?route.fulfill({status:503,json:{message:'Unavailable'}}):route.fallback();
+  await page.route('**/api/templates/*',unavailable);
   await page.locator('#save').click();await expect(page.locator('#state')).toHaveText('Reload required');
-  await expect(page).toHaveURL(/templates\/edit\/saved/);
+  await expect(page).toHaveURL(new RegExp(`templates/edit/${server.savedId}$`));
   page.on('dialog',dialog=>dialog.accept());await page.reload();
   await expect(page.locator('#draft-offer')).toBeVisible();await page.locator('#restore-draft').click();
   expect(await page.locator('#editor > *').evaluate(el=>el.currentArtifact['schema:name'])).toBe('Created but not reopened');
@@ -123,4 +128,27 @@ for(const dependency of ['profile','manifest','component','artifact','report'])t
   await expect(page.locator('#draft-offer')).toBeVisible();await page.locator('#restore-draft').click();
   expect(await page.locator('#editor > *').evaluate(el=>el.currentArtifact['schema:name'])).toBe('Retained through '+dependency);
   expect(server.writes).toHaveLength(0);
+});
+
+// A new field's type chooser covers the whole page. While a retained draft is offered it waits, so the
+// offer stays reachable; discarding the draft opens it as on a fresh page.
+for (const choice of ['restore', 'discard']) test(`a new field's retained draft can be ${choice === 'restore' ? 'restored' : 'discarded'} after reload`, async ({page}) => {
+  await host(page, 'field', 'create');
+  await expect(page.locator('.chooser')).toBeVisible();
+  await edit(page, 'Retained new field');
+  page.on('dialog', dialog => dialog.accept());
+  await page.reload();
+  await expect(page.locator('#draft-offer')).toBeVisible();
+  await expect(page.locator('#restore-draft')).toBeEnabled();
+  await expect(page.locator('.chooser')).toHaveCount(0);
+  if (choice === 'restore') {
+    await page.locator('#restore-draft').click();
+    await expect(page.locator('#draft-offer')).toBeHidden();
+    expect(await page.locator('#editor > *').evaluate(el => el.currentArtifact['schema:name'])).toBe('Retained new field');
+    await expect(page.locator('.chooser')).toHaveCount(0);
+  } else {
+    await page.locator('#discard-draft').click();
+    await expect(page.locator('#draft-offer')).toBeHidden();
+    await expect(page.locator('.chooser')).toBeVisible();
+  }
 });

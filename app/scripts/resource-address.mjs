@@ -46,3 +46,19 @@ export function resourceIri(id, example) {
   const base = deploymentBase ?? example.match(new RegExp(`^(https?://[^/]+/)(?:${COLLECTIONS})/`))?.[1];
   return base ? base + id : id;
 }
+
+/**
+ * A new identity in a collection: a random UUID on the deployment's base. The server accepts a
+ * caller's identity only on its own base, so while the base is unknown nothing is minted and the
+ * server mints the identity instead.
+ */
+export function mintIdentity(collection) {
+  if (!deploymentBase || !new RegExp(`^(?:${COLLECTIONS})$`).test(collection)) return null;
+  return `${deploymentBase}${collection}/${crypto.randomUUID().toLowerCase()}`;
+}
+
+/** Whether an identity has the form mintIdentity gives it in the collection, on the deployment's base once that is known. */
+export function identityIn(id, collection) {
+  const match = typeof id === 'string' ? new RegExp(`^https://[^/?#\\s]+/(${COLLECTIONS})/(${UUID})$`).exec(id) : null;
+  return Boolean(match && match[1] === collection && (!deploymentBase || id.startsWith(deploymentBase)));
+}

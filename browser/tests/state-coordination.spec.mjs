@@ -75,7 +75,7 @@ for(const kind of ['template','element','field'])for(const mode of ['create','ed
   expect(await page.locator('#editor > *').evaluate(el=>el.inert)).toBe(false);
   expect(state.writes[0].body['schema:name']).toBe('Submitted');
   if(mode==='create'){
-    await expect(page).toHaveURL(new RegExp(`/${kind}s/edit/saved`));
+    await expect(page).toHaveURL(new RegExp(`/${kind}s/edit/${state.savedId}$`));
     await expect(page.locator('#save')).toBeDisabled();await expect(page.locator('#reload')).toBeVisible();
     page.once('dialog',dialog=>dialog.dismiss());await page.locator('#reload').click();
     expect(await page.locator('#editor > *').evaluate(el=>el.currentArtifact['schema:name'])).toBe('Newer');
@@ -110,8 +110,10 @@ for(const reason of ['new-version','missing-validator','invalid-draft','unreadab
 for(const mode of ['create','edit'])test(`unidentified ${mode} acknowledgement cannot cause a duplicate save`,async({page})=>{
   const state=await host(page,'template',mode);state.savedId=null;
   await edit(page);await page.locator('#save').click();
-  await expect(page.locator('#message')).toContainText('Check Workspace');await expect(page.locator('#save')).toBeDisabled();
+  await expect(page.locator('#message')).toHaveText(text('en','Error.SaveUnconfirmed'));await expect(page.locator('#save')).toBeDisabled();
   await expect(page.locator('#reload')).toBeVisible({visible:mode==='edit'});
+  // Whether it was stored is read from the server, never repeated.
+  await expect(page.locator('#check-save')).toBeVisible();
   expect(state.writes).toHaveLength(1);
 });
 

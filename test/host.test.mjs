@@ -1,7 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BackendError, routeFor, workspaceReturn, canEdit, createBackend, saveArtifact, storageArtifact, childSource } from '../app/scripts/host-core.mjs';
+import { BackendError, routeFor, workspaceReturn, canEdit, createBackend, saveArtifact, storageArtifact, childSource, useDeploymentApi } from '../app/scripts/host-core.mjs';
 const base = 'https://resource.example';
+// A create or new version mints its identity on the deployment's base.
+useDeploymentApi(base);
+const minted = collection => new RegExp(`^https://repo\\.example/${collection}/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`);
 const route = { kind: 'template', collection: 'templates', id: 'https://repo.example/templates/a' };
 const artifact = { '@id': route.id, 'schema:name': 'Changed', properties: {} };
 function harness(responses) {
@@ -54,12 +57,16 @@ test('declining versioning makes no write and keeps the edit', async () => {
   assert.equal(await saveArtifact({ ...h.options, confirmVersion: async () => false }), null);
   assert.equal(h.calls.length, 1);
 });
-test('accepted versioning sends the original validator without refreshing it or copying instances', async () => {
+test('accepted versioning sends the original validator and the new draft\'s identity without refreshing it or copying instances', async () => {
   const h = harness([{ data: { canBeUpdated: false } }, { data: artifact }]);
   await saveArtifact(h.options);
-  assert.equal(h.calls[1].url, base + '/command/publish-create-draft-template/' + encodeURIComponent(route.id));
+  const url = new URL(h.calls[1].url);
+  assert.equal(url.origin + url.pathname, base + '/command/publish-create-draft-template/' + encodeURIComponent(route.id));
+  assert.deepEqual([...url.searchParams.keys()], ['draft_id']);
+  assert.match(url.searchParams.get('draft_id'), minted('templates'));
   assert.equal(h.calls[1].method, 'POST');
   assert.equal(h.calls[1].etag, '"v1"');
+  assert.equal(h.calls[1].body['@id'], route.id);
   assert.equal(h.calls.length, 2);
 });
 test('failed impact requests never fall through to writing', async () => {
@@ -67,13 +74,18 @@ test('failed impact requests never fall through to writing', async () => {
   await assert.rejects(saveArtifact(h.options), /Offline/);
   assert.equal(h.calls.length, 1);
 });
-test('element update is conditional; creation uses the selected folder', async () => {
+test('element update is conditional; creation puts a minted identity in the selected folder', async () => {
   const h = harness([{ data: artifact }, { data: artifact }]);
   await saveArtifact({ ...h.options, route: { kind: 'element', collection: 'template-elements', id: 'element-id' } });
   assert.equal(h.calls[0].method, 'PUT');
   assert.equal(h.calls[0].etag, '"v1"');
   await saveArtifact({ ...h.options, route: { kind: 'element', collection: 'template-elements', id: null } });
-  assert.equal(h.calls[1].url, base + '/template-elements?folder_id=folder');
+  const id = h.calls[1].body['@id'];
+  assert.match(id, minted('template-elements'));
+  assert.equal(h.calls[1].method, 'PUT');
+  assert.equal(h.calls[1].url, `${base}/template-elements/${id.split('/').pop()}?folder_id=folder`);
+  // A create states no validator, since there is nothing it could match.
+  assert.equal(h.calls[1].etag, undefined);
 });
 test('missing validators and destination folders block writes', async () => {
   const h = harness([]);
@@ -129,8 +141,9 @@ test('standalone field creation and updates use the field collection and origina
   const h = harness([{ data: artifact }, { data: artifact }]);
   const route = routeFor('/fields/create');
   await saveArtifact({ ...h.options, route });
-  assert.equal(h.calls[0].url, base + '/template-fields?folder_id=folder');
-  assert.equal(h.calls[0].method, 'POST');
+  assert.equal(h.calls[0].url, `${base}/template-fields/${h.calls[0].body['@id'].split('/').pop()}?folder_id=folder`);
+  assert.match(h.calls[0].body['@id'], minted('template-fields'));
+  assert.equal(h.calls[0].method, 'PUT');
   await saveArtifact({ ...h.options, route: routeFor('/fields/edit/' + encodeURIComponent('https://example.org/fields/one')) });
   assert.equal(h.calls[1].method, 'PUT');
   assert.equal(h.calls[1].etag, '"v1"');

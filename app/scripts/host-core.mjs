@@ -1,5 +1,5 @@
-import { resourceSelector, resourcePathId, useDeploymentApi } from './resource-address.mjs';
-export { resourceSelector, resourcePathId, useDeploymentApi };
+import { resourceSelector, resourcePathId, useDeploymentApi, mintIdentity } from './resource-address.mjs';
+export { resourceSelector, resourcePathId, useDeploymentApi, mintIdentity };
 // Loading the maps with this module's query string keeps one shared instance with host.mjs,
 // which imports the same versioned URL and sets the active language on it.
 const { t } = await import(`./i18n.mjs${new URL(import.meta.url).search}`);
@@ -174,8 +174,14 @@ export function storageArtifact(source, creating = false) {
   return result;
 }
 
-/** Validators belong to the loaded representation, never a URL cache. */
-export async function saveArtifact({ request, base, route, artifact, etag, folderId, confirmVersion, stillCurrent = () => true, onWrite = () => {} }) {
+/**
+ * Validators belong to the loaded representation, never a URL cache. A create or a new version is sent
+ * under the identity `identity()` gives, so that a lost answer can be settled by reading that identity
+ * and a retry under it cannot store a second artifact. While the deployment's base is unknown there is
+ * none, and the server mints the identity instead.
+ */
+export async function saveArtifact({ request, base, route, artifact, etag, folderId, confirmVersion, stillCurrent = () => true, onWrite = () => {},
+  identity = () => mintIdentity(route.collection) }) {
   const name = artifact?.['schema:name'];
   if (typeof name !== 'string' || !name.trim()) {
     throw new Error(t(`Error.NameRequired.${route.kind}`));
@@ -183,16 +189,20 @@ export async function saveArtifact({ request, base, route, artifact, etag, folde
   artifact = storageArtifact(artifact, !route.id);
   const url = `${base}/${route.collection}`;
   const current = () => { if (!stillCurrent()) throw new Error(t('Error.DocumentChanged')); };
-  // Assessments do not write. Record only the operation that may store an artifact, so a
-  // failed assessment can be retried while a lost create response cannot create a duplicate.
-  const write = (url, options, createsIdentity = false) => {
-    onWrite({ createsIdentity, body: structuredClone(options.body) });
+  // Assessments do not write. Record only the operation that may store an artifact, with the identity
+  // it creates, so a failed assessment can be retried while a lost create response cannot create a duplicate.
+  const write = (url, options, operation = 'update', id = null) => {
+    onWrite({ createsIdentity: operation !== 'update', operation, identity: id, body: structuredClone(options.body) });
     return request(url, options);
   };
   current();
   if (!route.id) {
     if (!folderId) throw new Error(t('Error.NoFolder'));
-    return write(`${url}?${new URLSearchParams({ folder_id: resourceSelector(folderId) })}`, { method: 'POST', body: artifact }, true);
+    const folder = new URLSearchParams({ folder_id: resourceSelector(folderId) });
+    const id = identity();
+    if (!id) return write(`${url}?${folder}`, { method: 'POST', body: artifact }, 'create');
+    artifact['@id'] = id;
+    return write(`${url}/${encodeURIComponent(resourcePathId(id))}?${folder}`, { method: 'PUT', body: artifact }, 'create', id);
   }
   if (!etag) throw new Error(t('Error.NoValidator'));
   artifact['@id'] = route.id; // Resolved from the loaded document, never from a short browser address.
@@ -206,7 +216,9 @@ export async function saveArtifact({ request, base, route, artifact, etag, folde
     if (!impact.canBeUpdated) {
       if (!await confirmVersion(impact)) return null;
       current();
-      return write(`${base}/command/publish-create-draft-template/${encodedId}`, { method: 'POST', body: artifact, etag }, true);
+      const draft = identity();
+      const query = draft ? `?${new URLSearchParams({ draft_id: draft })}` : '';
+      return write(`${base}/command/publish-create-draft-template/${encodedId}${query}`, { method: 'POST', body: artifact, etag }, 'version', draft);
     }
   }
   return write(`${url}/${encodedId}`, { method: 'PUT', body: artifact, etag });

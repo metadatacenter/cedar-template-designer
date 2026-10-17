@@ -1,6 +1,9 @@
 // The Designer host page with its backend, sign-in and components answered in the browser. The real
 // host scripts, translations and markup are served; the designer is a small stand-in whose document,
 // report and dirtiness a test sets directly.
+//
+// The page and its API share one origin, named as a deployment's resource host, so the host takes the
+// deployment's base from the API as it does in production: it mints identities on https://repo.designer.test/.
 import {readFileSync} from 'node:fs';
 import {expect} from '@playwright/test';
 
@@ -25,10 +28,14 @@ export const OPENING_REQUESTS={
 
 const root = new URL('../../app/', import.meta.url);
 const source = name => readFileSync(new URL(name, root), 'utf8');
+export const ORIGIN='https://resource.designer.test';
+/** The form of an identity the host mints in a collection. */
+export const minted=collection=>new RegExp(`^https://repo\\.designer\\.test/${collection}/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`);
+// Unless a test names the identity a write stores (savedId), a create stores under the identity it sends.
 export async function host(page, kind='template', mode='edit', allowed=true, initial={}) {
-  const state={allowed,language:'en',writes:[],stored:new Map(),failure:null,impact:{canBeUpdated:true},brokenLoad:false,holdWrite:null,savedId:mode==='edit'?'item':'saved',nextEtag:'"next"',loadedId:'item',loadedEtag:'"opened"',...initial};
+  const state={allowed,language:'en',writes:[],stored:new Map(),failure:null,impact:{canBeUpdated:true},brokenLoad:false,holdWrite:null,savedId:mode==='edit'?'item':undefined,nextEtag:'"next"',loadedId:'item',loadedEtag:'"opened"',...initial};
   await page.route('https://workspace.test/**',route=>route.fulfill({contentType:'text/html',body:'<h1>Workspace</h1>'}));
-  await page.route('https://designer.test/**',async route=>{
+  await page.route(`${ORIGIN}/**`,async route=>{
     const url=new URL(route.request().url()),path=url.pathname;
     // A request named in `openingFailure` gets that answer instead of its own.
     const failing=state.openingFailure;
@@ -39,20 +46,27 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
       if(path.endsWith('/report'))return route.fulfill({json:{currentUserPermissions:{capabilities:state.allowed?['updateResource']:[]}}});
       if(path.includes('/check-update-template/'))return route.fulfill({json:state.impact});
       if(route.request().method()!=='GET'){
-        state.writes.push({path,body:route.request().postDataJSON(),etag:route.request().headers()['if-match']});
+        const write={path,query:Object.fromEntries(url.searchParams),body:route.request().postDataJSON(),etag:route.request().headers()['if-match']};
+        state.writes.push(write);
         if(state.holdWrite)await state.holdWrite;
         if(state.failure==='network')return route.abort('failed');
         if(state.failure)return route.fulfill(state.failure);
+        // A create names its identity in its address. The server answers with that identity in full.
+        const named=route.request().method()==='PUT'&&!write.etag&&typeof write.body?.['@id']==='string'&&write.body['@id'].endsWith('/'+path.split('/').pop());
+        if(state.savedId===undefined&&named)state.savedId=path.split('/').pop();
+        const id=named&&state.savedId===path.split('/').pop()?write.body['@id']:state.stored.get(state.savedId)?.json['@id']??state.savedId;
         // What a write stores is what the artifact reads back as afterwards, under the same validator.
-        if(state.savedId)state.stored.set(state.savedId,{json:{...state.writes.at(-1).body,'@id':state.savedId},etag:state.nextEtag});
-        return route.fulfill({json:state.savedId?{'@id':state.savedId}:{},headers:state.nextEtag?{ETag:state.nextEtag}:{}});
+        if(state.savedId)state.stored.set(state.savedId,{json:{...write.body,'@id':id},etag:state.nextEtag});
+        return route.fulfill({json:state.savedId?{'@id':id}:{},headers:state.nextEtag?{ETag:state.nextEtag}:{}});
       }
       const stored=state.stored.get(path.split('/').pop());
       if(stored)return route.fulfill({json:stored.json,headers:stored.etag?{ETag:stored.etag}:{}});
+      // Only the opened artifact exists unless a write stored another.
+      if(path.split('/').pop()!=='item')return route.fulfill({status:404,json:{message:'Not found'}});
       if(state.brokenLoad)return route.fulfill({status:503,json:{message:'Load unavailable'}});
       return route.fulfill({json:{'@id':state.loadedId,'schema:name':'Opened',properties:{},...(state.unreadable?{unreadable:true}:{})},headers:state.loadedEtag?{ETag:state.loadedEtag}:{}});
     }
-    if(path==='/config/host.json')return route.fulfill({json:{workspaceFrontend:'https://workspace.test',resourceRestAPI:'https://designer.test/api',userRestAPI:'https://designer.test/api'}});
+    if(path==='/config/host.json')return route.fulfill({json:{workspaceFrontend:'https://workspace.test',resourceRestAPI:`${ORIGIN}/api`,userRestAPI:`${ORIGIN}/api`}});
     if(path==='/config/version.js')return route.fulfill({contentType:'text/javascript',body:"window.cedarCacheControl='fixture';"});
     if(path==='/scripts/handlers/KeycloakUserHandler.js')return route.fulfill({contentType:'text/javascript',body:`window.KeycloakUserHandler=class{initUserHandler(ok){ok(true)}doLogin(){window.signInCalls=(window.signInCalls||0)+1}getParsedToken(){return{sub:'user'}}getToken(){return 'test'}refreshToken(_n,ok){ok(true)}};`});
     if(path==='/components/manifest.json')return route.fulfill({json:Object.fromEntries(['cedar-embeddable-editor','cedar-embeddable-term-picker','cedar-embeddable-designer'].map(name=>[name,{sha256:'fixture'}]))});
@@ -68,7 +82,23 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
         newArtifact(){this.loadArtifact({'schema:name':''});this.report={valid:false,canSave:false,issues:[{setting:'name',shown:false,severity:'error'}]}}
       }
       setTimeout(()=>{
-        customElements.define('cedar-embeddable-field-designer',class extends Designer{});
+        // A new field opens its type chooser as a dialog over the whole page, as the real component does
+        // while it is not read only. Choosing a type, the first change to the field, closes it, and
+        // restored or loaded work already has its type.
+        customElements.define('cedar-embeddable-field-designer',class extends Designer{
+          #readOnly=false; choosing=false;
+          constructor(){super();this.addEventListener('artifactChange',()=>{this.choosing=false;this.chooser()})}
+          get readOnly(){return this.#readOnly}set readOnly(value){this.#readOnly=value;this.chooser()}
+          newArtifact(){super.newArtifact();this.choosing=true;this.chooser()}
+          loadArtifact(value,options){super.loadArtifact(value,options);this.choosing=false;this.chooser()}
+          restoreDraft(value){super.restoreDraft(value);this.choosing=false;this.chooser()}
+          chooser(){
+            const open=this.choosing&&!this.#readOnly;let dialog=this.querySelector('.chooser');
+            if(open&&!dialog){dialog=document.createElement('div');dialog.className='chooser';dialog.textContent='Choose field';
+              dialog.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.3)';this.append(dialog);}
+            if(!open)dialog?.remove();
+          }
+        });
         customElements.define('cedar-embeddable-designer',Designer);
       },30);`});
     if(path==='/components/icons.js')return route.fulfill({contentType:'text/javascript',body:'export const iconSvg=()=>"";'});
@@ -79,7 +109,7 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
   });
   // The host takes its language from the browser's preferences.
   await page.addInitScript(language=>Object.defineProperty(navigator,'languages',{get:()=>[language]}),state.language);
-  await page.goto(`https://designer.test/${kind}s/${mode}${mode==='edit'?'/item':''}`);
+  await page.goto(`${ORIGIN}/${kind}s/${mode}${mode==='edit'?'/item':''}`);
   if(state.brokenLoad||state.loadedId!=='item'||state.unreadable||state.openingFailure){
     await expect(page.locator('#state')).toHaveText(text(state.language,'State.LoadFailed'));return state;
   }

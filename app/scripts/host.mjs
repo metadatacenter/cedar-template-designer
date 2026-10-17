@@ -3,8 +3,8 @@ document.getElementById('back-icon').innerHTML = iconSvg('back');
 // Workspace heads its Create Draft dialog with this icon, and this dialog also ends in a new draft.
 document.getElementById('version-icon').innerHTML = iconSvg('new-record');
 const version = encodeURIComponent(window.cedarCacheControl || 'local');
-const { resourceSelector, resourcePathId, useDeploymentApi, routeFor, workspaceReturn, canEdit, canCreate, createBackend, openingMessage, childSource, saveArtifact, DesignerCoordinator, waitForDesigner } = await import(`./host-core.mjs?v=${version}`);
-const { DesignerDraftStore, draftScope } = await import(`./host-draft.mjs?v=${version}`);
+const { resourceSelector, resourcePathId, useDeploymentApi, mintIdentity, routeFor, workspaceReturn, canEdit, canCreate, createBackend, openingMessage, childSource, saveArtifact, DesignerCoordinator, waitForDesigner } = await import(`./host-core.mjs?v=${version}`);
+const { DesignerDraftStore, draftScope, discardable } = await import(`./host-draft.mjs?v=${version}`);
 // host-core.mjs imports this same versioned URL, so both modules share one active language.
 const { t, counted, detectLanguage, setLanguage, localizeDocument } = await import(`./i18n.mjs?v=${version}`);
 const language = setLanguage(detectLanguage(navigator.languages));
@@ -14,8 +14,13 @@ const state = new DesignerCoordinator();
 let designer, leaving = false, discarded = false, returnUrl, route, saved = false, folderId, request, config, auth, draftStore, offeredDraft;
 // The stored artifact is one the designer cannot read, so reloading it cannot help.
 let unreadable = false, openingAccessRefused = false, forwardedFindings;
+// The read that settles a lost create or new version was refused for the session.
+let creationCheckSignedOut = false;
 function message(text, error = false) { ui.message.textContent = text; ui.message.dataset.tone = error ? 'error' : 'info'; }
 function dirty() { return !leaving && state.dirty(designer); }
+// A new field opens its type chooser as a dialog over the whole page, which would cover the offer of a
+// retained draft and leave neither Restore nor Discard reachable. The chooser waits for that decision.
+function choiceWouldCoverOffer() { return route?.kind === 'field' && !route.id && Boolean(offeredDraft); }
 function canRecheckOpeningAccess() {
   return !offeredDraft && !dirty() && ((state.loadFailed && openingAccessRefused) ||
     (state.ready && !state.writable && !state.reloadRequired));
@@ -59,7 +64,8 @@ function update() {
   ui['check-save'].hidden = !state.canCheckSave;
   ui['check-save'].disabled = state.saving || state.checking;
   ui['recheck-access'].hidden = !(state.canRecheckAccess || canRecheckOpeningAccess());
-  ui['sign-in-again'].hidden = !(openingAccessRefused || canRecheckOpeningAccess() || state.canRecheckAccess || (state.reloadRequired && !route?.id && !state.uncertainCreation));
+  ui['sign-in-again'].hidden = !(openingAccessRefused || canRecheckOpeningAccess() || state.canRecheckAccess ||
+    (state.reloadRequired && !route?.id && !state.uncertainCreation) || (creationCheckSignedOut && state.uncertainCreation));
   ui['sign-in-again'].disabled = state.saving || state.checking;
   ui['recheck-access'].disabled = state.saving || state.checking;
   ui['server-issues'].hidden = !report.server.length;
@@ -87,7 +93,7 @@ function update() {
   // Until it is edited, an artifact is unmodified, whether read from the server or new; only a save made here is reported as saved.
   ui.state.textContent = t(state.loadFailed ? 'State.LoadFailed' : !state.ready ? 'Page.Loading' : state.reloadRequired ? 'State.ReloadRequired' : state.saving ? 'State.Saving' : !state.writable ? 'State.ReadOnly' : dirty() ? 'State.Modified' : saved ? 'State.Saved' : 'State.Unmodified');
   if (designer) {
-    designer.readOnly = !state.writable;
+    designer.readOnly = !state.writable || choiceWouldCoverOffer();
     designer.inert = !state.ready || state.loadFailed || state.saving || Boolean(offeredDraft);
   }
   keepDraft();
@@ -130,14 +136,62 @@ ui.reload.addEventListener('click', () => {
   if (!state.loadFailed) clearDraft();
   leaving = true; location.reload();
 });
+/** Read a resource, answering null when the server reports that it does not exist. */
+async function readIfPresent(url) {
+  try { return await request(url); } catch (error) { if (error?.status === 404) return null; throw error; }
+}
+/**
+ * Settle a create or new version whose answer was lost by reading the identity it was sent under, and
+ * for an absent new version the template it was drawn from. Committed opens what was stored at its edit
+ * address and keeps later edits as unsaved changes. A create refused as occupied moves to that address
+ * too, keeping the designer's content, and needs a reload before another save. Absent permits Save again
+ * under the same identity; anything else leaves Save blocked, and the check may be repeated.
+ */
+async function settleCreation(check, creation) {
+  const url = `${config.resourceRestAPI}/${route.collection}/${encodeURIComponent(resourcePathId(creation.id))}`;
+  const created = await readIfPresent(url);
+  let source, writable = state.writable;
+  if (created) writable = canEdit((await request(`${url}/report`)).data, created.data);
+  else if (creation.operation === 'version') {
+    const [latest, report] = await Promise.all([request(artifactUrl()), request(`${artifactUrl()}/report`)]);
+    source = latest; writable = canEdit(report.data, latest.data);
+  }
+  if (!check.current()) return;
+  const result = state.settleCreation(check, { created, source, writable });
+  if (result === 'committed' || result === 'adopted') {
+    saved = true;
+    route.id = created.data['@id'];
+    const address = new URL(location.href);
+    address.pathname = `/${route.kind}s/edit/${encodeURIComponent(resourcePathId(route.id))}`;
+    window.history.replaceState(null, '', address.href);
+    // Without later edits the designer opens what was stored, as a confirmed save does. What an earlier
+    // attempt stored is never loaded over the designer's content, which may hold more than it.
+    if (result === 'committed' && !state.dirty(designer)) {
+      try {
+        designer.loadArtifact(created.data, { preserveView: true });
+        state.loaded({ artifact: created.data, projection: designer.currentArtifact, etag: created.etag, writable: true });
+        state.reloadRequired = !created.etag;
+      } catch { /* The submitted projection stays the baseline the designer is compared with. */ }
+    }
+    selectDraftStore();
+  }
+  if (result === 'obsolete') return;
+  if (result === 'adopted') { message(t('Message.SavedNewIdentity'), true); return; }
+  const key = result === 'committed' ? (state.reloadRequired ? 'Error.NoValidator' : 'Message.SaveConfirmed') :
+    result === 'absent' ? 'Message.ChangesKept' : result === 'readonly' ? 'Error.RecoveryReadOnly' : 'Error.RecoveryUnresolved';
+  message(t(key), key.startsWith('Error.'));
+}
 async function checkRecovery() {
   // A clean read-only opening has no local work to reconcile; fetch content and access together again.
   if (canRecheckOpeningAccess() && !state.saving && !state.checking) { location.reload(); return; }
   const access = state.canRecheckAccess;
+  const creation = state.creation;
   const check = state.beginCheck();
   if (!check) return;
+  creationCheckSignedOut = false;
   update(); message(t(access ? 'Message.CheckingAccess' : 'Message.CheckingSave'));
   try {
+    if (creation) { await settleCreation(check, creation); return; }
     const url = artifactUrl();
     const [latest, report] = await Promise.all([request(url), request(`${url}/report`)]);
     if (!check.current()) return;
@@ -146,8 +200,10 @@ async function checkRecovery() {
     const recovered = result === 'saved' || result === 'unchanged';
     message(t(result === 'saved' ? 'Message.SaveConfirmed' : result === 'unchanged' ? (access ? 'Message.AccessRestored' : 'Message.SaveUnchanged') :
       result === 'readonly' ? 'Error.RecoveryReadOnly' : 'Error.RecoveryUnresolved'), !recovered);
-  } catch {
-    if (check.current()) message(t(access ? 'Error.AccessUnavailable' : 'Error.RecoveryUnavailable'), true);
+  } catch (error) {
+    if (!check.current()) return;
+    creationCheckSignedOut = Boolean(creation) && error?.status === 401;
+    message(t(creationCheckSignedOut ? 'Error.SessionExpired' : access ? 'Error.AccessUnavailable' : 'Error.RecoveryUnavailable'), true);
   } finally { state.finishCheck(check); update(); }
 }
 ui['check-save'].addEventListener('click', checkRecovery);
@@ -176,7 +232,7 @@ ui['restore-draft'].addEventListener('click', () => {
 });
 ui['discard-draft'].addEventListener('click', () => {
   if (!offeredDraft || state.saving || state.checking) return;
-  if (offeredDraft.coordinator.uncertainCreation) { message(t('Draft.UnknownCreate'), true); return; }
+  if (!discardable(offeredDraft)) { message(t('Draft.UnknownCreate'), true); return; }
   if (window.confirm(t('Message.ConfirmDiscard'))) { clearDraft(); update(); }
 });
 function confirmVersion(impact) {
@@ -209,6 +265,8 @@ ui.save.addEventListener('click', async () => {
     update(); message(t('State.Saving'));
     const result = await saveArtifact({ request, base: config.resourceRestAPI, route,
       artifact: attempt.artifact, etag: state.etag, folderId, confirmVersion,
+      // Every attempt of a create or new version reuses one identity until a write under it is confirmed.
+      identity: () => state.identity(() => mintIdentity(route.collection)),
       stillCurrent: () => state.matches(attempt, designer), onWrite: write => { attempt.write = write; keepDraft(attempt); } });
     if (!attempt.current()) return;
     if (!result) { message(t(discarded ? 'Message.ChangesDiscarded' : 'Message.ChangesKept')); return; }
@@ -338,7 +396,7 @@ try {
       designer.newArtifact(route.kind === 'field' ? undefined : route.kind);
       state.loaded({writable: canCreate(folder)});
     }
-    designer.readOnly = !state.writable;
+    designer.readOnly = !state.writable || choiceWouldCoverOffer();
     ui.editor.hidden = false;
     if (!state.reloadRequired) message(state.writable ? '' : t('Message.ReadOnly'));
     update();

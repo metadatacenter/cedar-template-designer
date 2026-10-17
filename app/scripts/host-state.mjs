@@ -1,5 +1,5 @@
 import { applyAuthorChanges } from './author-changes.mjs';
-import { sameRevision, updateOutcome } from './save-recovery.mjs';
+import { creationOutcome, sameRevision, updateOutcome } from './save-recovery.mjs';
 
 /** Compare documents independently of object key order. */
 export function artifactKey(value) {
@@ -28,6 +28,12 @@ export class DesignerCoordinator {
   #committed = false;
   #projection;
   #pendingUpdate;
+  // The identity the next create or new version is sent under. It is minted once and kept, across
+  // reloads through the retained draft, until a write under it is confirmed, so that no retry of an
+  // unsettled write can store a second artifact.
+  #identity;
+  // The create or new version whose answer was lost, until a read of its identity settles it.
+  #creation;
 
   loaded({ artifact, projection = artifact, etag, writable }) {
     if (!this.#active) return;
@@ -45,15 +51,31 @@ export class DesignerCoordinator {
     this.loadFailed = false;
     this.#server = undefined;
     this.#committed = false;
+    this.#identity = undefined;
+    this.#creation = undefined;
+  }
+  /** The identity for this page's next create or new version, minted by `mint` the first time. */
+  identity(mint) {
+    this.#identity ??= mint() ?? undefined;
+    return this.#identity ?? null;
+  }
+  #creationOf(write, attempt) {
+    if (!write?.createsIdentity || !write.identity) return undefined;
+    return structuredClone({ operation: write.operation, id: write.identity, submitted: write.body, projection: attempt.projection,
+      ...(write.operation === 'version' ? { source: this.stored?.['@id'], etag: this.etag } : {}) });
   }
   captureRecovery(attempt) {
     const pending = this.#pendingUpdate;
     const write = attempt?.write;
+    // Written before the request is sent, so that a lost answer can be settled after a reload.
+    const creation = this.#creationOf(write, attempt) ?? this.#creation;
     return structuredClone({
       stored: this.stored, projection: this.#projection, etag: this.etag,
       committed: this.#committed, reloadRequired: this.reloadRequired || Boolean(write),
       server: this.#server,
       uncertainCreation: this.uncertainCreation || Boolean(write?.createsIdentity),
+      identity: creation?.id ?? this.#identity,
+      creation,
       pending: write && !write.createsIdentity && this.stored && this.etag
         ? { opened: this.stored, submitted: write.body, etag: this.etag, purpose: 'save', projection: attempt.projection }
         : pending ? { opened: pending.opened, submitted: pending.submitted, etag: pending.etag,
@@ -71,6 +93,15 @@ export class DesignerCoordinator {
     if (copy.server && (typeof copy.server.key !== 'string' || !Array.isArray(copy.server.issues) ||
       !copy.server.issues.every(issue => object(issue) && typeof issue.message === 'string' &&
         typeof issue.location === 'string' && ['error', 'warning'].includes(issue.severity) && issue.source === 'server'))) throw new Error();
+    // A journal written before identities were sent has neither field and keeps its guard.
+    const creation = copy.creation;
+    if ((copy.identity !== undefined && typeof copy.identity !== 'string') || (creation !== undefined && (!object(creation) ||
+      !copy.uncertainCreation || creation.id !== copy.identity || !object(creation.submitted) || !object(creation.projection) ||
+      (creation.occupied !== undefined && !(creation.occupied === true && creation.operation === 'create')) ||
+      !(creation.operation === 'create'
+        ? copy.stored === undefined && creation.source === undefined && creation.etag === undefined && creation.submitted['@id'] === creation.id
+        : creation.operation === 'version' && typeof creation.source === 'string' && copy.stored?.['@id'] === creation.source &&
+          typeof creation.etag === 'string' && creation.etag === copy.etag && creation.submitted['@id'] === creation.source)))) throw new Error();
     const same = this.ready && (copy.stored === undefined ? this.stored === undefined :
       sameRevision(copy.etag, this.etag) && artifactKey(copy.stored) === artifactKey(this.stored));
     this.#generation++;
@@ -79,6 +110,8 @@ export class DesignerCoordinator {
     this.#pendingUpdate = copy.pending ? { ...copy.pending, attempt: { projection: copy.pending.projection } } : undefined;
     this.reloadRequired = (copy.stored !== undefined && copy.reloadRequired) || copy.uncertainCreation || !same || !this.writable;
     this.uncertainCreation = copy.uncertainCreation;
+    this.#identity = copy.identity;
+    this.#creation = creation;
     if (this.reloadRequired && !this.uncertainCreation && !this.#pendingUpdate && copy.stored && copy.etag && copy.projection)
       this.#pendingUpdate = { opened: copy.stored, submitted: copy.stored, etag: copy.etag,
         purpose: 'access', attempt: { projection: copy.projection } };
@@ -133,6 +166,7 @@ export class DesignerCoordinator {
     this.reloadRequired = requiresReload || !etag;
     this.#committed = true;
     this.#server = undefined;
+    if (write?.createsIdentity) { this.#identity = undefined; this.#creation = undefined; }
   }
   dirty(designer) {
     if (!this.#committed) return Boolean(designer?.isDirty);
@@ -141,7 +175,12 @@ export class DesignerCoordinator {
   }
   failed(error, attempt) {
     if (!attempt?.current()) return;
-    const unconfirmed = Boolean(attempt.write && (error.status == null || error.status === 0 ||
+    const write = attempt.write;
+    // A refusal because the identity is already held shows only that some write under it was stored, and a
+    // lost answer may hide which. Reading the identity settles it. It is never taken for success or failure.
+    const occupied = Boolean(write?.createsIdentity && write.identity && (write.operation === 'create'
+      ? [412, 428].includes(error.status) : error.status === 412 && error.data?.errorKey === 'nodeAlreadyPresent'));
+    const unconfirmed = occupied || Boolean(write && (error.status == null || error.status === 0 ||
       (error.status >= 200 && error.status < 300) || error.status === 408 || error.status >= 500));
     if (unconfirmed || [401, 403, 404, 409, 412, 428].includes(error.status)) this.reloadRequired = true;
     const accessRefused = [401, 403].includes(error.status);
@@ -149,7 +188,14 @@ export class DesignerCoordinator {
       this.#pendingUpdate = {attempt, opened: structuredClone(this.stored),
         submitted: structuredClone(attempt.write?.body ?? attempt.artifact), etag: this.etag, purpose: accessRefused ? 'access' : 'save'};
     }
-    if (unconfirmed && attempt.write.createsIdentity) this.uncertainCreation = true;
+    if (unconfirmed && write.createsIdentity) {
+      this.uncertainCreation = true;
+      const creation = this.#creationOf(write, attempt);
+      // A create refused as occupied stored nothing itself. What its identity holds was stored by an
+      // earlier attempt, whose content may differ from this one's, and the settlement must know that.
+      this.#creation = creation && occupied && write.operation === 'create' ? { ...creation, occupied: true } : creation;
+      if (write.identity) this.#identity = write.identity;
+    }
     const report = error.data?.objects?.validationReport ?? error.data?.validationReport;
     const issues = [];
     for (const severity of ['error', 'warning']) {
@@ -162,7 +208,14 @@ export class DesignerCoordinator {
     this.#server = { key: attempt.key, issues };
     return unconfirmed;
   }
-  get canCheckSave() { return this.#active && ['save', 'acknowledgement'].includes(this.#pendingUpdate?.purpose) && !this.uncertainCreation; }
+  // An unsettled create or new version is checked by reading the identity it sent. One sent before
+  // identities were sent has none, so it cannot be checked and stays guarded.
+  get canCheckSave() {
+    return this.#active && (this.uncertainCreation ? Boolean(this.#creation)
+      : ['save', 'acknowledgement'].includes(this.#pendingUpdate?.purpose));
+  }
+  /** The unsettled create or new version, with the template it was drawn from. */
+  get creation() { return this.uncertainCreation && this.#creation ? structuredClone({ ...this.#creation, opened: this.stored }) : undefined; }
   get canRecheckAccess() { return this.#active && this.#pendingUpdate?.purpose === 'access' && !this.uncertainCreation; }
   beginCheck() {
     if (!(this.canCheckSave || this.canRecheckAccess) || this.saving || this.checking) return null;
@@ -190,6 +243,41 @@ export class DesignerCoordinator {
     this.#server = undefined;
     this.#pendingUpdate = undefined;
     return result;
+  }
+  /**
+   * Settle an unsettled create or new version from reads of its identity (`created`, null when not
+   * found) and, when that is absent for a version, of its source. Committed adopts what was stored as
+   * the saved artifact, keeping the submitted projection as the baseline later edits are compared with.
+   * A create refused as occupied is 'adopted' instead: its identity is taken as the saved artifact, but
+   * an earlier attempt stored it, so nothing is a baseline for the designer's content. That content stays
+   * unsaved, and the artifact must be reloaded before another save, as a new artifact the designer has
+   * not adopted must be. Absent permits Save again under the same identity. Anything else changes nothing.
+   */
+  settleCreation(check, { created = null, source, writable }) {
+    if (!check?.current() || !this.uncertainCreation || !this.#creation) return 'obsolete';
+    const creation = { ...this.#creation, opened: this.stored };
+    const result = creationOutcome(creation, created, source);
+    if (result === 'unresolved') return result;
+    if (!writable) return 'readonly';
+    const adopted = result === 'committed' && creation.occupied === true;
+    if (result === 'committed') {
+      this.stored = structuredClone(created.data);
+      // Without a baseline no retained draft can be rechecked into a save that would merge onto it.
+      this.#projection = adopted ? undefined : structuredClone(creation.projection);
+      this.etag = created.etag;
+      this.#committed = true;
+      this.reloadRequired = adopted || !created.etag;
+      this.#identity = undefined;
+    } else {
+      if (creation.operation === 'version') { this.stored = structuredClone(source.data); this.etag = source.etag; }
+      this.reloadRequired = false;
+    }
+    this.writable = true;
+    this.uncertainCreation = false;
+    this.#creation = undefined;
+    this.#pendingUpdate = undefined;
+    this.#server = undefined;
+    return adopted ? 'adopted' : result;
   }
   finishCheck(check) { if (check?.current()) this.checking = false; }
   finish(attempt) { if (attempt?.current()) this.saving = false; }

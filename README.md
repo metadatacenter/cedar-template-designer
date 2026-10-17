@@ -106,10 +106,21 @@ not inherit permission or an ETag from the recovery file. Download/import recove
 files retain unfinished controls and the evidence for interrupted writes. A failed
 storage write is reported so the author can download before leaving.
 
-The host journals immediately before dispatching a write. Uncertain create and
-version operations remain blocked through reload, including attempted discard or
-import; checking Workspace is still necessary because the server has no durable
-operation identifier for resolving these outcomes. Update recovery rechecks the
-stored revision and access before permitting another conditional write. Explicit
-confirmed discard clears ordinary drafts. Closing a tab ends automatic retention;
-a downloaded recovery file can be imported at the same account and route later.
+The host journals immediately before dispatching a write. A create is a PUT under
+an identity the host mints on the deployment's base, and a new version names the
+draft identity it asks for in `draft_id`. The journal keeps that identity and the
+submitted definition, and for a new version also the source template and the ETag
+it was opened with. Every attempt reuses the identity until its outcome is settled.
+When an answer is lost, Save stays blocked through reload and sign-in, and Discard
+is refused. Check save status then reads the identity. If the artifact is stored,
+it opens at its edit address and later edits remain as unsaved changes. If it is
+absent, Save sends the write again under the same identity. Any other answer leaves
+Save blocked, and the check may be repeated. A create whose identity the server
+already holds (412 or 428) is checked the same way. That attempt stored nothing,
+so an artifact found there was stored by an earlier attempt whose content may
+differ. The page moves to its edit address and keeps the designer's content. The
+artifact must be reloaded before the next save. While the deployment's base
+cannot be derived from the resource API, the server mints the identity as before,
+and a lost answer cannot be checked. Update recovery rechecks the stored revision
+and access before permitting another conditional write. Explicit confirmed
+discard clears ordinary drafts. Closing a tab ends automatic retention.

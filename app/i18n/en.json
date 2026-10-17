@@ -83,7 +83,7 @@
     "InvalidImpact": "The server did not provide a valid update assessment. Your changes have been kept.",
     "DocumentChanged": "The document changed while saving was being prepared. Review it and save again.",
     "InvalidArtifact": "The repository returned a different or incomplete artifact. Reload to try again.",
-    "SaveUnconfirmed": "We could not confirm whether your changes were saved. Your changes remain in the designer. Check Workspace before saving again.",
+    "SaveUnconfirmed": "We could not confirm whether your changes were saved. Your changes remain in the designer. Use Check save status to find out before saving again.",
     "Unreachable": "The server could not be reached. Check your connection and try again.",
     "Unreadable": "CEDAR cannot read this artifact, so it cannot be opened. {{detail}}",
     "SessionEnded": "Your session has expired. Sign in again.",
@@ -103,9 +103,9 @@
     "Restore": "Restore draft",
     "Discard": "Discard retained draft",
     "Restored": "Your draft has been restored.",
-    "RestoredGuarded": "Your draft has been restored. Check access and save status before saving again.",
+    "RestoredGuarded": "Your draft has been restored. Use Check save status or Recheck access before saving again.",
     "Invalid": "This retained draft cannot be restored here. Use the same account, deployment and artifact.",
-    "UnknownCreate": "The previous create or version operation is unresolved. Keep this page open and check Workspace before creating another artifact.",
+    "UnknownCreate": "The previous create or version operation is unresolved. Restore the draft and use Check save status before discarding it.",
     "SignInAgain": "Sign in again"
   }
 }

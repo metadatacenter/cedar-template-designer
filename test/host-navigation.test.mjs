@@ -1,4 +1,4 @@
-import { test } from 'node:test';
+import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import * as core from '../app/scripts/host-core.mjs';
@@ -63,43 +63,63 @@ async function host(isDirty = true, languages = ['en-US'], existing = false, imp
   const fetch = async url => ({ ok: true, json: async () => url.startsWith('config/') ? config : Object.fromEntries(
     ['cedar-embeddable-editor', 'cedar-embeddable-term-picker', 'cedar-embeddable-designer'].map(name => [name, { sha256: 'test' }]),
   ) });
-  // Holds templates as the resource server does. Creation mints the identity and starts at Draft
-  // 0.0.1. An update needs the current ETag, refuses a change to lifecycle metadata, and answers
-  // with the graph record rather than the document. An entry that is an error fails its read.
-  const repository = new Map(), impacts = [];
+  // Holds templates as the resource server does. Creation stores the identity the request names and
+  // starts at Draft 0.0.1; a repeat that names an identity already held is refused with 428. A new
+  // version is stored under the draft identity the request names. An update needs the current ETag,
+  // refuses a change to lifecycle metadata, and answers with the graph record rather than the
+  // document. An entry that is an error fails its read, and an artifact never stored reads as not
+  // found. `faults` answers the next write with an error: `committed` stores the write first, as a
+  // server whose answer is lost does, and `refused` leaves everything as it was.
+  const repository = new Map(), impacts = [], faults = [];
   if (existing) repository.set('template-id', { data: { '@id': 'template-id', 'schema:name': 'Study', 'pav:version': '0.0.1', 'bibo:status': 'bibo:draft' }, etag: '"one"' });
   let revision = 0;
-  const store = (id, data) => {
-    const entry = { data: { ...structuredClone(data), '@id': id }, etag: `"${++revision}"` };
+  const store = (id, data, identity = id) => {
+    const entry = { data: { ...structuredClone(data), '@id': identity }, etag: `"${++revision}"` };
     repository.set(id, entry);
     return entry;
   };
   const request = async (url, { method = 'GET', body, etag } = {}) => {
     requests.push({ method, url, ...(etag ? { etag } : {}) });
-    const [, collection, id, rest] = new URL(url).pathname.split('/').map(decodeURIComponent);
+    const address = new URL(url);
+    const [, collection, id, rest] = address.pathname.split('/').map(decodeURIComponent);
     const current = id => {
       if (repository.get(id)?.etag !== etag) throw new core.BackendError(412);
       return repository.get(id).data;
     };
+    const writing = method !== 'GET' && id !== 'check-update-template';
+    const fault = writing ? faults.shift() : undefined;
+    if (fault?.refused) throw fault.refused;
+    const answer = result => { if (fault?.committed) throw fault.committed; return result; };
     if (method === 'POST' && collection === 'templates') {
-      return structuredClone(store('created-template', { ...body, 'pav:version': '0.0.1', 'bibo:status': 'bibo:draft' }));
+      return answer(structuredClone(store('created-template', { ...body, 'pav:version': '0.0.1', 'bibo:status': 'bibo:draft' })));
+    }
+    if (method === 'PUT' && collection === 'templates' && !etag) {
+      if (repository.has(id)) throw new core.BackendError(428);
+      const created = store(id, { ...body, 'pav:version': '0.0.1', 'bibo:status': 'bibo:draft', 'pav:createdOn': 'now' }, body['@id']);
+      return answer({ data: structuredClone(created.data), etag: created.etag });
     }
     if (method === 'POST' && id === 'check-update-template') return { data: impacts.shift() ?? { canBeUpdated: true } };
     if (method === 'POST' && id === 'publish-create-draft-template') {
       const source = current(rest);
-      const draft = store('draft-template', { ...body, 'pav:version': '0.0.2', 'bibo:status': 'bibo:draft', 'pav:previousVersion': source['@id'] });
-      return { data: { '@id': 'draft-template', resourceType: 'template' }, etag: draft.etag };
+      const named = address.searchParams.get('draft_id');
+      const draftId = named ?? 'draft-template';
+      if (repository.has(core.resourcePathId(draftId))) throw new core.BackendError(412, { errorKey: 'nodeAlreadyPresent' });
+      // Publishing the source gives it a new revision; the draft takes the next in the series.
+      repository.set(rest, { data: { ...source, 'bibo:status': 'bibo:published' }, etag: '"published"' });
+      const draft = store(core.resourcePathId(draftId), { ...body, 'pav:version': '0.0.2', 'bibo:status': 'bibo:draft', 'pav:previousVersion': source['@id'] }, draftId);
+      return answer({ data: { '@id': draftId, resourceType: 'template' }, etag: draft.etag });
     }
     if (method === 'PUT') {
       const stored = current(id);
       if (['pav:version', 'bibo:status', 'pav:previousVersion'].some(key => stored[key] !== body[key])) throw new core.BackendError(400);
-      return { data: { '@id': id, resourceType: 'template' }, etag: store(id, body).etag };
+      return answer({ data: { '@id': stored['@id'], resourceType: 'template' }, etag: store(id, body, stored['@id']).etag });
     }
     if (method === 'GET' && !rest && repository.has(id)) {
       const entry = repository.get(id);
       if (entry instanceof Error) throw entry;
       return structuredClone(entry);
     }
+    if (method === 'GET' && !rest && collection === 'templates') throw new core.BackendError(404);
     return { data: { '@id': 'template-id', homeFolderId: 'home', currentUserPermissions: {capabilities: ['createInFolder', 'updateResource']} }, etag: '"one"' };
   };
   const source = (await readFile(new URL('../app/scripts/host.mjs', import.meta.url), 'utf8'))
@@ -122,10 +142,15 @@ async function host(isDirty = true, languages = ['en-US'], existing = false, imp
   if (i18n.language === 'en') assert.equal(node('state').textContent, isDirty ? 'Modified' : 'Unmodified');
   const closeVersion = choice => { node('version-dialog').returnValue = choice; events.get('version-dialog:close')(); };
   return { change: () => events.get('designer:dirtyChange')(), closeVersion, designer, document, unload, navigations, resolveSave, rejectSave,
-    save: () => events.get('save:click')(), back: () => events.get('back:click')(), node, location, window, requests, repository, impacts };
+    save: () => events.get('save:click')(), back: () => events.get('back:click')(), check: () => events.get('check-save:click')(),
+    recheck: () => events.get('recheck-access:click')(), node, location, window, requests, repository, impacts, faults };
 }
 
 const settle = () => new Promise(resolve => setImmediate(resolve));
+// The identity the host mints for a create or new version, on the base https://repo.example/.
+const UUID = '6a3d1f0e-2b4c-4d5e-8f60-718293a4b5c6';
+const MINTED = `https://repo.example/templates/${UUID}`;
+const minting = t => t.mock.method(globalThis.crypto, 'randomUUID', () => UUID);
 
 for (const dirty of [true, false]) {
   test(`saving a new artifact stays in Designer at its edit address (dirty=${dirty})`, async () => {
@@ -186,30 +211,34 @@ test('saving an existing artifact keeps the open document, and the next save use
   assert.deepEqual(h.navigations, [{ url: 'https://workspace.example/folders/folder-id', blocked: false }]);
 });
 
-test('a second save after creating an artifact updates it with the ETag the creation returned', async () => {
+test('a second save after creating an artifact updates it with the ETag the creation returned', async t => {
+  minting(t);
   const h = await host(true, ['en-US'], false, null, true);
   h.designer.currentArtifact = { 'schema:name': 'Study' };
   const before = h.requests.length;
   await h.save();
   assert.equal(h.node('state').textContent, 'Saved');
-  assert.equal(h.location.pathname, '/templates/edit/created-template');
+  assert.equal(h.location.pathname, `/templates/edit/${UUID}`);
   h.designer.currentArtifact = { ...h.designer.currentArtifact, 'schema:name': 'Study, revised' };
   h.designer.isDirty = true;
   h.change();
   assert.equal(h.node('state').textContent, 'Modified');
   await h.save();
+  // The create puts the identity it minted, and every later request uses that identity.
   assert.deepEqual(h.requests.slice(before), [
-    { method: 'POST', url: 'https://resource.example/templates?folder_id=folder-id' },
-    { method: 'GET', url: 'https://resource.example/templates/created-template' },
-    { method: 'POST', url: 'https://resource.example/command/check-update-template/created-template' },
-    { method: 'PUT', url: 'https://resource.example/templates/created-template', etag: '"1"' },
+    { method: 'PUT', url: `https://resource.example/templates/${UUID}?folder_id=folder-id` },
+    { method: 'GET', url: `https://resource.example/templates/${UUID}` },
+    { method: 'POST', url: `https://resource.example/command/check-update-template/${UUID}` },
+    { method: 'PUT', url: `https://resource.example/templates/${UUID}`, etag: '"1"' },
   ]);
-  assert.equal(h.repository.get('created-template').data['schema:name'], 'Study, revised');
+  assert.equal(h.repository.get(UUID).data['@id'], MINTED);
+  assert.equal(h.repository.get(UUID).data['schema:name'], 'Study, revised');
   assert.equal(h.node('state').textContent, 'Saved');
   assert.deepEqual(h.navigations, []);
 });
 
-test('confirming a new version opens the new draft, and the next save updates the draft', async () => {
+test('confirming a new version opens the new draft, and the next save updates the draft', async t => {
+  minting(t);
   const h = await host(true, ['en-US'], true, null, true);
   h.designer.currentArtifact = { ...h.repository.get('template-id').data, 'schema:name': 'Study, revised' };
   h.impacts.push({ canBeUpdated: false, numberOfInstances: 9, oldVersion: '0.0.1' });
@@ -218,7 +247,7 @@ test('confirming a new version opens the new draft, and the next save updates th
   while (!h.node('version-dialog').open) await settle();
   h.closeVersion('confirm');
   await saving;
-  assert.equal(h.location.pathname, '/templates/edit/draft-template');
+  assert.equal(h.location.pathname, `/templates/edit/${UUID}`);
   assert.equal(h.designer.currentArtifact['pav:version'], '0.0.2');
   assert.equal(h.node('state').textContent, 'Saved');
   h.designer.currentArtifact = { ...h.designer.currentArtifact, 'schema:name': 'Study, second revision' };
@@ -227,12 +256,13 @@ test('confirming a new version opens the new draft, and the next save updates th
   await h.save();
   assert.deepEqual(h.requests.slice(before), [
     { method: 'POST', url: 'https://resource.example/command/check-update-template/template-id' },
-    { method: 'POST', url: 'https://resource.example/command/publish-create-draft-template/template-id', etag: '"one"' },
-    { method: 'GET', url: 'https://resource.example/templates/draft-template' },
-    { method: 'POST', url: 'https://resource.example/command/check-update-template/draft-template' },
-    { method: 'PUT', url: 'https://resource.example/templates/draft-template', etag: '"1"' },
+    { method: 'POST', url: `https://resource.example/command/publish-create-draft-template/template-id?draft_id=${encodeURIComponent(MINTED)}`, etag: '"one"' },
+    { method: 'GET', url: `https://resource.example/templates/${UUID}` },
+    { method: 'POST', url: `https://resource.example/command/check-update-template/${UUID}` },
+    { method: 'PUT', url: `https://resource.example/templates/${UUID}`, etag: '"1"' },
   ]);
-  assert.equal(h.repository.get('draft-template').data['schema:name'], 'Study, second revision');
+  assert.equal(h.repository.get(UUID).data['@id'], MINTED);
+  assert.equal(h.repository.get(UUID).data['schema:name'], 'Study, second revision');
   assert.deepEqual(h.navigations, []);
 });
 
@@ -403,4 +433,206 @@ test('keeping editing from the version dialog stays in the designer with the cha
   assert.equal(h.designer.loads.length, 1);
   assert.equal(h.node('message').textContent, 'Not saved. Your changes remain in the designer.');
   assert.equal(h.unload(), true);
+});
+
+// Exceptional controls appear only while their condition exists.
+const RECOVERY = ['check-save', 'recheck-access', 'draft-offer', 'sign-in-again', 'reload'];
+const shown = h => RECOVERY.filter(id => h.node(id).hidden === false);
+for (const existing of [false, true]) test(`a ${existing ? 'opened' : 'new'} template offers no recovery control while opening, editing or after saving`, async t => {
+  minting(t);
+  const h = await host(false, ['en-US'], existing, null, true);
+  assert.deepEqual(shown(h), []);
+  h.designer.currentArtifact = { ...(existing ? h.repository.get('template-id').data : {}), 'schema:name': 'Study, edited' };
+  h.designer.isDirty = true; h.change();
+  assert.equal(h.node('state').textContent, 'Modified');
+  assert.deepEqual(shown(h), []);
+  await h.save();
+  assert.equal(h.node('state').textContent, 'Saved');
+  assert.deepEqual(shown(h), []);
+});
+
+/** Save a template that needs a new version, and confirm the version dialog. */
+async function saveNewVersion(h) {
+  h.impacts.push({ canBeUpdated: false, numberOfInstances: 1, oldVersion: '0.0.1' });
+  h.node('version-dialog').open = false;
+  const saving = h.save();
+  while (!h.node('version-dialog').open) await settle();
+  h.closeVersion('confirm');
+  await saving;
+}
+const successors = h => [...h.repository.values()].filter(entry => entry.data?.['pav:previousVersion'] === 'template-id');
+const versionWrites = h => h.requests.filter(request => request.url.includes('/publish-create-draft-template/'));
+
+for (const [label, refusal, message] of [
+  ['refused permission', new core.BackendError(403), 'You do not have permission to save this artifact.'],
+  ['refused validation', new core.BackendError(400, { message: 'Validation failed', objects: { validationReport: { errors: [{ location: '/properties/Link', message: 'Invalid default IRI' }] } } }),
+    'Request failed (400). Validation failed'],
+]) test(`a new version with ${label} stays on the template with the edits and creates the draft once corrected`, async t => {
+  minting(t);
+  const h = await host(true, ['en-US'], true, null, true);
+  const opened = structuredClone(h.repository.get('template-id'));
+  h.designer.currentArtifact = { ...opened.data, 'schema:name': 'Study, revised' };
+  h.faults.push({ refused: refusal });
+  await saveNewVersion(h);
+  // Nothing was stored. The page reports the refusal in the existing words and does not take it for a possible success.
+  assert.equal(h.location.pathname, '/templates/edit/template-id');
+  assert.equal(h.node('message').textContent, message);
+  assert.equal(h.node('state').textContent, refusal.status === 400 ? 'Modified' : 'Reload required');
+  assert.equal(h.designer.currentArtifact['schema:name'], 'Study, revised');
+  assert.deepEqual(h.repository.get('template-id'), opened);
+  assert.deepEqual(successors(h), []);
+  assert.equal(h.node('check-save').hidden, true);
+  assert.equal(h.node('recheck-access').hidden, refusal.status !== 403);
+  assert.equal(h.node('server-issues').hidden, refusal.status !== 400);
+  if (refusal.status === 403) { await h.recheck(); assert.equal(h.node('message').textContent.startsWith('Access is restored'), true); }
+  else { h.designer.currentArtifact = { ...h.designer.currentArtifact, 'schema:name': 'Study, corrected' }; h.change(); }
+  assert.equal(h.node('save').disabled, false);
+  await saveNewVersion(h);
+  assert.equal(h.location.pathname, `/templates/edit/${UUID}`);
+  assert.equal(h.node('state').textContent, 'Saved');
+  assert.equal(successors(h).length, 1);
+  assert.equal(successors(h)[0].data['@id'], MINTED);
+  // Both attempts send the validator the template was opened with, and the one identity minted for the draft.
+  assert.deepEqual(versionWrites(h).map(({ url, etag }) => [new URL(url).searchParams.get('draft_id'), etag]), [[MINTED, '"one"'], [MINTED, '"one"']]);
+});
+
+test('a new version whose answer is lost sends nothing more until Check save status finds it absent', async t => {
+  const uuid = minting(t);
+  const h = await host(true, ['en-US'], true, null, true);
+  h.designer.currentArtifact = { ...h.repository.get('template-id').data, 'schema:name': 'Study, revised' };
+  h.faults.push({ refused: new core.BackendError(500) });
+  await saveNewVersion(h);
+  assert.match(h.node('message').textContent, /^We could not confirm whether your changes were saved/);
+  assert.deepEqual(shown(h), ['check-save']);
+  const before = h.requests.length;
+  await h.save();
+  assert.equal(h.requests.length, before, 'a second save sends no further request');
+  await h.check();
+  assert.deepEqual(h.requests.slice(before).map(({ method, url }) => `${method} ${new URL(url).pathname}`).sort(), [
+    `GET /templates/${UUID}`, 'GET /templates/template-id', 'GET /templates/template-id/report']);
+  assert.equal(h.node('message').textContent, 'Not saved. Your changes remain in the designer.');
+  assert.deepEqual(shown(h), []);
+  assert.equal(h.node('save').disabled, false);
+  await saveNewVersion(h);
+  assert.equal(h.location.pathname, `/templates/edit/${UUID}`);
+  assert.equal(successors(h).length, 1);
+  assert.equal(uuid.mock.callCount(), 1, 'the retry reuses the identity');
+});
+
+for (const later of [false, true]) test(`a new version that committed although its answer was lost opens the draft, later edits=${later}`, async t => {
+  minting(t);
+  const h = await host(true, ['en-US'], true, null, true);
+  h.designer.currentArtifact = { ...h.repository.get('template-id').data, 'schema:name': 'Study, revised' };
+  h.faults.push({ committed: new core.BackendError(0) });
+  await saveNewVersion(h);
+  assert.deepEqual(shown(h), ['check-save']);
+  if (later) { h.designer.currentArtifact = { ...h.designer.currentArtifact, 'schema:name': 'Study, later' }; h.change(); }
+  await h.check();
+  assert.equal(h.location.pathname, `/templates/edit/${UUID}`);
+  assert.equal(h.node('message').textContent, 'The stored version matches your submitted changes. Your current edits have been kept.');
+  assert.equal(h.node('state').textContent, later ? 'Modified' : 'Saved');
+  assert.equal(h.designer.currentArtifact['schema:name'], later ? 'Study, later' : 'Study, revised');
+  assert.deepEqual(shown(h), []);
+  assert.equal(h.repository.get('template-id').data['bibo:status'], 'bibo:published');
+  if (!later) return;
+  const before = h.requests.length;
+  await h.save();
+  assert.deepEqual(h.requests.slice(before), [
+    { method: 'POST', url: `https://resource.example/command/check-update-template/${UUID}` },
+    { method: 'PUT', url: `https://resource.example/templates/${UUID}`, etag: '"1"' },
+  ]);
+  assert.equal(successors(h).length, 1);
+  assert.equal(successors(h)[0].data['schema:name'], 'Study, later');
+});
+
+for (const later of [false, true]) test(`a create that committed although its answer was lost opens at its edit address, later edits=${later}`, async t => {
+  minting(t);
+  const h = await host(true, ['en-US'], false, null, true);
+  h.designer.currentArtifact = { 'schema:name': 'Study' };
+  h.faults.push({ committed: new core.BackendError(0) });
+  await h.save();
+  assert.match(h.node('message').textContent, /^We could not confirm whether your changes were saved/);
+  assert.equal(h.node('state').textContent, 'Reload required');
+  assert.deepEqual(shown(h), ['check-save']);
+  if (later) { h.designer.currentArtifact = { 'schema:name': 'Study, later' }; h.change(); }
+  await h.check();
+  assert.equal(h.location.pathname, `/templates/edit/${UUID}`);
+  assert.equal(h.node('message').textContent, 'The stored version matches your submitted changes. Your current edits have been kept.');
+  assert.equal(h.node('state').textContent, later ? 'Modified' : 'Saved');
+  assert.deepEqual(shown(h), []);
+  if (!later) assert.deepEqual(h.designer.loads.at(-1), h.repository.get(UUID).data);
+  const before = h.requests.length;
+  h.designer.currentArtifact = { ...h.designer.currentArtifact, 'schema:name': 'Study, final' }; h.change();
+  await h.save();
+  assert.deepEqual(h.requests.slice(before).slice(-1), [{ method: 'PUT', url: `https://resource.example/templates/${UUID}`, etag: '"1"' }]);
+  assert.equal(h.repository.get(UUID).data['schema:name'], 'Study, final');
+  assert.equal(h.repository.get(UUID).data['pav:createdOn'], 'now', 'the update is applied to what was stored');
+  assert.deepEqual([...h.repository.keys()], [UUID]);
+});
+
+test('a create absent after a lost answer saves again under the same identity', async t => {
+  const uuid = minting(t);
+  const h = await host(true, ['en-US'], false, null, true);
+  h.designer.currentArtifact = { 'schema:name': 'Study' };
+  h.faults.push({ refused: new core.BackendError(503) });
+  await h.save();
+  assert.equal(h.node('save').disabled, true);
+  await h.check();
+  assert.equal(h.node('message').textContent, 'Not saved. Your changes remain in the designer.');
+  assert.equal(h.node('message').dataset.tone, 'info');
+  assert.equal(h.node('state').textContent, 'Modified');
+  assert.deepEqual(shown(h), []);
+  await h.save();
+  assert.equal(h.node('state').textContent, 'Saved');
+  assert.equal(h.location.pathname, `/templates/edit/${UUID}`);
+  assert.deepEqual(h.requests.filter(({ method }) => method === 'PUT').map(({ url }) => url),
+    [`https://resource.example/templates/${UUID}?folder_id=folder-id`, `https://resource.example/templates/${UUID}?folder_id=folder-id`]);
+  assert.equal(uuid.mock.callCount(), 1);
+});
+
+test('a create refused as occupied is checked, never taken for success or failure', async t => {
+  minting(t);
+  const h = await host(true, ['en-US'], false, null, true);
+  h.designer.currentArtifact = { 'schema:name': 'Study, extended' };
+  // An earlier attempt under this identity committed with less content, so the repeat answers 428.
+  const earlier = { 'schema:name': 'Study', '@id': MINTED, 'pav:version': '0.0.1', 'bibo:status': 'bibo:draft' };
+  h.repository.set(UUID, { data: earlier, etag: '"7"' });
+  await h.save();
+  assert.match(h.node('message').textContent, /^We could not confirm whether your changes were saved/);
+  assert.deepEqual(shown(h), ['check-save']);
+  const before = h.requests.length;
+  await h.check();
+  // The identity is adopted, but the designer keeps its own content rather than the earlier attempt's,
+  // and the artifact must be reloaded before another save, as a new artifact the designer has not adopted is.
+  assert.equal(h.location.pathname, `/templates/edit/${UUID}`);
+  assert.equal(h.node('message').textContent, 'Saved as a new artifact. Further changes remain here; reload the saved artifact before saving again.');
+  assert.equal(h.node('state').textContent, 'Reload required');
+  assert.equal(h.designer.currentArtifact['schema:name'], 'Study, extended');
+  assert.deepEqual(shown(h), ['reload']);
+  assert.equal(h.node('save').disabled, true);
+  assert.deepEqual(h.requests.slice(before).filter(({ method }) => method !== 'GET'), []);
+  assert.deepEqual(h.repository.get(UUID).data, earlier);
+  // The designer's content is unsaved, so leaving the page still asks first.
+  assert.equal(h.unload(), true);
+});
+
+for (const [label, answer, message] of [
+  ['refused for the session', new core.BackendError(401), 'Your session has expired. Sign in again before saving.'],
+  ['refused', new core.BackendError(403), 'Save status could not be checked. Your edits have been kept. Check your connection and access, then try again.'],
+  ['unavailable', new core.BackendError(503), 'Save status could not be checked. Your edits have been kept. Check your connection and access, then try again.'],
+]) test(`a create whose check is ${label} stays blocked and can be checked again`, async t => {
+  minting(t);
+  const h = await host(true, ['en-US'], false, null, true);
+  h.designer.currentArtifact = { 'schema:name': 'Study' };
+  h.faults.push({ refused: new core.BackendError(0) });
+  await h.save();
+  h.repository.set(UUID, answer);
+  await h.check();
+  assert.equal(h.node('message').textContent, message);
+  assert.equal(h.node('save').disabled, true);
+  assert.deepEqual(shown(h), answer.status === 401 ? ['check-save', 'sign-in-again'] : ['check-save']);
+  h.repository.delete(UUID);
+  await h.check();
+  assert.equal(h.node('message').textContent, 'Not saved. Your changes remain in the designer.');
+  assert.deepEqual(shown(h), []);
 });
