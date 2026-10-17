@@ -62,6 +62,7 @@
     "Conflict": "Ez az artefaktum megváltozott, mióta megnyitotta. A szerkesztései megmaradtak; mentés előtt nyissa meg újra a legfrissebb verziót.",
     "SessionExpired": "A munkamenete lejárt. Mentés előtt jelentkezzen be újra.",
     "Forbidden": "Nincs jogosultsága az artefaktum mentéséhez.",
+    "VersioningOnlyByOwner": "Új verziót csak a sablon tulajdonosa hozhat létre. A szerkesztései megmaradtak.",
     "RequestFailed": "A kérés sikertelen ({{status}}). {{detail}}",
     "EditsKept": "A szerkesztései megmaradtak.",
     "InvalidSearchCursor": "Érvénytelen tárhelykeresési kurzor.",

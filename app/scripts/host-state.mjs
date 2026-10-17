@@ -11,6 +11,15 @@ function validReport(report) {
   return report?.valid !== false && report?.canSave === true && Array.isArray(report.issues) && report.issues.every(issue => issue?.severity === 'warning');
 }
 
+/**
+ * Whether the server refused a new version because only the template's owner may create one, whatever
+ * role the author holds. Nothing was written, and neither a reload nor signing in again changes who owns
+ * the template, so the page keeps the edits and Save as they were and offers no recovery.
+ */
+export function ownerOnlyRefusal(error) {
+  return error?.status === 403 && error.data?.errorKey === 'versioningOnlyByOwner';
+}
+
 /** Owns the host's readiness, pending write and reports about its submitted document. */
 export class DesignerCoordinator {
   ready = false;
@@ -182,8 +191,9 @@ export class DesignerCoordinator {
       ? [412, 428].includes(error.status) : error.status === 412 && error.data?.errorKey === 'nodeAlreadyPresent'));
     const unconfirmed = occupied || Boolean(write && (error.status == null || error.status === 0 ||
       (error.status >= 200 && error.status < 300) || error.status === 408 || error.status >= 500));
-    if (unconfirmed || [401, 403, 404, 409, 412, 428].includes(error.status)) this.reloadRequired = true;
-    const accessRefused = [401, 403].includes(error.status);
+    const ownerOnly = ownerOnlyRefusal(error);
+    if (unconfirmed || (!ownerOnly && [401, 403, 404, 409, 412, 428].includes(error.status))) this.reloadRequired = true;
+    const accessRefused = !ownerOnly && [401, 403].includes(error.status);
     if ((unconfirmed && !attempt.write.createsIdentity || accessRefused) && this.stored && this.etag) {
       this.#pendingUpdate = {attempt, opened: structuredClone(this.stored),
         submitted: structuredClone(attempt.write?.body ?? attempt.artifact), etag: this.etag, purpose: accessRefused ? 'access' : 'save'};

@@ -35,17 +35,20 @@ for (const setting of ['name','default','occurrences']) for (const depth of [0,1
     assert.equal(state.report(designer).canSave,true);
   });
 }
-for (const depth of [1,3,8]) for (const status of [400,403,404,412,428,500]) for (const edit of ['before','after','none']) {
-  test(`server report depth ${depth}, status ${status}, edit ${edit} belongs to its submitted snapshot`, () => {
+// A 403 refusing a new version to anyone but the template's owner is a refusal of the save alone, as a
+// 400 is. Every other 403 refuses access, so the page must be reloaded before another save.
+for (const depth of [1,3,8]) for (const [status, errorKey] of [[400],[403],[403,'versioningOnlyByOwner'],[404],[412],[428],[500]]) for (const edit of ['before','after','none']) {
+  test(`server report depth ${depth}, status ${status}${errorKey ? ` ${errorKey}` : ''}, edit ${edit} belongs to its submitted snapshot`, () => {
     const {state,designer} = setup(depth), original = structuredClone(designer.currentArtifact);
     const attempt = state.beginSave(designer);
     if (edit === 'before') designer.currentArtifact['schema:name'] = 'Newer';
-    state.failed(new BackendError(status,{objects:{validationReport:{errors:[{location:'/properties/'+'Child/items/properties/'.repeat(depth)+'Link',message:'Invalid default'}]}}}),attempt);
+    state.failed(new BackendError(status,{errorKey,objects:{validationReport:{errors:[{location:'/properties/'+'Child/items/properties/'.repeat(depth)+'Link',message:'Invalid default'}]}}}),attempt);
     state.finish(attempt);
     if (edit === 'after') designer.currentArtifact['schema:name'] = 'Corrected';
     const report = state.report(designer);
     assert.equal(report.server.length,edit==='none'?1:0);
-    assert.equal(state.reloadRequired,[403,404,412,428].includes(status));
+    assert.equal(state.reloadRequired,[403,404,412,428].includes(status)&&errorKey!=='versioningOnlyByOwner');
+    assert.equal(state.canRecheckAccess,status===403&&errorKey!=='versioningOnlyByOwner');
     assert.equal(report.canSave,edit!=='none'&&!state.reloadRequired);
     assert.deepEqual(state.stored,original);
     state.loaded({artifact:designer.currentArtifact,etag:'"two"',writable:true});

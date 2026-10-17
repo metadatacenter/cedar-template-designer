@@ -62,6 +62,8 @@ test('backend errors follow the active language', t_ => {
   t_.after(() => setLanguage('en'));
   setLanguage('hu');
   assert.equal(new BackendError(403).message, 'Nincs jogosultsága az artefaktum mentéséhez.');
+  assert.equal(new BackendError(403, { errorKey: 'versioningOnlyByOwner' }).message,
+    'Új verziót csak a sablon tulajdonosa hozhat létre. A szerkesztései megmaradtak.');
   assert.equal(new BackendError(500).message, 'A kérés sikertelen (500). A szerkesztései megmaradtak.');
 });
 

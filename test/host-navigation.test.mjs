@@ -465,6 +465,7 @@ const versionWrites = h => h.requests.filter(request => request.url.includes('/p
 
 for (const [label, refusal, message] of [
   ['refused permission', new core.BackendError(403), 'You do not have permission to save this artifact.'],
+  ['refused permission to create in its folder', new core.BackendError(403, { errorKey: 'noWriteAccessToFolder' }), 'You do not have permission to save this artifact.'],
   ['refused validation', new core.BackendError(400, { message: 'Validation failed', objects: { validationReport: { errors: [{ location: '/properties/Link', message: 'Invalid default IRI' }] } } }),
     'Request failed (400). Validation failed'],
 ]) test(`a new version with ${label} stays on the template with the edits and creates the draft once corrected`, async t => {
@@ -493,6 +494,41 @@ for (const [label, refusal, message] of [
   assert.equal(successors(h).length, 1);
   assert.equal(successors(h)[0].data['@id'], MINTED);
   // Both attempts send the validator the template was opened with, and the one identity minted for the draft.
+  assert.deepEqual(versionWrites(h).map(({ url, etag }) => [new URL(url).searchParams.get('draft_id'), etag]), [[MINTED, '"one"'], [MINTED, '"one"']]);
+});
+
+// Only the template's owner may create a new version, and the server refuses anyone else with a 403
+// under its own key. Nothing was stored and no recovery can lift that refusal, so the page keeps the
+// edits and Save and offers no recovery control, as it does for a template the server cannot version.
+for (const [label, refusal, message] of [
+  ['to anyone but the owner', new core.BackendError(403, { errorKey: 'versioningOnlyByOwner', parameters: { id: 'template-id' } }),
+    "Only the template's owner can create a new version. Your edits have been kept."],
+  ...['publishOnlyDraft', 'createDraftOnlyFromPublished', 'versioningOnlyOnLatest', 'nonVersionedArtifactType'].map(errorKey =>
+    [`as ${errorKey}`, new core.BackendError(400, { errorKey }), 'Request failed (400). Your edits have been kept.']),
+]) test(`a new version refused ${label} keeps the edits and Save, and offers no recovery control`, async t => {
+  minting(t);
+  const h = await host(true, ['en-US'], true, null, true);
+  const opened = structuredClone(h.repository.get('template-id'));
+  h.designer.currentArtifact = { ...opened.data, 'schema:name': 'Study, revised' };
+  h.faults.push({ refused: refusal });
+  await saveNewVersion(h);
+  assert.equal(h.location.pathname, '/templates/edit/template-id');
+  assert.equal(h.node('message').textContent, message);
+  assert.equal(h.node('message').dataset.tone, 'error');
+  assert.equal(h.node('state').textContent, 'Modified');
+  assert.equal(h.node('save').disabled, false);
+  assert.deepEqual(shown(h), []);
+  assert.equal(h.node('server-issues').hidden, true);
+  assert.equal(h.designer.currentArtifact['schema:name'], 'Study, revised');
+  assert.deepEqual(h.repository.get('template-id'), opened);
+  assert.deepEqual(successors(h), []);
+  // The edits are unsaved, so leaving the page still asks first.
+  assert.equal(h.unload(), true);
+  // Save is offered as it was. Once the server accepts, the draft is created once, under the identity first minted.
+  await saveNewVersion(h);
+  assert.equal(h.location.pathname, `/templates/edit/${UUID}`);
+  assert.equal(h.node('state').textContent, 'Saved');
+  assert.equal(successors(h).length, 1);
   assert.deepEqual(versionWrites(h).map(({ url, etag }) => [new URL(url).searchParams.get('draft_id'), etag]), [[MINTED, '"one"'], [MINTED, '"one"']]);
 });
 

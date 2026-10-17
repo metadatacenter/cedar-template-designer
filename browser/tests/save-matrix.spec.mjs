@@ -178,6 +178,74 @@ test('a new version refused permission is restored after a reload, still guarded
   expect(state.writes).toHaveLength(1);
 });
 
+// Only the template's owner may create a new version, and the server refuses anyone else with a 403
+// under its own key. Nothing was stored and no recovery can lift that refusal, so the page keeps the edits
+// and Save and offers no recovery control. Any other 403 on that request still refuses access, and a
+// template the server cannot version is refused with a 400, as before. As in the matrix above, a case
+// runs in Hungarian as well when it is the first to leave its message.
+const OWNER_ONLY={errorKey:'versioningOnlyByOwner',parameters:{id:'item'}};
+const VERSIONING_REFUSALS={
+  'to anyone but the owner':{status:403,json:OWNER_ONLY},
+  'permission to create in its folder':{status:403,json:{errorKey:'noWriteAccessToFolder'}},
+  ...Object.fromEntries(['publishOnlyDraft','createDraftOnlyFromPublished','versioningOnlyOnLatest','nonVersionedArtifactType']
+    .map(errorKey=>[`as ${errorKey}`,{status:400,json:{errorKey}}])),
+};
+const RECOVERY_CONTROLS='#check-save, #recheck-access, #sign-in-again, #reload, #draft-offer, #server-issues';
+function versioningRefusal(answer,language){
+  const say=(key,params)=>text(language,key,params);
+  if(answer.json.errorKey==='versioningOnlyByOwner')return {message:say('Error.VersioningOnlyByOwner'),access:false};
+  if(answer.status===403)return {message:say('Error.Forbidden'),access:true};
+  return {message:say('Error.RequestFailed',{status:400,detail:say('Error.EditsKept')}),access:false};
+}
+for(const [label,answer] of Object.entries(VERSIONING_REFUSALS)){
+  const hungarian=versioningRefusal(answer,'hu').message;
+  const languages=shownInHungarian.has(hungarian)?['en']:['en','hu'];
+  shownInHungarian.add(hungarian);
+  for(const language of languages)
+    test(`a new version refused ${label}, in ${language}`,async({page})=>{
+      const state=await host(page,'template','edit',true,{language,impact:{canBeUpdated:false,numberOfInstances:3,oldVersion:'0.0.1'}});
+      state.failure=answer;
+      await edit(page,'Refused version');await saveNewVersion(page);
+      const expected=versioningRefusal(answer,language);
+      const message=page.locator('#message'),save=page.locator('#save');
+      await expect(message).toHaveText(expected.message);
+      await expect(message).toHaveAttribute('data-tone','error');
+      await expect(page.locator('#state')).toHaveText(text(language,expected.access?'State.ReloadRequired':'State.Modified'));
+      expect(await page.locator('#editor > *').evaluate(el=>el.currentArtifact['schema:name'])).toBe('Refused version');
+      await expect(page).toHaveURL(/\/templates\/edit\/item$/);
+      if(expected.access){
+        // An access refusal keeps today's guard: Save waits for Recheck access, Sign in again or a reload.
+        await expect(save).toBeDisabled();
+        for(const control of ['#recheck-access','#sign-in-again','#reload'])await expect(page.locator(control)).toBeVisible();
+        await expect(page.locator('#check-save')).toBeHidden();
+      }else{
+        await expect(save).toBeEnabled();
+        // Every control is present to be hidden, so the check cannot pass by matching nothing.
+        const recovery=page.locator(RECOVERY_CONTROLS);
+        await expect(recovery).toHaveCount(6);
+        for(const control of await recovery.all())await expect(control).toBeHidden();
+      }
+      expect(state.writes).toEqual([{path:'/api/command/publish-create-draft-template/item',
+        query:{draft_id:expect.stringMatching(minted('templates'))},body:expect.objectContaining({'schema:name':'Refused version','@id':'item'}),etag:'"opened"'}]);
+    });
+}
+
+test('a new version refused to anyone but the owner restores after a reload as ordinary unsaved work',async({page})=>{
+  const state=await host(page,'template','edit',true,{impact:{canBeUpdated:false}});
+  state.failure={status:403,json:OWNER_ONLY};
+  await edit(page,'Refused version');await saveNewVersion(page);
+  await expect(page.locator('#message')).toHaveText(text('en','Error.VersioningOnlyByOwner'));
+  page.on('dialog',dialog=>dialog.accept());await page.reload();
+  await expect(page.locator('#draft-offer')).toBeVisible();
+  await page.locator('#restore-draft').click();
+  await expect(page.locator('#message')).toHaveText(text('en','Draft.Restored'));
+  expect(await page.locator('#editor > *').evaluate(el=>el.currentArtifact['schema:name'])).toBe('Refused version');
+  await expect(page.locator('#state')).toHaveText('Modified');
+  await expect(page.locator('#save')).toBeEnabled();
+  for(const control of await page.locator(RECOVERY_CONTROLS).all())await expect(control).toBeHidden();
+  expect(state.writes).toHaveLength(1);
+});
+
 // Recovery controls are exceptional, so none appears while a page opens, stays unchanged, is edited and saved.
 for(const kind of Object.keys(COLLECTIONS))for(const mode of ['create','edit'])
   test(`${kind} ${mode} offers no recovery control on a fresh, unchanged or ordinarily edited page`,async({page})=>{

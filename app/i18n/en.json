@@ -62,6 +62,7 @@
     "Conflict": "This artifact changed since you opened it. Your edits have been kept; reopen the latest version before saving.",
     "SessionExpired": "Your session has expired. Sign in again before saving.",
     "Forbidden": "You do not have permission to save this artifact.",
+    "VersioningOnlyByOwner": "Only the template's owner can create a new version. Your edits have been kept.",
     "RequestFailed": "Request failed ({{status}}). {{detail}}",
     "EditsKept": "Your edits have been kept.",
     "InvalidSearchCursor": "Invalid repository search cursor.",

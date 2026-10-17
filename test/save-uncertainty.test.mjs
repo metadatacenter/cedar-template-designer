@@ -102,6 +102,59 @@ for (const errorKey of ['nodeAlreadyPresent', 'artifactHasMovedOn', undefined])
     assert.equal(state.reloadRequired, true);
   });
 
+// Only a template's owner may create a new version of it, and the server refuses anyone else with a 403
+// under its own key. That refusal stores nothing, and no reload, sign-in or access check can lift it, so
+// the page stays as it was before Save, with the edits. Any other 403 on the same request still refuses
+// access, and a template the server cannot version is refused with a 400, as before.
+const VERSIONING_REFUSALS = [[403, 'versioningOnlyByOwner'], [403, 'noWriteAccessToFolder'], [403, undefined],
+  ...['publishOnlyDraft', 'createDraftOnlyFromPublished', 'versioningOnlyOnLatest', 'nonVersionedArtifactType'].map(key => [400, key])];
+for (const [status, errorKey] of VERSIONING_REFUSALS)
+  test(`version: ${status} ${errorKey ?? 'without an error key'} ${errorKey === 'versioningOnlyByOwner' ? 'leaves Save as it was'
+    : status === 403 ? 'still refuses access' : 'is still a plain refusal'}`, async () => {
+    const ownerOnly = errorKey === 'versioningOnlyByOwner', accessRefused = status === 403 && !ownerOnly;
+    const opened = {'@id': 'https://repo.test/templates/item', 'schema:name': 'Opened'};
+    const state = new DesignerCoordinator();
+    const designer = {currentArtifact: {'schema:name': 'Submitted'}, isDirty: true, validate: () => ({canSave: true, issues: []})};
+    state.loaded({artifact: opened, etag: '"opened"', writable: true});
+    const attempt = state.beginSave(designer);
+    const error = new BackendError(status, errorKey ? {errorKey, parameters: {id: opened['@id']}} : null);
+    const calls = [];
+    await assert.rejects(saveArtifact({
+      route: {kind: 'template', collection: 'templates', id: opened['@id']}, artifact: designer.currentArtifact,
+      etag: state.etag, base: 'https://resource.test', confirmVersion: async () => true,
+      identity: () => state.identity(() => `https://repo.test/templates/${crypto.randomUUID()}`), onWrite: write => {attempt.write = write;},
+      request: async url => { calls.push(url); if (url.includes('/check-update-template/')) return {data: {canBeUpdated: false}}; throw error; },
+    }), failure => failure === error);
+    assert.match(calls.at(-1), /\/command\/publish-create-draft-template\//);
+    assert.equal(error.message, ownerOnly ? "Only the template's owner can create a new version. Your edits have been kept."
+      : accessRefused ? 'You do not have permission to save this artifact.' : 'Request failed (400). Your edits have been kept.');
+    assert.equal(state.failed(error, attempt), false);
+    state.finish(attempt);
+    // A definitive refusal leaves nothing to check, whatever its reason.
+    assert.equal(state.uncertainCreation, false);
+    assert.equal(state.canCheckSave, false);
+    assert.equal(state.reloadRequired, accessRefused);
+    assert.equal(state.canRecheckAccess, accessRefused);
+    const report = state.report(designer, designer.validate());
+    assert.equal(report.canSave, !accessRefused);
+    assert.equal(report.phase, accessRefused ? 'reload' : 'ready');
+    assert.equal(report.server.length, 0);
+    assert.deepEqual(state.stored, opened);
+    assert.equal(state.dirty(designer), true);
+    // The journal a reload restores from holds the same state, so a restored draft is guarded only after an access refusal.
+    const journal = JSON.parse(JSON.stringify(state.captureRecovery()));
+    assert.equal(journal.uncertainCreation, false);
+    assert.equal(journal.creation, undefined);
+    assert.equal(journal.pending?.purpose, accessRefused ? 'access' : undefined);
+    const restored = new DesignerCoordinator();
+    restored.loaded({artifact: opened, etag: '"opened"', writable: true});
+    restored.restoreRecovery(journal);
+    assert.equal(restored.reloadRequired, accessRefused);
+    assert.equal(restored.canRecheckAccess, accessRefused);
+    assert.equal(restored.canCheckSave, false);
+    assert.equal(restored.beginSave(designer) === null, accessRefused);
+  });
+
 test('a create sent without an identity, as before identities were sent, stays guarded and cannot be checked', async () => {
   const state = new DesignerCoordinator();
   const designer = {currentArtifact: {'schema:name': 'Submitted'}, isDirty: true, validate: () => ({canSave: true, issues: []})};

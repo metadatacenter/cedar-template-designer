@@ -3,7 +3,7 @@ export { resourceSelector, resourcePathId, useDeploymentApi, mintIdentity };
 // Loading the maps with this module's query string keeps one shared instance with host.mjs,
 // which imports the same versioned URL and sets the active language on it.
 const { t } = await import(`./i18n.mjs${new URL(import.meta.url).search}`);
-const { DesignerCoordinator } = await import(`./host-state.mjs${new URL(import.meta.url).search}`);
+const { DesignerCoordinator, ownerOnlyRefusal } = await import(`./host-state.mjs${new URL(import.meta.url).search}`);
 export { DesignerCoordinator };
 
 /** Angular registers CED asynchronously after its script has loaded. Bound that wait. */
@@ -61,6 +61,7 @@ export class BackendError extends Error {
       status === 0 ? t('Error.Unreachable') :
       status === 412 ? t('Error.Conflict') :
       status === 401 ? t('Error.SessionExpired') :
+      ownerOnlyRefusal({ status, data }) ? t('Error.VersioningOnlyByOwner') :
       status === 403 ? t('Error.Forbidden') :
       t('Error.RequestFailed', { status, detail: data?.message || data?.errorMessage || t('Error.EditsKept') }));
     this.status = status;
