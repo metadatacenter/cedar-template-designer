@@ -68,13 +68,21 @@ for (const transition of ['replacement','dispose','failed-load']) for (const out
     assert.notEqual(state.etag,'"obsolete"');
   });
 }
-for (const report of [null, {}, {canSave:true}, {canSave:true,issues:null}, {canSave:true,issues:[null]}, {canSave:true,issues:[{shown:false}]}, {valid:false,canSave:true,issues:[]}]) {
+for (const report of [null, {}, {canSave:true}, {canSave:true,issues:null}, {canSave:true,issues:[null]}, {canSave:true,issues:[{shown:false}]}, {pendingValidation:true,canSave:true,issues:[]}, {canSave:true,issues:[{severity:'error'}]}]) {
   test(`incomplete or contradictory CED report cannot allow save: ${JSON.stringify(report)}`, () => {
     const {state,designer}=setup(); designer.validationReport=report;
     assert.equal(state.beginSave(designer),null);
     designer.validationReport={canSave:true,issues:[]}; assert.ok(state.beginSave(designer));
   });
 }
+test('settled semantic uncertainty follows CED canSave without becoming a successful verification', () => {
+  const {state,designer}=setup();
+  designer.validationReport={valid:false,canSave:true,issues:[{severity:'warning',code:'semanticUnavailable'}],semanticChecks:[{status:'unavailable'}]};
+  assert.equal(state.report(designer).canSave,true);
+  assert.ok(state.beginSave(designer));
+  assert.equal(designer.validationReport.valid,false);
+  assert.equal(designer.validationReport.semanticChecks[0].status,'unavailable');
+});
 for (const capabilities of [undefined,null,[],{},'createInFolder updateResource',['readResource'],['createInFolder'],['updateResource']]) {
   test(`permissions stay explicit: ${JSON.stringify(capabilities)}`, () => {
     const report={currentUserPermissions:{capabilities}};

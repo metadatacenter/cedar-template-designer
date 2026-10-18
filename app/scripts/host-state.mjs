@@ -8,7 +8,7 @@ export function artifactKey(value) {
 }
 
 function validReport(report) {
-  return !report?.pendingValidation && report?.valid !== false && report?.canSave === true && Array.isArray(report.issues) && report.issues.every(issue => issue?.severity === 'warning');
+  return !report?.pendingValidation && report?.canSave === true && Array.isArray(report.issues) && report.issues.every(issue => issue?.severity === 'warning');
 }
 
 /**
