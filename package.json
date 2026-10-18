@@ -10,6 +10,7 @@
     "start": "node scripts/designer.mjs start",
     "prepare:components": "node scripts/stage-components.mjs && node scripts/stage-design.mjs",
     "test": "node --test test/*.test.mjs",
+    "pretest:browser": "node scripts/stage-policy.mjs",
     "test:browser": "npm --prefix browser test",
     "pretest": "node scripts/stage-policy.mjs"
   },

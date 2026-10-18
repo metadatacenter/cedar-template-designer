@@ -101,6 +101,7 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
         });
         customElements.define('cedar-embeddable-designer',Designer);
       },30);`});
+    if(path==='/components/cedar-validation-policy.mjs')return route.fulfill({contentType:'text/javascript',body:source('components/cedar-validation-policy.mjs')});
     if(path==='/components/icons.js')return route.fulfill({contentType:'text/javascript',body:'export const iconSvg=()=>"";'});
     if(path.startsWith('/components/')||path.startsWith('/scripts/keycloak/'))return route.fulfill({contentType:'text/javascript',body:''});
     if(path.startsWith('/scripts/')||path.startsWith('/i18n/'))return route.fulfill({contentType:path.endsWith('.json')?'application/json':'text/javascript',body:source(path.slice(1))});
