@@ -1,3 +1,4 @@
+import { JsonSourcePolicy, TextPolicy } from './json-policy.mjs';
 import {iconSvg} from '../components/icons.js';
 document.getElementById('back-icon').innerHTML = iconSvg('back');
 // Workspace heads its Create Draft dialog with this icon, and this dialog also ends in a new draft.
@@ -250,7 +251,7 @@ function confirmVersion(impact) {
     dialog.addEventListener('close', () => {
       // Discarding returns the designer to the template as it was opened, and stays in the designer.
       discarded = dialog.returnValue === 'discard';
-      if (discarded) designer.loadArtifact(structuredClone(state.stored));
+      if (discarded) designer.loadArtifact(JsonSourcePolicy.clone(state.stored));
       resolve(dialog.returnValue === 'confirm');
     }, { once: true });
     dialog.showModal();
@@ -270,7 +271,7 @@ ui.save.addEventListener('click', async () => {
       stillCurrent: () => state.matches(attempt, designer), onWrite: write => { attempt.write = write; keepDraft(attempt); } });
     if (!attempt.current()) return;
     if (!result) { message(t(discarded ? 'Message.ChangesDiscarded' : 'Message.ChangesKept')); return; }
-    if (!result.data || typeof result.data['@id'] !== 'string' || !result.data['@id'].trim()) {
+    if (!result.data || typeof result.data['@id'] !== 'string' || TextPolicy.isBlank(result.data['@id'])) {
       state.reloadRequired = true; state.uncertainCreation = attempt.write?.createsIdentity ?? !route.id;
       throw new Error(t('Error.SaveUnconfirmed'));
     }

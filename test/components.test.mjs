@@ -17,11 +17,19 @@ async function fixture(t) {
     await writeFile(join(dir, 'package.json'), JSON.stringify({ name: '@org.metadatacenter/' + name, version: '0.1.0-dev.test' }));
     await writeFile(join(dir, 'bundle-manifest.json'), JSON.stringify({ bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') }));
   }
+  const policy = join(root, 'node_modules/cedar-model-typescript-library');
+  await mkdir(policy, { recursive: true });
+  await writeFile(join(policy, 'policy.esm.js'), 'export const fixture = true;');
+  await writeFile(join(policy, 'package.json'), JSON.stringify({name: 'cedar-model-typescript-library', version:'1.0.0'}));
   return root;
 }
 test('stages verified installed packages with published identities', async t => {
   const root = await fixture(t);
   const manifest = await stageComponents(root, {});
+  const policy = await readFile(join(root, 'app/components/cedar-validation-policy.mjs'));
+  const identity = JSON.parse(await readFile(join(root, 'app/components/policy-manifest.json'), 'utf8'));
+  assert.equal(policy.toString(), 'export const fixture = true;');
+  assert.equal(identity.sha256, createHash('sha256').update(policy).digest('hex'));
   for (const name of names) {
     assert.equal(manifest[name].version, '0.1.0-dev.test');
     assert.equal(manifest[name].source, 'package');

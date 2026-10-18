@@ -1,13 +1,13 @@
+import { ExactDecimal, JsonSourcePolicy, IdentifierPolicy, canonicalJson } from './json-policy.mjs';
 import { resourcePathId } from './resource-address.mjs';
 // Ignore only root update provenance. Child identities, provenance, values,
 // order, annotations and unknown content all remain part of the comparison.
 export function authoredKey(document) {
-  const content = structuredClone(document);
+  const content = JsonSourcePolicy.clone(document);
   if (!content || typeof content !== 'object' || Array.isArray(content)) return null;
   delete content['pav:lastUpdatedOn'];
   delete content['oslc:modifiedBy'];
-  return JSON.stringify(content, (_key, value) => value && typeof value === 'object' && !Array.isArray(value)
-    ? Object.fromEntries(Object.keys(value).sort().map(key => [key, value[key]])) : value);
+  return canonicalJson(content);
 }
 export function sameRevision(expected, actual) {
   if (!expected || !actual) return false;
@@ -25,10 +25,7 @@ export function updateOutcome({opened, submitted, etag}, latest) {
 }
 
 const PROVENANCE = ['pav:createdOn', 'pav:createdBy', 'pav:lastUpdatedOn', 'oslc:modifiedBy'];
-const absoluteIri = value => {
-  if (typeof value !== 'string' || !value.trim()) return false;
-  try { new URL(value.trim()); return true; } catch { return false; }
-};
+const absoluteIri = value => typeof value === 'string' && IdentifierPolicy.isValid(value);
 
 /**
  * Two documents as the artifact server compares a child with its stored counterpart, for judging what a
@@ -38,11 +35,11 @@ const absoluteIri = value => {
  * names, order of arrays, values, constraints and annotations, must match.
  */
 function sameWritten(stored, submitted) {
-  const a = structuredClone(stored), b = structuredClone(submitted);
+  const a = JsonSourcePolicy.clone(stored), b = JsonSourcePolicy.clone(submitted);
   if (!a || typeof a !== 'object' || !b || typeof b !== 'object') return false;
   const visit = (node, sent) => {
     if (Array.isArray(node)) { node.forEach((item, index) => visit(item, Array.isArray(sent) ? sent[index] : undefined)); return; }
-    if (!node || typeof node !== 'object') return;
+    if (!node || typeof node !== 'object' || ExactDecimal.isExact(node)) return;
     const counterpart = sent && typeof sent === 'object' && !Array.isArray(sent) ? sent : undefined;
     for (const key of PROVENANCE) { delete node[key]; if (counterpart) delete counterpart[key]; }
     for (const [key, value] of Object.entries(node)) {
@@ -63,7 +60,7 @@ function sameWritten(stored, submitted) {
  * predecessor and creation provenance it was created with, and carries no DOI.
  */
 function storedDefinition(submitted, draft) {
-  const result = structuredClone(submitted);
+  const result = JsonSourcePolicy.clone(submitted);
   for (const key of ['@id', 'pav:version', 'bibo:status', 'pav:previousVersion', 'pav:createdOn', 'pav:createdBy']) {
     if (Object.hasOwn(draft, key)) result[key] = draft[key]; else delete result[key];
   }

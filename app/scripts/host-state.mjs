@@ -1,14 +1,14 @@
+import { JsonSourcePolicy, canonicalJson } from './json-policy.mjs';
 import { applyAuthorChanges } from './author-changes.mjs';
 import { creationOutcome, sameRevision, updateOutcome } from './save-recovery.mjs';
 
 /** Compare documents independently of object key order. */
 export function artifactKey(value) {
-  return JSON.stringify(value, (_key, node) => node && typeof node === 'object' && !Array.isArray(node)
-    ? Object.fromEntries(Object.keys(node).sort().map(key => [key, node[key]])) : node);
+  return canonicalJson(value);
 }
 
 function validReport(report) {
-  return report?.valid !== false && report?.canSave === true && Array.isArray(report.issues) && report.issues.every(issue => issue?.severity === 'warning');
+  return !report?.pendingValidation && report?.valid !== false && report?.canSave === true && Array.isArray(report.issues) && report.issues.every(issue => issue?.severity === 'warning');
 }
 
 /**
@@ -50,8 +50,8 @@ export class DesignerCoordinator {
     this.saving = false;
     this.checking = false;
     this.#pendingUpdate = undefined;
-    this.stored = structuredClone(artifact);
-    this.#projection = structuredClone(projection);
+    this.stored = JsonSourcePolicy.clone(artifact);
+    this.#projection = JsonSourcePolicy.clone(projection);
     this.etag = etag;
     this.writable = writable === true;
     this.ready = true;
@@ -70,7 +70,7 @@ export class DesignerCoordinator {
   }
   #creationOf(write, attempt) {
     if (!write?.createsIdentity || !write.identity) return undefined;
-    return structuredClone({ operation: write.operation, id: write.identity, submitted: write.body, projection: attempt.projection,
+    return JsonSourcePolicy.clone({ operation: write.operation, id: write.identity, submitted: write.body, projection: attempt.projection,
       ...(write.operation === 'version' ? { source: this.stored?.['@id'], etag: this.etag } : {}) });
   }
   captureRecovery(attempt) {
@@ -78,7 +78,7 @@ export class DesignerCoordinator {
     const write = attempt?.write;
     // Written before the request is sent, so that a lost answer can be settled after a reload.
     const creation = this.#creationOf(write, attempt) ?? this.#creation;
-    return structuredClone({
+    return JsonSourcePolicy.clone({
       stored: this.stored, projection: this.#projection, etag: this.etag,
       committed: this.#committed, reloadRequired: this.reloadRequired || Boolean(write),
       server: this.#server,
@@ -92,7 +92,7 @@ export class DesignerCoordinator {
     });
   }
   restoreRecovery(value) {
-    const copy = structuredClone(value);
+    const copy = JsonSourcePolicy.clone(value);
     const object = value => value && typeof value === 'object' && !Array.isArray(value);
     if (!object(copy) || typeof copy.committed !== 'boolean' || typeof copy.reloadRequired !== 'boolean' ||
       typeof copy.uncertainCreation !== 'boolean' || (copy.stored !== undefined && !object(copy.stored)) ||
@@ -151,8 +151,8 @@ export class DesignerCoordinator {
   beginSave(designer) {
     if (!this.#active || !this.ready || !this.writable || this.saving || this.reloadRequired) return null;
     if (!this.report(designer, designer.validate()).canSave) return null;
-    const projection = structuredClone(designer.currentArtifact);
-    const artifact = this.stored === undefined ? structuredClone(projection)
+    const projection = JsonSourcePolicy.clone(designer.currentArtifact);
+    const artifact = this.stored === undefined ? JsonSourcePolicy.clone(projection)
       : applyAuthorChanges(this.stored, this.#projection, projection);
     const generation = ++this.#generation;
     this.saving = true;
@@ -166,11 +166,11 @@ export class DesignerCoordinator {
   committed(attempt, etag, requiresReload = false, write = attempt.write) {
     if (!attempt.current()) return;
     if (!etag && !requiresReload && write?.createsIdentity === false && write.body && this.stored && this.etag) {
-      this.#pendingUpdate = {attempt, opened: structuredClone(this.stored),
-        submitted: structuredClone(write.body), etag: this.etag, purpose: 'acknowledgement'};
+      this.#pendingUpdate = {attempt, opened: JsonSourcePolicy.clone(this.stored),
+        submitted: JsonSourcePolicy.clone(write.body), etag: this.etag, purpose: 'acknowledgement'};
     }
-    this.stored = structuredClone(attempt.artifact);
-    this.#projection = structuredClone(attempt.projection);
+    this.stored = JsonSourcePolicy.clone(attempt.artifact);
+    this.#projection = JsonSourcePolicy.clone(attempt.projection);
     this.etag = etag;
     this.reloadRequired = requiresReload || !etag;
     this.#committed = true;
@@ -195,8 +195,8 @@ export class DesignerCoordinator {
     if (unconfirmed || (!ownerOnly && [401, 403, 404, 409, 412, 428].includes(error.status))) this.reloadRequired = true;
     const accessRefused = !ownerOnly && [401, 403].includes(error.status);
     if ((unconfirmed && !attempt.write.createsIdentity || accessRefused) && this.stored && this.etag) {
-      this.#pendingUpdate = {attempt, opened: structuredClone(this.stored),
-        submitted: structuredClone(attempt.write?.body ?? attempt.artifact), etag: this.etag, purpose: accessRefused ? 'access' : 'save'};
+      this.#pendingUpdate = {attempt, opened: JsonSourcePolicy.clone(this.stored),
+        submitted: JsonSourcePolicy.clone(attempt.write?.body ?? attempt.artifact), etag: this.etag, purpose: accessRefused ? 'access' : 'save'};
     }
     if (unconfirmed && write.createsIdentity) {
       this.uncertainCreation = true;
@@ -225,7 +225,7 @@ export class DesignerCoordinator {
       : ['save', 'acknowledgement'].includes(this.#pendingUpdate?.purpose));
   }
   /** The unsettled create or new version, with the template it was drawn from. */
-  get creation() { return this.uncertainCreation && this.#creation ? structuredClone({ ...this.#creation, opened: this.stored }) : undefined; }
+  get creation() { return this.uncertainCreation && this.#creation ? JsonSourcePolicy.clone({ ...this.#creation, opened: this.stored }) : undefined; }
   get canRecheckAccess() { return this.#active && this.#pendingUpdate?.purpose === 'access' && !this.uncertainCreation; }
   beginCheck() {
     if (!(this.canCheckSave || this.canRecheckAccess) || this.saving || this.checking) return null;
@@ -241,8 +241,8 @@ export class DesignerCoordinator {
     if (this.#pendingUpdate.purpose === 'acknowledgement' && result === 'unchanged') return 'changed';
     if (result !== 'saved' && result !== 'unchanged') return result;
     if (result === 'saved') {
-      this.stored = structuredClone(latest.data);
-      this.#projection = structuredClone(this.#pendingUpdate.attempt.projection);
+      this.stored = JsonSourcePolicy.clone(latest.data);
+      this.#projection = JsonSourcePolicy.clone(this.#pendingUpdate.attempt.projection);
       this.etag = latest.etag;
       this.#committed = true;
     }
@@ -271,15 +271,15 @@ export class DesignerCoordinator {
     if (!writable) return 'readonly';
     const adopted = result === 'committed' && creation.occupied === true;
     if (result === 'committed') {
-      this.stored = structuredClone(created.data);
+      this.stored = JsonSourcePolicy.clone(created.data);
       // Without a baseline no retained draft can be rechecked into a save that would merge onto it.
-      this.#projection = adopted ? undefined : structuredClone(creation.projection);
+      this.#projection = adopted ? undefined : JsonSourcePolicy.clone(creation.projection);
       this.etag = created.etag;
       this.#committed = true;
       this.reloadRequired = adopted || !created.etag;
       this.#identity = undefined;
     } else {
-      if (creation.operation === 'version') { this.stored = structuredClone(source.data); this.etag = source.etag; }
+      if (creation.operation === 'version') { this.stored = JsonSourcePolicy.clone(source.data); this.etag = source.etag; }
       this.reloadRequired = false;
     }
     this.writable = true;

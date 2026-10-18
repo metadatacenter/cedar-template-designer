@@ -15,7 +15,7 @@ function harness(responses) {
 for (const kind of ['template', 'element', 'field']) {
   test(`${kind} saves reject missing or blank names before any request`, async () => {
     for (const id of [null, route.id]) {
-      for (const name of [undefined, null, '', ' \t\n']) {
+      for (const name of [undefined, null, '', ' \t\n', '\u001c\u001f']) {
         const h = harness([]);
         await assert.rejects(saveArtifact({ ...h.options,
           route: { ...route, kind, id }, artifact: { ...artifact, 'schema:name': name },

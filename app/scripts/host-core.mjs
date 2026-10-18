@@ -1,3 +1,4 @@
+import { JsonSourcePolicy, TextPolicy, parseJson } from './json-policy.mjs';
 import { resourceSelector, resourcePathId, useDeploymentApi, mintIdentity } from './resource-address.mjs';
 export { resourceSelector, resourcePathId, useDeploymentApi, mintIdentity };
 // Loading the maps with this module's query string keeps one shared instance with host.mjs,
@@ -118,7 +119,7 @@ export function createBackend(auth, sessionId, fetcher = fetch) {
       if (etag) headers['If-Match'] = etag;
       let response;
       try {
-        response = await fetcher(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal });
+        response = await fetcher(url, { method, headers, body: body === undefined ? undefined : JsonSourcePolicy.stringify(body), signal });
       } catch (error) {
         // A cancelled request stays a cancellation. Any other rejection means no answer arrived, and the
         // browser's own text for that is neither translated nor helpful.
@@ -127,7 +128,7 @@ export function createBackend(auth, sessionId, fetcher = fetch) {
       }
       const text = await response.text();
       let data;
-      try { data = text ? JSON.parse(text) : null; } catch {
+      try { data = text ? parseJson(text) : null; } catch {
         // A read that answers with something other than JSON has failed: a proxy's sign-in page, or
         // a body cut short. A write's acknowledgement is judged by the save, which knows that an
         // unreadable one may still mean the write happened.
@@ -153,7 +154,7 @@ export function childSource(request, base) {
       const { data } = await request(`${base}/search?${params}`, { signal });
       const rows = data?.resources;
       if (!Array.isArray(rows) || !Number.isSafeInteger(data.totalCount) || data.totalCount < rows.length ||
-          rows.some(row => !row || typeof row['@id'] !== 'string' || !row['@id'].trim() || !['field', 'element'].includes(row.resourceType)) ||
+          rows.some(row => !row || typeof row['@id'] !== 'string' || TextPolicy.isBlank(row['@id']) || !['field', 'element'].includes(row.resourceType)) ||
           new Set(rows.map(row => row['@id'])).size !== rows.length) throw new Error(t('Error.InvalidChildren'));
       return {
         results: rows.map(row => ({ id: row['@id'], name: row['schema:name'], type: row.resourceType,
@@ -171,7 +172,7 @@ export function childSource(request, base) {
 
 /** Storage requires explicit empty provenance on new artifacts; the server owns its values. */
 export function storageArtifact(source, creating = false) {
-  const result = structuredClone(source);
+  const result = JsonSourcePolicy.clone(source);
   function visit(node) {
     if (!node || typeof node !== 'object') return;
     const types = Array.isArray(node['@type']) ? node['@type'] : [node['@type']];
@@ -200,7 +201,7 @@ export function storageArtifact(source, creating = false) {
 export async function saveArtifact({ request, base, route, artifact, etag, folderId, confirmVersion, stillCurrent = () => true, onWrite = () => {},
   identity = () => mintIdentity(route.collection) }) {
   const name = artifact?.['schema:name'];
-  if (typeof name !== 'string' || !name.trim()) {
+  if (typeof name !== 'string' || TextPolicy.isBlank(name)) {
     throw new Error(t(`Error.NameRequired.${route.kind}`));
   }
   artifact = storageArtifact(artifact, !route.id);
@@ -209,7 +210,7 @@ export async function saveArtifact({ request, base, route, artifact, etag, folde
   // Assessments do not write. Record only the operation that may store an artifact, with the identity
   // it creates, so a failed assessment can be retried while a lost create response cannot create a duplicate.
   const write = (url, options, operation = 'update', id = null) => {
-    onWrite({ createsIdentity: operation !== 'update', operation, identity: id, body: structuredClone(options.body) });
+    onWrite({ createsIdentity: operation !== 'update', operation, identity: id, body: JsonSourcePolicy.clone(options.body) });
     return request(url, options);
   };
   current();

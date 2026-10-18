@@ -1,6 +1,6 @@
-const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
-const keyOf = value => JSON.stringify(value, (_key, node) => object(node)
-  ? Object.fromEntries(Object.keys(node).sort().map(key => [key, node[key]])) : node);
+import { ExactDecimal, JsonSourcePolicy, canonicalJson } from './json-policy.mjs';
+const object = value => value !== null && typeof value === 'object' && !Array.isArray(value) && !ExactDecimal.isExact(value);
+const keyOf = canonicalJson;
 const definition = value => object(value) && object(value._ui) && object(value.properties) &&
   typeof value['@id'] === 'string' && value['@id'];
 const sameDefinition = (left, right) => definition(left) && definition(right) && left['@id'] === right['@id'];
@@ -40,15 +40,15 @@ function childSources(opened, edited) {
  * Arrays are complete authored values (order, types, choices and constraints).
  */
 export function applyAuthorChanges(stored, opened, edited) {
-  if (keyOf(opened) === keyOf(edited)) return structuredClone(stored);
-  if (!object(opened) || !object(edited)) return structuredClone(edited);
+  if (keyOf(opened) === keyOf(edited)) return JsonSourcePolicy.clone(stored);
+  if (!object(opened) || !object(edited)) return JsonSourcePolicy.clone(edited);
   // Repeat cardinality moves a definition under `items`; it does not replace
   // that definition with the component's normalized projection of it.
   if (edited.type === 'array' && sameDefinition(opened, edited.items))
-    return { ...structuredClone(edited), items: applyAuthorChanges(stored, opened, edited.items) };
+    return { ...JsonSourcePolicy.clone(edited), items: applyAuthorChanges(stored, opened, edited.items) };
   if (opened.type === 'array' && sameDefinition(opened.items, edited))
     return applyAuthorChanges(stored?.items, opened.items, edited);
-  const result = object(stored) ? structuredClone(stored) : {};
+  const result = object(stored) ? JsonSourcePolicy.clone(stored) : {};
   const sources = childSources(opened, edited);
   for (const key of new Set([...Object.keys(opened), ...Object.keys(edited)])) {
     if (!Object.hasOwn(edited, key)) {
@@ -57,7 +57,7 @@ export function applyAuthorChanges(stored, opened, edited) {
       const source = sources.get(key) ?? key;
       const value = Object.hasOwn(opened, source)
         ? applyAuthorChanges(object(stored) && Object.hasOwn(stored, source) ? stored[source] : undefined, opened[source], edited[key])
-        : structuredClone(edited[key]);
+        : JsonSourcePolicy.clone(edited[key]);
       if (value === undefined) delete result[key];
       else Object.defineProperty(result, key, {value, enumerable: true, configurable: true, writable: true});
     }
