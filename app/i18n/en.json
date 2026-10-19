@@ -12,7 +12,9 @@
       "element": "Element Designer",
       "field": "Field Designer"
     },
-    "Reload": "Reload designer"
+    "Reload": "Reload designer",
+    "CheckSave": "Check save status",
+    "RecheckAccess": "Recheck access"
   },
   "State": {
     "Saving": "Saving…",
@@ -33,7 +35,12 @@
     "ServerFindingsOne": "Server validation: {{count}} finding",
     "SavedWithChanges": "Saved. Further changes remain in the designer.",
     "SavedNewIdentity": "Saved as a new artifact. Further changes remain here; reload the saved artifact before saving again.",
-    "SavedReloadRequired": "Saved. Reload the designer before saving again."
+    "SavedReloadRequired": "Saved. Reload the designer before saving again.",
+    "CheckingSave": "Checking save status…",
+    "SaveConfirmed": "The stored version matches your submitted changes. Your current edits have been kept.",
+    "SaveUnchanged": "The stored version is unchanged. You can retry Save.",
+    "CheckingAccess": "Checking access…",
+    "AccessRestored": "Access is restored and the stored version is unchanged. Your edits have been kept; you can save again."
   },
   "Version": {
     "Title": "Create a new template version?",
@@ -55,6 +62,7 @@
     "Conflict": "This artifact changed since you opened it. Your edits have been kept; reopen the latest version before saving.",
     "SessionExpired": "Your session has expired. Sign in again before saving.",
     "Forbidden": "You do not have permission to save this artifact.",
+    "VersioningOnlyByOwner": "Only the template's owner can create a new version. Your edits have been kept.",
     "RequestFailed": "Request failed ({{status}}). {{detail}}",
     "EditsKept": "Your edits have been kept.",
     "InvalidSearchCursor": "Invalid repository search cursor.",
@@ -66,6 +74,7 @@
     },
     "NoFolder": "No destination folder is available. Open Create from a Workspace folder.",
     "NoValidator": "The server did not provide a version validator. Reopen this artifact before saving.",
+    "SavedVerificationUnavailable": "Saved, but the server did not provide a version validator. Your current edits remain in Designer. Use Check save status before saving again.",
     "ComponentLoad": "Could not load {{name}}. Rebuild and stage the local components.",
     "ConfigurationLoad": "Frontend configuration could not be loaded.",
     "SignIn": "Sign-in could not be initialized. Reload to try again.",
@@ -75,7 +84,7 @@
     "InvalidImpact": "The server did not provide a valid update assessment. Your changes have been kept.",
     "DocumentChanged": "The document changed while saving was being prepared. Review it and save again.",
     "InvalidArtifact": "The repository returned a different or incomplete artifact. Reload to try again.",
-    "SaveUnconfirmed": "The server accepted the save but did not identify the saved artifact. Check Workspace before saving again.",
+    "SaveUnconfirmed": "We could not confirm whether your changes were saved. Your changes remain in the designer. Use Check save status to find out before saving again.",
     "Unreachable": "The server could not be reached. Check your connection and try again.",
     "Unreadable": "CEDAR cannot read this artifact, so it cannot be opened. {{detail}}",
     "SessionEnded": "Your session has expired. Sign in again.",
@@ -83,6 +92,21 @@
     "ForbiddenCreate": "You do not have permission to create an artifact here.",
     "ReloadToRetry": "Reload to try again.",
     "UnreadableAnswer": "The server sent an answer the Designer cannot read. Reload to try again.",
-    "ManifestLoad": "The component manifest could not be loaded. Rebuild and stage the local components."
+    "ManifestLoad": "The component manifest could not be loaded. Rebuild and stage the local components.",
+    "RecoveryReadOnly": "You do not currently have permission to update this artifact. Your edits have been kept; saving remains blocked.",
+    "RecoveryUnresolved": "The stored version could not be reconciled with your save. Your edits have been kept; saving remains blocked.",
+    "RecoveryUnavailable": "Save status could not be checked. Your edits have been kept. Check your connection and access, then try again.",
+    "AccessUnavailable": "Access could not be checked. Your edits have been kept. Sign in or check your connection, then try again."
+  },
+  "Draft": {
+    "StorageError": "This browser could not retain the draft. Keep this page open to avoid losing your changes.",
+    "Offer": "Unfinished work from this tab is available. Restore it or discard it before saving.",
+    "Restore": "Restore draft",
+    "Discard": "Discard retained draft",
+    "Restored": "Your draft has been restored.",
+    "RestoredGuarded": "Your draft has been restored. Use Check save status or Recheck access before saving again.",
+    "Invalid": "This retained draft cannot be restored here. Use the same account, deployment and artifact.",
+    "UnknownCreate": "The previous create or version operation is unresolved. Restore the draft and use Check save status before discarding it.",
+    "SignInAgain": "Sign in again"
   }
 }

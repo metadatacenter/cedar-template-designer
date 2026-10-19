@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { translations, t, detectLanguage, setLanguage } from '../app/scripts/i18n.mjs';
-import { BackendError } from '../app/scripts/host-core.mjs';
+import { BackendError, saveMessage } from '../app/scripts/host-core.mjs';
 
 // Hungarian entries that may equal their English source. Keep this short; each entry needs a
 // reason that holds in Hungarian as well as English.
@@ -62,7 +62,34 @@ test('backend errors follow the active language', t_ => {
   t_.after(() => setLanguage('en'));
   setLanguage('hu');
   assert.equal(new BackendError(403).message, 'Nincs jogosultsága az artefaktum mentéséhez.');
+  assert.equal(new BackendError(403, { errorKey: 'versioningOnlyByOwner' }).message,
+    'Új verziót csak a sablon tulajdonosa hozhat létre. A szerkesztései megmaradtak.');
   assert.equal(new BackendError(500).message, 'A kérés sikertelen (500). A szerkesztései megmaradtak.');
+});
+
+// A refused save leaves the edits in the designer. Its message says so after the server's message as
+// well as without one. The error's own text, which the child picker shows, carries the server's message alone.
+test('a refused save says the edits are kept, after the server message when there is one', t_ => {
+  t_.after(() => setLanguage('en'));
+  const expected = {
+    en: ['Request failed (400). Your edits have been kept.', 'Request failed (400). Invalid folder identifier. Your edits have been kept.',
+      'Request failed (400). Invalid folder identifier'],
+    hu: ['A kérés sikertelen (400). A szerkesztései megmaradtak.', 'A kérés sikertelen (400). Invalid folder identifier. A szerkesztései megmaradtak.',
+      'A kérés sikertelen (400). Invalid folder identifier'],
+  };
+  for (const language of ['en', 'hu']) {
+    setLanguage(language);
+    const [withoutMessage, withMessage, ownText] = expected[language];
+    assert.equal(saveMessage(new BackendError(400, null)), withoutMessage);
+    assert.equal(saveMessage(new BackendError(400, {})), withoutMessage);
+    assert.equal(saveMessage(new BackendError(400, { message: 'Invalid folder identifier' })), withMessage);
+    assert.equal(saveMessage(new BackendError(400, { message: 'Invalid folder identifier.' })), withMessage);
+    assert.equal(saveMessage(new BackendError(400, { errorMessage: 'Invalid folder identifier' })), withMessage);
+    assert.equal(new BackendError(400, { message: 'Invalid folder identifier' }).message, ownText);
+    // A refusal the host names in its own words, and a failure that is not a refusal, keep their text.
+    for (const error of [new BackendError(403, { message: 'Server said no' }), new BackendError(412, { message: 'Server said no' }),
+      new BackendError(0), new Error('Name the template')]) assert.equal(saveMessage(error), error.message);
+  }
 });
 
 test('the first supported primary subtag wins, and English is the default', () => {

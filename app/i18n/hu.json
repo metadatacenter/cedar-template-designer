@@ -12,7 +12,9 @@
       "element": "Elemtervező",
       "field": "Mezőtervező"
     },
-    "Reload": "Tervező újratöltése"
+    "Reload": "Tervező újratöltése",
+    "CheckSave": "Mentés állapotának ellenőrzése",
+    "RecheckAccess": "Hozzáférés újraellenőrzése"
   },
   "State": {
     "Saving": "Mentés…",
@@ -33,7 +35,12 @@
     "ServerFindingsOne": "Kiszolgálóoldali ellenőrzés: {{count}} megállapítás",
     "SavedWithChanges": "Mentve. További módosítások maradtak a tervezőben.",
     "SavedNewIdentity": "Új erőforrásként mentve. A további módosítások itt maradnak; újabb mentés előtt töltse be újra a mentett erőforrást.",
-    "SavedReloadRequired": "Mentve. Újabb mentés előtt töltse újra a tervezőt."
+    "SavedReloadRequired": "Mentve. Újabb mentés előtt töltse újra a tervezőt.",
+    "CheckingSave": "Mentés állapotának ellenőrzése…",
+    "SaveConfirmed": "A tárolt változat megegyezik az elküldött módosításokkal. A jelenlegi szerkesztések megmaradtak.",
+    "SaveUnchanged": "A tárolt változat nem változott. Újra megpróbálhatja a mentést.",
+    "CheckingAccess": "Hozzáférés ellenőrzése…",
+    "AccessRestored": "A hozzáférés helyreállt, és a tárolt változat nem változott. A szerkesztések megmaradtak; újra menthet."
   },
   "Version": {
     "Title": "Létrehoz egy új sablonverziót?",
@@ -55,6 +62,7 @@
     "Conflict": "Ez az artefaktum megváltozott, mióta megnyitotta. A szerkesztései megmaradtak; mentés előtt nyissa meg újra a legfrissebb verziót.",
     "SessionExpired": "A munkamenete lejárt. Mentés előtt jelentkezzen be újra.",
     "Forbidden": "Nincs jogosultsága az artefaktum mentéséhez.",
+    "VersioningOnlyByOwner": "Új verziót csak a sablon tulajdonosa hozhat létre. A szerkesztései megmaradtak.",
     "RequestFailed": "A kérés sikertelen ({{status}}). {{detail}}",
     "EditsKept": "A szerkesztései megmaradtak.",
     "InvalidSearchCursor": "Érvénytelen tárhelykeresési kurzor.",
@@ -66,6 +74,7 @@
     },
     "NoFolder": "Nem áll rendelkezésre célmappa. A létrehozást egy Munkaterület-mappából indítsa.",
     "NoValidator": "A kiszolgáló nem adott meg verzióellenőrzőt. Mentés előtt nyissa meg újra az artefaktumot.",
+    "SavedVerificationUnavailable": "Mentve, de a kiszolgáló nem adott meg verzióellenőrzőt. A jelenlegi módosításai a tervezőben maradtak. Újabb mentés előtt ellenőrizze a mentés állapotát.",
     "ComponentLoad": "A(z) {{name}} nem tölthető be. Építse újra és telepítse a helyi komponenseket.",
     "ConfigurationLoad": "A frontend konfigurációja nem tölthető be.",
     "SignIn": "A bejelentkezés nem inicializálható. Töltse újra az oldalt, és próbálja újra.",
@@ -75,7 +84,7 @@
     "InvalidImpact": "A kiszolgáló nem adott érvényes frissítési értékelést. A módosításai megmaradtak.",
     "DocumentChanged": "A dokumentum megváltozott a mentés előkészítése közben. Ellenőrizze, és mentse újra.",
     "InvalidArtifact": "Az adattár eltérő vagy hiányos artefaktumot adott vissza. Próbálja újra az újratöltéssel.",
-    "SaveUnconfirmed": "A kiszolgáló elfogadta a mentést, de nem azonosította a mentett artefaktumot. Újabb mentés előtt ellenőrizze a Workspace-ben.",
+    "SaveUnconfirmed": "Nem sikerült megerősíteni, hogy a módosítások mentése megtörtént-e. A módosítások megmaradtak a tervezőben. Újabb mentés előtt a Mentés állapotának ellenőrzése gombbal derítse ki, mi történt.",
     "Unreachable": "A kiszolgáló nem érhető el. Ellenőrizze a kapcsolatot, és próbálja újra.",
     "Unreadable": "A CEDAR nem tudja beolvasni ezt az artefaktumot, ezért nem nyitható meg. {{detail}}",
     "SessionEnded": "A munkamenete lejárt. Jelentkezzen be újra.",
@@ -83,6 +92,21 @@
     "ForbiddenCreate": "Nincs jogosultsága itt artefaktumot létrehozni.",
     "ReloadToRetry": "Töltse újra az oldalt, és próbálja újra.",
     "UnreadableAnswer": "A kiszolgáló olyan választ küldött, amelyet a Designer nem tud értelmezni. Töltse újra az oldalt, és próbálja újra.",
-    "ManifestLoad": "A komponensjegyzék nem tölthető be. Építse újra és telepítse a helyi komponenseket."
+    "ManifestLoad": "A komponensjegyzék nem tölthető be. Építse újra és telepítse a helyi komponenseket.",
+    "RecoveryReadOnly": "Jelenleg nincs jogosultsága az elem módosításához. A szerkesztések megmaradtak; a mentés továbbra is le van tiltva.",
+    "RecoveryUnresolved": "A tárolt változatot nem sikerült egyeztetni a mentéssel. A szerkesztések megmaradtak; a mentés továbbra is le van tiltva.",
+    "RecoveryUnavailable": "Nem sikerült ellenőrizni a mentés állapotát. A szerkesztések megmaradtak. Ellenőrizze a kapcsolatot és a hozzáférést, majd próbálja újra.",
+    "AccessUnavailable": "Nem sikerült ellenőrizni a hozzáférést. A szerkesztések megmaradtak. Jelentkezzen be, vagy ellenőrizze a kapcsolatot, majd próbálja újra."
+  },
+  "Draft": {
+    "StorageError": "A böngésző nem tudta megőrizni a piszkozatot. A módosítások megőrzéséhez tartsa nyitva ezt az oldalt.",
+    "Offer": "Ebben a lapban befejezetlen munka található. Mentés előtt állítsa vissza vagy vesse el.",
+    "Restore": "Piszkozat visszaállítása",
+    "Discard": "Megőrzött piszkozat elvetése",
+    "Restored": "A piszkozat visszaállítása sikerült.",
+    "RestoredGuarded": "A piszkozat visszaállítása sikerült. Újabb mentés előtt használja a Mentés állapotának ellenőrzése vagy a Hozzáférés újraellenőrzése gombot.",
+    "Invalid": "Ez a megőrzött piszkozat itt nem állítható vissza. Használja ugyanazt a fiókot, telepítést és erőforrást.",
+    "UnknownCreate": "Az előző létrehozási vagy verzióművelet eredménye ismeretlen. A piszkozat elvetése előtt állítsa vissza, és használja a Mentés állapotának ellenőrzése gombot.",
+    "SignInAgain": "Újbóli bejelentkezés"
   }
 }

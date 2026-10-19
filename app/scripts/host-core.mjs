@@ -1,9 +1,10 @@
-import { resourceSelector, resourcePathId, useDeploymentApi } from './resource-address.mjs';
-export { resourceSelector, resourcePathId, useDeploymentApi };
+import { JsonSourcePolicy, TextPolicy, parseJson } from './json-policy.mjs';
+import { resourceSelector, resourcePathId, useDeploymentApi, mintIdentity } from './resource-address.mjs';
+export { resourceSelector, resourcePathId, useDeploymentApi, mintIdentity };
 // Loading the maps with this module's query string keeps one shared instance with host.mjs,
 // which imports the same versioned URL and sets the active language on it.
 const { t } = await import(`./i18n.mjs${new URL(import.meta.url).search}`);
-const { DesignerCoordinator } = await import(`./host-state.mjs${new URL(import.meta.url).search}`);
+const { DesignerCoordinator, ownerOnlyRefusal } = await import(`./host-state.mjs${new URL(import.meta.url).search}`);
 export { DesignerCoordinator };
 
 /** Angular registers CED asynchronously after its script has loaded. Bound that wait. */
@@ -57,16 +58,33 @@ export class BackendError extends Error {
   constructor(status, data, { unreadable = false } = {}) {
     // A server-supplied message is shown as the server wrote it; only the host's own text is translated.
     // Status 0 means no answer arrived.
-    super(unreadable ? t('Error.UnreadableAnswer') :
+    const named = unreadable ? t('Error.UnreadableAnswer') :
       status === 0 ? t('Error.Unreachable') :
       status === 412 ? t('Error.Conflict') :
       status === 401 ? t('Error.SessionExpired') :
-      status === 403 ? t('Error.Forbidden') :
-      t('Error.RequestFailed', { status, detail: data?.message || data?.errorMessage || t('Error.EditsKept') }));
+      ownerOnlyRefusal({ status, data }) ? t('Error.VersioningOnlyByOwner') :
+      status === 403 ? t('Error.Forbidden') : null;
+    const serverMessage = named === null ? data?.message || data?.errorMessage : undefined;
+    super(named ?? t('Error.RequestFailed', { status, detail: serverMessage || t('Error.EditsKept') }));
     this.status = status;
     this.data = data;
     this.unreadable = unreadable;
+    // The message shown for a refused save extends the server's, so the general refusal records the one it reports.
+    this.serverMessage = serverMessage || undefined;
   }
+}
+
+/**
+ * The message shown when a save fails. A refusal leaves the edits in the designer, and the general refusal
+ * says so after the server's message as well as in place of a missing one. Every other failure keeps its
+ * own text.
+ */
+export function saveMessage(error) {
+  const reported = error instanceof BackendError ? String(error.serverMessage ?? '').trim() : '';
+  if (!reported) return error?.message ?? String(error);
+  // The reassurance is a sentence of its own, so a message without closing punctuation gains a full stop.
+  const sentence = /[.!?]$/.test(reported) ? reported : `${reported}.`;
+  return t('Error.RequestFailed', { status: error.status, detail: `${sentence} ${t('Error.EditsKept')}` });
 }
 
 /**
@@ -101,7 +119,7 @@ export function createBackend(auth, sessionId, fetcher = fetch) {
       if (etag) headers['If-Match'] = etag;
       let response;
       try {
-        response = await fetcher(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal });
+        response = await fetcher(url, { method, headers, body: body === undefined ? undefined : JsonSourcePolicy.stringify(body), signal });
       } catch (error) {
         // A cancelled request stays a cancellation. Any other rejection means no answer arrived, and the
         // browser's own text for that is neither translated nor helpful.
@@ -110,7 +128,7 @@ export function createBackend(auth, sessionId, fetcher = fetch) {
       }
       const text = await response.text();
       let data;
-      try { data = text ? JSON.parse(text) : null; } catch {
+      try { data = text ? parseJson(text) : null; } catch {
         // A read that answers with something other than JSON has failed: a proxy's sign-in page, or
         // a body cut short. A write's acknowledgement is judged by the save, which knows that an
         // unreadable one may still mean the write happened.
@@ -136,7 +154,7 @@ export function childSource(request, base) {
       const { data } = await request(`${base}/search?${params}`, { signal });
       const rows = data?.resources;
       if (!Array.isArray(rows) || !Number.isSafeInteger(data.totalCount) || data.totalCount < rows.length ||
-          rows.some(row => !row || typeof row['@id'] !== 'string' || !row['@id'].trim() || !['field', 'element'].includes(row.resourceType)) ||
+          rows.some(row => !row || typeof row['@id'] !== 'string' || TextPolicy.isBlank(row['@id']) || !['field', 'element'].includes(row.resourceType)) ||
           new Set(rows.map(row => row['@id'])).size !== rows.length) throw new Error(t('Error.InvalidChildren'));
       return {
         results: rows.map(row => ({ id: row['@id'], name: row['schema:name'], type: row.resourceType,
@@ -154,7 +172,7 @@ export function childSource(request, base) {
 
 /** Storage requires explicit empty provenance on new artifacts; the server owns its values. */
 export function storageArtifact(source, creating = false) {
-  const result = structuredClone(source);
+  const result = JsonSourcePolicy.clone(source);
   function visit(node) {
     if (!node || typeof node !== 'object') return;
     const types = Array.isArray(node['@type']) ? node['@type'] : [node['@type']];
@@ -174,19 +192,35 @@ export function storageArtifact(source, creating = false) {
   return result;
 }
 
-/** Validators belong to the loaded representation, never a URL cache. */
-export async function saveArtifact({ request, base, route, artifact, etag, folderId, confirmVersion, stillCurrent = () => true }) {
+/**
+ * Validators belong to the loaded representation, never a URL cache. A create or a new version is sent
+ * under the identity `identity()` gives, so that a lost answer can be settled by reading that identity
+ * and a retry under it cannot store a second artifact. While the deployment's base is unknown there is
+ * none, and the server mints the identity instead.
+ */
+export async function saveArtifact({ request, base, route, artifact, etag, folderId, confirmVersion, stillCurrent = () => true, onWrite = () => {},
+  identity = () => mintIdentity(route.collection) }) {
   const name = artifact?.['schema:name'];
-  if (typeof name !== 'string' || !name.trim()) {
+  if (typeof name !== 'string' || TextPolicy.isBlank(name)) {
     throw new Error(t(`Error.NameRequired.${route.kind}`));
   }
   artifact = storageArtifact(artifact, !route.id);
   const url = `${base}/${route.collection}`;
   const current = () => { if (!stillCurrent()) throw new Error(t('Error.DocumentChanged')); };
+  // Assessments do not write. Record only the operation that may store an artifact, with the identity
+  // it creates, so a failed assessment can be retried while a lost create response cannot create a duplicate.
+  const write = (url, options, operation = 'update', id = null) => {
+    onWrite({ createsIdentity: operation !== 'update', operation, identity: id, body: JsonSourcePolicy.clone(options.body) });
+    return request(url, options);
+  };
   current();
   if (!route.id) {
     if (!folderId) throw new Error(t('Error.NoFolder'));
-    return request(`${url}?${new URLSearchParams({ folder_id: resourceSelector(folderId) })}`, { method: 'POST', body: artifact });
+    const folder = new URLSearchParams({ folder_id: resourceSelector(folderId) });
+    const id = identity();
+    if (!id) return write(`${url}?${folder}`, { method: 'POST', body: artifact }, 'create');
+    artifact['@id'] = id;
+    return write(`${url}/${encodeURIComponent(resourcePathId(id))}?${folder}`, { method: 'PUT', body: artifact }, 'create', id);
   }
   if (!etag) throw new Error(t('Error.NoValidator'));
   artifact['@id'] = route.id; // Resolved from the loaded document, never from a short browser address.
@@ -200,8 +234,10 @@ export async function saveArtifact({ request, base, route, artifact, etag, folde
     if (!impact.canBeUpdated) {
       if (!await confirmVersion(impact)) return null;
       current();
-      return request(`${base}/command/publish-create-draft-template/${encodedId}`, { method: 'POST', body: artifact, etag });
+      const draft = identity();
+      const query = draft ? `?${new URLSearchParams({ draft_id: draft })}` : '';
+      return write(`${base}/command/publish-create-draft-template/${encodedId}${query}`, { method: 'POST', body: artifact, etag }, 'version', draft);
     }
   }
-  return request(`${url}/${encodedId}`, { method: 'PUT', body: artifact, etag });
+  return write(`${url}/${encodedId}`, { method: 'PUT', body: artifact, etag });
 }

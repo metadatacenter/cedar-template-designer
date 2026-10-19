@@ -1,3 +1,4 @@
+import { stagePolicy } from './stage-policy.mjs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
@@ -30,6 +31,7 @@ export async function stageComponents(root, env = process.env) {
     }
     staged.push({ name, bytes, identity });
   }
+  await stagePolicy(root);
   // Validate every input before replacing any served bundle.
   const destination = resolve(root, 'app/components');
   await mkdir(destination, { recursive: true });

@@ -1,10 +1,14 @@
 import {test,expect} from '@playwright/test';
 import {host,text} from './host-fixture.mjs';
 
-// Opening the Designer, creating or editing, in either language, with each request the page makes
-// while it opens answered in each way it can fail. The page stops loading and says why in the
-// language it speaks. The server's own words appear when it gives some. The browser's and the
-// parser's words never appear, and nothing speaks of a save that has not happened.
+// Opening the Designer, creating or editing, with each request the page makes while it opens
+// answered in each way it can fail. The page stops loading and says why in the language it speaks.
+// The server's own words appear when it gives some. The browser's and the parser's words never
+// appear, and nothing speaks of a save that has not happened.
+//
+// The language selects only the catalogue a message comes from and never a branch in the code
+// under test, so every case runs in English. A case runs in Hungarian as well when it is the first
+// to show its message, so that each message the page can show appears once in Hungarian.
 
 const SERVER_MESSAGE='Server says no';
 const ANSWERS={
@@ -34,11 +38,15 @@ function expected(request,answer,mode,say){
   }
 }
 
-for(const mode of ['create','edit'])for(const language of ['en','hu'])for(const request of REQUESTS[mode])
+const shownInHungarian=new Set();
+for(const mode of ['create','edit'])for(const request of REQUESTS[mode])
   for(const answer of Object.keys(ANSWERS)){
     // A script that answers 200 with something other than JavaScript is not a failure of loading it.
     if(request==='component'&&answer==='an answer that is not JSON')continue;
-    test(`${mode} in ${language}: the ${request} request meets ${answer}`,async({page})=>{
+    const hungarian=expected(request,answer,mode,(key,params)=>text('hu',key,params));
+    const languages=shownInHungarian.has(hungarian)?['en']:['en','hu'];
+    shownInHungarian.add(hungarian);
+    for(const language of languages)test(`${mode} in ${language}: the ${request} request meets ${answer}`,async({page})=>{
       await host(page,'template',mode,true,{language,openingFailure:{request,answer:ANSWERS[answer]}});
       const message=page.locator('#message');
       await expect(message).toHaveText(expected(request,answer,mode,(key,params)=>text(language,key,params)));

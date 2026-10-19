@@ -33,6 +33,23 @@ for(const depth of [1,3,8])for(const severity of ['errors','warnings']) {
     expect(state.writes).toHaveLength(2);
   });
 }
+// The page never scrolls: a long field scrolls within the editor area, and a long list of findings within itself.
+for(const kind of ['template','field'])test(`${kind}: the header and server findings stay in view however long either runs`,async({page})=>{
+  await page.setViewportSize({width:1280,height:600});
+  const state=await host(page,kind);
+  const errors=Array.from({length:40},(_,i)=>({location:`/properties/Field${i}`,message:'Invalid default IRI'}));
+  state.failure={status:400,json:{message:'Validation failed',objects:{validationReport:{errors}}}};
+  await edit(page);await page.locator('#save').click();
+  await page.locator('#server-issues summary').click();
+  await expect(page.locator('#server-issues li')).toHaveCount(40);
+  await page.locator('#editor > *').evaluate(designer=>{designer.style.display='block';designer.style.minHeight='3000px';});
+  await page.mouse.move(640,580);await page.mouse.wheel(0,3000);
+  if(kind==='field')await expect.poll(()=>page.locator('#editor').evaluate(editor=>editor.scrollTop)).toBeGreaterThan(0);
+  expect(await page.evaluate(()=>[window.scrollY,document.documentElement.scrollHeight-innerHeight])).toEqual([0,0]);
+  await expect(page.locator('header')).toBeInViewport({ratio:1});
+  await expect(page.locator('#server-issues summary')).toBeInViewport({ratio:1});
+  expect((await page.locator('#editor').boundingBox()).height).toBeGreaterThan(100);
+});
 for(const status of [403,412])test(`write ${status} keeps the edit and offers explicit reload`,async({page})=>{
   const state=await host(page);state.failure={status,json:{message:'Cannot save'}};
   await edit(page,'Unsaved');await page.locator('#save').click();await expect(page.locator('#save')).toBeDisabled();
@@ -58,7 +75,7 @@ for(const kind of ['template','element','field'])for(const mode of ['create','ed
   expect(await page.locator('#editor > *').evaluate(el=>el.inert)).toBe(false);
   expect(state.writes[0].body['schema:name']).toBe('Submitted');
   if(mode==='create'){
-    await expect(page).toHaveURL(new RegExp(`/${kind}s/edit/saved`));
+    await expect(page).toHaveURL(new RegExp(`/${kind}s/edit/${state.savedId}$`));
     await expect(page.locator('#save')).toBeDisabled();await expect(page.locator('#reload')).toBeVisible();
     page.once('dialog',dialog=>dialog.dismiss());await page.locator('#reload').click();
     expect(await page.locator('#editor > *').evaluate(el=>el.currentArtifact['schema:name'])).toBe('Newer');
@@ -80,7 +97,11 @@ for(const reason of ['new-version','missing-validator','invalid-draft','unreadab
   if(reason==='invalid-draft')await edit(page,'Submitted',{source:'draft',setting:'default',shown:true});
   else if(reason==='unreadable-draft')await page.locator('#editor > *').evaluate(el=>Object.defineProperty(el,'currentArtifact',{get(){throw new Error('Unserializable draft');}}));
   else await edit(page,'Newer');
-  release();await expect(page.locator('#message')).toContainText('Further changes remain');
+  release();await expect(page.locator('#message')).toContainText(reason==='missing-validator'?'Use Check save status':'Further changes remain');
+  if(reason==='missing-validator'){
+    await expect(page.locator('#check-save')).toBeVisible();
+    expect(await page.locator('#editor > *').evaluate(el=>el.currentArtifact['schema:name'])).toBe('Newer');
+  }
   await expect(page.locator('#save')).toBeDisabled();
   if(reason==='new-version')await expect(page).toHaveURL(/\/templates\/edit\/new-draft/);
   if(reason==='new-version'||reason==='missing-validator')await expect(page.locator('#reload')).toBeVisible();
@@ -89,8 +110,10 @@ for(const reason of ['new-version','missing-validator','invalid-draft','unreadab
 for(const mode of ['create','edit'])test(`unidentified ${mode} acknowledgement cannot cause a duplicate save`,async({page})=>{
   const state=await host(page,'template',mode);state.savedId=null;
   await edit(page);await page.locator('#save').click();
-  await expect(page.locator('#message')).toContainText('Check Workspace');await expect(page.locator('#save')).toBeDisabled();
+  await expect(page.locator('#message')).toHaveText(text('en','Error.SaveUnconfirmed'));await expect(page.locator('#save')).toBeDisabled();
   await expect(page.locator('#reload')).toBeVisible({visible:mode==='edit'});
+  // Whether it was stored is read from the server, never repeated.
+  await expect(page.locator('#check-save')).toBeVisible();
   expect(state.writes).toHaveLength(1);
 });
 
@@ -113,3 +136,31 @@ for(const kind of ['template','element','field'])for(const language of ['en','hu
   await expect(page.locator('#save')).toBeDisabled();await expect(page.locator('#reload')).toBeHidden();
   expect(state.writes).toHaveLength(0);
 });
+
+for (const kind of ['template', 'element', 'field']) test(`${kind} read-only host permits inspection but cannot save`, async ({page}) => {
+  const state = await host(page, kind, 'edit', false);
+  const editor = page.locator('#editor > *');
+  expect(await editor.evaluate(el => ({inert: el.inert, readOnly: el.readOnly}))).toEqual({inert:false, readOnly:true});
+  await expect(page.locator('#save')).toBeDisabled();
+  await page.locator('#save').dispatchEvent('click');
+  expect(state.writes).toHaveLength(0);
+});
+
+for (const kind of ['template','element','field']) for (const mode of (kind === 'template' ? ['create','edit','new-version'] : ['create','edit'])) {
+  test(`${kind} ${mode} save retains open settings and selection`, async ({page}) => {
+    const state=await host(page,kind,mode==='create'?'create':'edit');
+    if(mode==='new-version'){state.impact={canBeUpdated:false};state.savedId='new-draft';}
+    await edit(page,'Study');
+    const view={tab:'Metadata',expanded:true,selection:'Value'};
+    await page.locator('#editor > *').evaluate((el,view)=>{el.viewState=view;},view);
+    await page.locator('#save').click();
+    if(mode==='new-version')await page.locator('#version-dialog button[value="confirm"]').click();
+    await expect(page.locator('#state')).toHaveText('Saved');
+    expect(await page.locator('#editor > *').evaluate(el=>el.viewState)).toEqual(view);
+    await edit(page,'Updated');
+    await page.locator('#save').click();
+    if(mode==='new-version')await page.locator('#version-dialog button[value="confirm"]').click();
+    await expect(page.locator('#state')).toHaveText('Saved');
+    expect(await page.locator('#editor > *').evaluate(el=>el.viewState)).toEqual(view);
+  });
+}

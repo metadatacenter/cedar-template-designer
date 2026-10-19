@@ -1,14 +1,6 @@
 {
   "schema": 1,
-  "findings": {
-    "b5cbebd9db4324db0ee8": {
-      "file": "app/styles/host.css",
-      "rule": "geometry",
-      "property": "height",
-      "value": "calc(100dvh - 100px)",
-      "count": 1
-    }
-  },
+  "findings": {},
   "exceptions": {},
   "policy": 4
 }

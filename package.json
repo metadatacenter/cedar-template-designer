@@ -1,6 +1,6 @@
 {
   "name": "cedar-template-designer",
-  "version": "2.9.24",
+  "version": "2.9.25",
   "publishConfig": {
     "registry": "https://nexus.bmir.stanford.edu/repository/npm-cedar/"
   },
@@ -10,7 +10,9 @@
     "start": "node scripts/designer.mjs start",
     "prepare:components": "node scripts/stage-components.mjs && node scripts/stage-design.mjs",
     "test": "node --test test/*.test.mjs",
-    "test:browser": "npm --prefix browser test"
+    "pretest:browser": "node scripts/stage-policy.mjs",
+    "test:browser": "npm --prefix browser test",
+    "pretest": "node scripts/stage-policy.mjs"
   },
   "allowScripts": {
     "fsevents@2.3.3": true
@@ -18,11 +20,12 @@
   "author": "Metadatacenter.org",
   "license": "BSD-2-Clause",
   "devDependencies": {
-    "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20261009.g8a8401b21c62.t0423"
+    "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20261019.g0403cbd43aae.t0059"
   },
   "dependencies": {
-    "cedar-embeddable-designer": "npm:@org.metadatacenter/cedar-embeddable-designer@0.1.0-dev.20261009.gf5b2fec82948.t0423",
-    "cedar-embeddable-editor": "2.0.23",
-    "cedar-embeddable-term-picker": "npm:@org.metadatacenter/cedar-embeddable-term-picker@0.1.0-dev.20261009.g20d0ba0056d4.t0423"
+    "cedar-embeddable-designer": "npm:@org.metadatacenter/cedar-embeddable-designer@0.1.0-dev.20261019.g797208314178.t0059",
+    "cedar-embeddable-editor": "2.0.24",
+    "cedar-embeddable-term-picker": "npm:@org.metadatacenter/cedar-embeddable-term-picker@0.1.0-dev.20261019.g15c6a2cd38b9.t0059",
+    "cedar-model-typescript-library": "1.0.20"
   }
 }

@@ -60,7 +60,9 @@ ETag on PUT. Templates run the backend's `check-update-template` command first;
 when instances prevent an in-place update, a confirmation offers to publish the
 original and save a new draft without copying instances. Cancellation and failures
 keep the edits. Published artifacts and artifacts without `updateResource`
-capability are inert and cannot be saved.
+capability remain inspectable: tabs, expansion, outline and preview work, while editing
+controls are disabled and Save is unavailable. The host is inert only while loading,
+after a failed load, and while saving.
 
 A successful save stays in Designer. After saving a new artifact or a new draft,
 the host reads the stored artifact back, opens it and moves to its edit address,
@@ -90,3 +92,37 @@ error retention, token refresh and repository child search without the stack.
 The live CED host smoke covers create/update without leaving Designer, stale-save
 rejection, versioning with metadata instances, cancellation and the return to Workspace.
 It is in `cedar-development/ops/e2e/ced-host-smoke.mjs`.
+
+A successful first save or new-draft save adopts the stored artifact through
+`loadArtifact(data, { preserveView: true })`, preserving matching settings tabs and
+expansion while receiving the server identity. The coordinator still verifies the
+submitted document is current before adoption. Ordinary loads and explicit reloads
+reset the view.
+
+Unfinished Designer work is retained in this tab's `sessionStorage`, scoped to the
+signed-in account, deployment, artifact kind and identity (or create folder).
+After a reload the host offers to restore it once fresh server reads have finished,
+and a restored draft takes neither permission nor an ETag from what was retained.
+The retained draft keeps the designer's unfinished work and the evidence of
+interrupted writes.
+If the browser cannot retain the draft, the host says so, and the author must keep
+the page open to avoid losing the changes.
+
+The host journals immediately before dispatching a write. A create is a PUT under
+an identity the host mints on the deployment's base, and a new version names the
+draft identity it asks for in `draft_id`. The journal keeps that identity and the
+submitted definition, and for a new version also the source template and the ETag
+it was opened with. Every attempt reuses the identity until its outcome is settled.
+When an answer is lost, Save stays blocked through reload and sign-in, and Discard
+is refused. Check save status then reads the identity. If the artifact is stored,
+it opens at its edit address and later edits remain as unsaved changes. If it is
+absent, Save sends the write again under the same identity. Any other answer leaves
+Save blocked, and the check may be repeated. A create whose identity the server
+already holds (412 or 428) is checked the same way. That attempt stored nothing,
+so an artifact found there was stored by an earlier attempt whose content may
+differ. The page moves to its edit address and keeps the designer's content. The
+artifact must be reloaded before the next save. While the deployment's base
+cannot be derived from the resource API, the server mints the identity as before,
+and a lost answer cannot be checked. Update recovery rechecks the stored revision
+and access before permitting another conditional write. Explicit confirmed
+discard clears ordinary drafts. Closing a tab ends automatic retention.
