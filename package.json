@@ -1,6 +1,6 @@
 {
   "name": "cedar-template-designer",
-  "version": "2.9.25-SNAPSHOT",
+  "version": "2.9.26-SNAPSHOT",
   "publishConfig": {
     "registry": "https://nexus.bmir.stanford.edu/repository/npm-cedar/"
   },
@@ -20,12 +20,12 @@
   "author": "Metadatacenter.org",
   "license": "BSD-2-Clause",
   "devDependencies": {
-    "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20261018.0403cbd4"
+    "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20261019.g0403cbd43aae.t0059"
   },
   "dependencies": {
-    "cedar-embeddable-designer": "npm:@org.metadatacenter/cedar-embeddable-designer@0.1.0-dev.20261018.adb2d5ad",
-    "cedar-embeddable-editor": "npm:@org.metadatacenter/cedar-embeddable-editor@2.0.24-dev.20261018.da1705a",
-    "cedar-embeddable-term-picker": "npm:@org.metadatacenter/cedar-embeddable-term-picker@0.1.0-dev.20261018.15c6a2cd",
+    "cedar-embeddable-designer": "npm:@org.metadatacenter/cedar-embeddable-designer@0.1.0-dev.20261019.g797208314178.t0059",
+    "cedar-embeddable-editor": "2.0.24",
+    "cedar-embeddable-term-picker": "npm:@org.metadatacenter/cedar-embeddable-term-picker@0.1.0-dev.20261019.g15c6a2cd38b9.t0059",
     "cedar-model-typescript-library": "1.0.20"
   }
 }
