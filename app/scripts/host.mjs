@@ -6,6 +6,7 @@ document.getElementById('version-icon').innerHTML = iconSvg('new-record');
 const version = encodeURIComponent(window.cedarCacheControl || 'local');
 const { resourceSelector, resourcePathId, useDeploymentApi, mintIdentity, routeFor, workspaceReturn, canEdit, canCreate, createBackend, openingMessage, saveMessage, childSource, saveArtifact, DesignerCoordinator, waitForDesigner } = await import(`./host-core.mjs?v=${version}`);
 const { DesignerDraftStore, draftScope, discardable } = await import(`./host-draft.mjs?v=${version}`);
+const { reusableSource, ReusableJournal } = await import(`./reusable-artifacts.mjs?v=${version}`);
 // host-core.mjs imports this same versioned URL, so both modules share one active language.
 const { t, counted, detectLanguage, setLanguage, localizeDocument } = await import(`./i18n.mjs?v=${version}`);
 const language = setLanguage(detectLanguage(navigator.languages));
@@ -367,7 +368,20 @@ try {
     // Suppress authoring UI (including the field chooser) until loading and permissions finish.
     designer.readOnly = true;
     designer.config = { terminologyBaseUrl: config.terminologyBaseUrl, bridgeBaseUrl: config.bridgeBaseUrl };
-    designer.childSource = childSource(request, config.resourceRestAPI);
+    designer.childSource = { ...childSource(request, config.resourceRestAPI),
+      ...reusableSource(request, config.resourceRestAPI, {
+        context: () => ({ route, etag: state.etag, writable: state.ready && state.writable && !state.saving && !state.reloadRequired,
+          rememberReplacement: (artifact, projection) => state.rememberReplacement(artifact, projection),
+          project: projection => state.project(projection) }),
+        folder: () => folderId,
+        journal: new ReusableJournal(JSON.stringify([config.resourceRestAPI, auth.getParsedToken().sub])),
+        open: reference => {
+          const address = new URL(`/${reference.type}s/edit/${encodeURIComponent(resourcePathId(reference.id))}`, location.origin);
+          if (folderId) address.searchParams.set('folderId', folderId);
+          window.open(address.href, '_blank', 'noopener,noreferrer');
+        },
+      }),
+    };
     // Connecting initializes Angular's public methods. Keep the editor inert until load and permissions succeed.
     designer.inert = true;
     ui.editor.hidden = true;

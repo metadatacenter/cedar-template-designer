@@ -17,6 +17,17 @@ const project = source => {
   result.properties._annotations = {type: 'object'};
   return result;
 };
+
+test('pulling a new identity replaces the complete definition without inheriting hidden old schema', () => {
+  const stored = legacy(), opened = project(stored), edited = structuredClone(opened);
+  stored.properties.Field.oldOnlyConstraint = {pattern: 'old'};
+  edited.properties.Field = {'@id': 'new-published-release', _ui: {inputType: 'textfield'},
+    properties: {'@value': {type: 'string'}}, 'bibo:status': 'bibo:published'};
+  const result = applyAuthorChanges(stored, opened, edited);
+  assert.deepEqual(result.properties.Field, edited.properties.Field);
+  assert.deepEqual(result._ui, stored._ui);
+  assert.deepEqual(result._annotations, stored._annotations);
+});
 function setup() {
   const stored = legacy(), projection = project(stored), state = new DesignerCoordinator();
   const designer = {currentArtifact: structuredClone(projection), isDirty: true,
@@ -159,4 +170,32 @@ test('a replacement definition does not inherit the previous scalar or repeated 
   const repeated=structuredClone(opened);repeated.properties.Field={type:'array',items:repeated.properties.Field};
   const replacement=structuredClone(opened);replacement.properties.Field['@id']='replacement';
   assert.deepEqual(applyAuthorChanges(repeated,repeated,replacement).properties.Field,replacement.properties.Field);
+});
+
+for (const repeated of [false, true]) test(`an assessed release keeps its wire schema through placement and recovery (${repeated})`, () => {
+  const {stored, projection, state, designer} = setup();
+  const release = {...structuredClone(stored.properties.Field), '@id': 'released', 'bibo:status': 'bibo:published'};
+  release.newOnly = {retained: true};
+  const normalized = {...structuredClone(projection.properties.Field), '@id': 'released', 'bibo:status': 'bibo:published'};
+  normalized.newOnly = {retained: true};
+  designer.currentArtifact.properties.Field = repeated ? {type: 'array', minItems: 2, items: normalized} : normalized;
+  state.rememberReplacement(release, designer.currentArtifact);
+  const expected = repeated ? {type: 'array', minItems: 2, items: release} : release;
+  assert.deepEqual(state.project(designer.currentArtifact).properties.Field, expected);
+  const recovery = JSON.parse(JSON.stringify(state.captureRecovery()));
+  const restored = new DesignerCoordinator();
+  restored.loaded({artifact: stored, projection, etag: '"opened"', writable: true});
+  restored.restoreRecovery(recovery);
+  assert.deepEqual(restored.project(designer.currentArtifact).properties.Field, expected);
+  normalized._valueConstraints.requiredValue = true;
+  normalized._ui.hidden = true;
+  const changed = restored.project(designer.currentArtifact).properties.Field;
+  const child = changed.items ?? changed;
+  assert.deepEqual(child.properties, release.properties);
+  assert.equal(child._valueConstraints.requiredValue, true);
+  assert.equal(child._valueConstraints.recommendedValue, false);
+  assert.equal(child._ui.hidden, true);
+  assert.equal(stored.properties.Field['@id'], 'field');
+  assert.throws(() => restored.rememberReplacement({...release, newOnly: {changed: true}}, designer.currentArtifact));
+  assert.deepEqual(restored.project(designer.currentArtifact).properties.Field, changed);
 });

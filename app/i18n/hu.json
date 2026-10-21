@@ -96,7 +96,8 @@
     "RecoveryReadOnly": "Jelenleg nincs jogosultsága az elem módosításához. A szerkesztések megmaradtak; a mentés továbbra is le van tiltva.",
     "RecoveryUnresolved": "A tárolt változatot nem sikerült egyeztetni a mentéssel. A szerkesztések megmaradtak; a mentés továbbra is le van tiltva.",
     "RecoveryUnavailable": "Nem sikerült ellenőrizni a mentés állapotát. A szerkesztések megmaradtak. Ellenőrizze a kapcsolatot és a hozzáférést, majd próbálja újra.",
-    "AccessUnavailable": "Nem sikerült ellenőrizni a hozzáférést. A szerkesztések megmaradtak. Jelentkezzen be, vagy ellenőrizze a kapcsolatot, majd próbálja újra."
+    "AccessUnavailable": "Nem sikerült ellenőrizni a hozzáférést. A szerkesztések megmaradtak. Jelentkezzen be, vagy ellenőrizze a kapcsolatot, majd próbálja újra.",
+    "ReusableUnconfirmed": "Az újrafelhasználható elem mentése nem volt ellenőrizhető. A módosítások megmaradtak. Ismételje meg a műveletet ugyanannak a mentett azonosítónak az ellenőrzéséhez."
   },
   "Draft": {
     "StorageError": "A böngésző nem tudta megőrizni a piszkozatot. A módosítások megőrzéséhez tartsa nyitva ezt az oldalt.",

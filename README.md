@@ -85,6 +85,28 @@ CEFD registration is required; during development stage it with `CEDAR_CED_BUNDL
 
 CED continues to support fields inside templates/elements and reusable repository children.
 
+## Reusable versions
+
+The Version tab uses authenticated repository history and loads, and opens originals in a
+separate Designer tab. Only published releases are replacement targets. Compatibility
+compares the complete proposed parent, including placement and the host's preservation of
+untouched stored content. Identical validation shapes are a conservative compatibility proof;
+other changes remain unknown. An explicit server count of zero permits a manual replacement
+without a compatibility claim. Unknown changes with existing records are withheld.
+
+Save as reusable draft and Publish as reusable create an independent artifact in the route's
+folder, or the user's home folder when none is supplied. The host retains the chosen identity,
+submitted content and creation/publication stages in session storage before writing. Retrying
+checks that identity and resumes publication; it does not create another artifact. Confirmed
+children remain stored if the parent edit is discarded. Saving the parent is a separate action.
+Published results become links; draft results remain editable copies with derivation.
+
+The artifact server independently fences child replacements that change validation against
+stored and in-flight instances. Same-definition constraint editing retains CEDAR's existing
+data-quality policy. The guard applies even when a client skips the browser assessment.
+Run `npm run smoke:journey -- pull-versions reusable-publication` and
+`npm run smoke:rest -- pull-versions` from `cedar-development/ops/e2e` after redeployment.
+
 ## Verification
 
 `npm test` exercises navigation, permission checks, conditional saving, versioning,
