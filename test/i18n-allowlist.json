@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "file": "app/scripts/reusable-artifacts.mjs",
+    "text": "  schema",
+    "reason": "The artifact's JSON Schema title follows the server's canonical storage format; this is not a UI title."
+  },
+  {
+    "file": "app/scripts/reusable-artifacts.mjs",
+    "text": "schema:name",
+    "reason": "JSON-LD property key used to derive the stored JSON Schema title, not display text."
+  }
+]

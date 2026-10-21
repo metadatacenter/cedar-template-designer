@@ -96,7 +96,8 @@
     "RecoveryReadOnly": "You do not currently have permission to update this artifact. Your edits have been kept; saving remains blocked.",
     "RecoveryUnresolved": "The stored version could not be reconciled with your save. Your edits have been kept; saving remains blocked.",
     "RecoveryUnavailable": "Save status could not be checked. Your edits have been kept. Check your connection and access, then try again.",
-    "AccessUnavailable": "Access could not be checked. Your edits have been kept. Sign in or check your connection, then try again."
+    "AccessUnavailable": "Access could not be checked. Your edits have been kept. Sign in or check your connection, then try again.",
+    "ReusableUnconfirmed": "The reusable artifact could not be confirmed. Your changes are kept. Retry this action to check the same saved identity."
   },
   "Draft": {
     "StorageError": "This browser could not retain the draft. Keep this page open to avoid losing your changes.",

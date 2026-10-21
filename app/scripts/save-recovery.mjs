@@ -34,7 +34,7 @@ const absoluteIri = value => typeof value === 'string' && IdentifierPolicy.isVal
  * submission sent without an absolute one, such as the designer's temporary identifiers. Everything else,
  * names, order of arrays, values, constraints and annotations, must match.
  */
-function sameWritten(stored, submitted) {
+export function sameWritten(stored, submitted) {
   const a = JsonSourcePolicy.clone(stored), b = JsonSourcePolicy.clone(submitted);
   if (!a || typeof a !== 'object' || !b || typeof b !== 'object') return false;
   const visit = (node, sent) => {

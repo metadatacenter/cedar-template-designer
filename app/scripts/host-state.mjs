@@ -36,6 +36,7 @@ export class DesignerCoordinator {
   #server;
   #committed = false;
   #projection;
+  #replacements = [];
   #pendingUpdate;
   // The identity the next create or new version is sent under. It is minted once and kept, across
   // reloads through the retained draft, until a write under it is confirmed, so that no retry of an
@@ -52,6 +53,7 @@ export class DesignerCoordinator {
     this.#pendingUpdate = undefined;
     this.stored = JsonSourcePolicy.clone(artifact);
     this.#projection = JsonSourcePolicy.clone(projection);
+    this.#replacements = [];
     this.etag = etag;
     this.writable = writable === true;
     this.ready = true;
@@ -80,6 +82,7 @@ export class DesignerCoordinator {
     const creation = this.#creationOf(write, attempt) ?? this.#creation;
     return JsonSourcePolicy.clone({
       stored: this.stored, projection: this.#projection, etag: this.etag,
+      replacements: this.#replacements,
       committed: this.#committed, reloadRequired: this.reloadRequired || Boolean(write),
       server: this.#server,
       uncertainCreation: this.uncertainCreation || Boolean(write?.createsIdentity),
@@ -99,6 +102,9 @@ export class DesignerCoordinator {
       (copy.projection !== undefined && !object(copy.projection)) || (copy.etag !== undefined && typeof copy.etag !== 'string')) throw new Error();
     if (copy.pending && (!object(copy.pending.opened) || !object(copy.pending.submitted) || !object(copy.pending.projection) ||
       typeof copy.pending.etag !== 'string' || !['save', 'access', 'acknowledgement'].includes(copy.pending.purpose))) throw new Error();
+    if (copy.replacements !== undefined && (!Array.isArray(copy.replacements) || copy.replacements.some(entry =>
+      !object(entry?.artifact) || !object(entry?.projection) || typeof entry.artifact['@id'] !== 'string' ||
+      entry.artifact['@id'] !== entry.projection['@id'] || entry.artifact['bibo:status'] !== 'bibo:published'))) throw new Error();
     if (copy.server && (typeof copy.server.key !== 'string' || !Array.isArray(copy.server.issues) ||
       !copy.server.issues.every(issue => object(issue) && typeof issue.message === 'string' &&
         typeof issue.location === 'string' && ['error', 'warning'].includes(issue.severity) && issue.source === 'server'))) throw new Error();
@@ -115,6 +121,7 @@ export class DesignerCoordinator {
       sameRevision(copy.etag, this.etag) && artifactKey(copy.stored) === artifactKey(this.stored));
     this.#generation++;
     this.stored = copy.stored; this.#projection = copy.projection; this.etag = copy.etag;
+    this.#replacements = copy.replacements ?? [];
     this.#committed = copy.committed;
     this.#pendingUpdate = copy.pending ? { ...copy.pending, attempt: { projection: copy.pending.projection } } : undefined;
     this.reloadRequired = (copy.stored !== undefined && copy.reloadRequired) || copy.uncertainCreation || !same || !this.writable;
@@ -152,11 +159,33 @@ export class DesignerCoordinator {
     if (!this.#active || !this.ready || !this.writable || this.saving || this.reloadRequired) return null;
     if (!this.report(designer, designer.validate()).canSave) return null;
     const projection = JsonSourcePolicy.clone(designer.currentArtifact);
-    const artifact = this.stored === undefined ? JsonSourcePolicy.clone(projection)
-      : applyAuthorChanges(this.stored, this.#projection, projection);
+    const artifact = this.project(projection);
     const generation = ++this.#generation;
     this.saving = true;
     return { artifact, projection, key: artifactKey(projection), current: () => this.#active && generation === this.#generation };
+  }
+  /** The body this projection would save, retaining untouched stored schema branches. */
+  project(projection) {
+    return this.stored === undefined ? JsonSourcePolicy.clone(projection)
+      : applyAuthorChanges(this.stored, this.#projection, projection, this.#replacements);
+  }
+  /** Retain the exact assessed release, alongside CED's projection of it, for Save and recovery. */
+  rememberReplacement(artifact, document) {
+    if (artifact?.['bibo:status'] !== 'bibo:published') return;
+    const remembered = this.#replacements.find(entry => entry.artifact['@id'] === artifact['@id']);
+    // An administrative repair must not silently replace content already assessed in this page.
+    if (remembered) {
+      if (artifactKey(remembered.artifact) !== artifactKey(artifact)) throw new Error();
+      return;
+    }
+    const find = node => {
+      if (node?.['@id'] === artifact['@id']) return node;
+      for (const child of Object.values(node?.properties ?? {})) {
+        const match = find(child?.items ?? child); if (match) return match;
+      }
+    };
+    const projection = find(document);
+    if (projection) this.#replacements.push(JsonSourcePolicy.clone({artifact, projection}));
   }
   unchanged(attempt, artifact) { return attempt.current() && attempt.key === artifactKey(artifact); }
   matches(attempt, designer) {
