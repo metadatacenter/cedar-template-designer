@@ -41,6 +41,8 @@ jobs:
           distribution: temurin
           java-version: 17
           cache: maven
+          # The oracle POM arrives with the model npm package, after Java setup.
+          cache-dependency-path: package-lock.json
 
       - name: Install the locked dependency graph
         run: npm ci
