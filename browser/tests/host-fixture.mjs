@@ -1,6 +1,7 @@
 // The Designer host page with its backend, sign-in and components answered in the browser. The real
 // host scripts, translations and markup are served; the designer is a small stand-in whose document,
-// report and dirtiness a test sets directly.
+// report and dirtiness a test sets directly. A case can instead serve a real designer bundle and the
+// stored artifact it opens, which is the only way to see what the designer's projection does to it.
 //
 // The page and its API share one origin, named as a deployment's resource host, so the host takes the
 // deployment's base from the API as it does in production: it mints identities on https://repo.designer.test/.
@@ -33,7 +34,10 @@ export const ORIGIN='https://resource.designer.test';
 export const minted=collection=>new RegExp(`^https://repo\\.designer\\.test/${collection}/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`);
 // Unless a test names the identity a write stores (savedId), a create stores under the identity it sends.
 export async function host(page, kind='template', mode='edit', allowed=true, initial={}) {
-  const state={allowed,language:'en',writes:[],stored:new Map(),failure:null,impact:{canBeUpdated:true},brokenLoad:false,holdWrite:null,savedId:mode==='edit'?'item':undefined,nextEtag:'"next"',loadedId:'item',loadedEtag:'"opened"',...initial};
+  // `item` is the opened artifact's identity in the page's address. A real designer refuses a relative
+  // identity, so a case serving one names the UUID its absolute `@id` ends in.
+  const item=initial.item??'item';
+  const state={allowed,language:'en',writes:[],stored:new Map(),failure:null,impact:{canBeUpdated:true},brokenLoad:false,holdWrite:null,savedId:mode==='edit'?item:undefined,nextEtag:'"next"',loadedId:item,loadedEtag:'"opened"',...initial,item};
   await page.route('https://workspace.test/**',route=>route.fulfill({contentType:'text/html',body:'<h1>Workspace</h1>'}));
   await page.route(`${ORIGIN}/**`,async route=>{
     const url=new URL(route.request().url()),path=url.pathname;
@@ -62,14 +66,17 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
       const stored=state.stored.get(path.split('/').pop());
       if(stored)return route.fulfill({json:stored.json,headers:stored.etag?{ETag:stored.etag}:{}});
       // Only the opened artifact exists unless a write stored another.
-      if(path.split('/').pop()!=='item')return route.fulfill({status:404,json:{message:'Not found'}});
+      if(path.split('/').pop()!==state.item)return route.fulfill({status:404,json:{message:'Not found'}});
       if(state.brokenLoad)return route.fulfill({status:503,json:{message:'Load unavailable'}});
-      return route.fulfill({json:{'@id':state.loadedId,'schema:name':'Opened',properties:{},...(state.unreadable?{unreadable:true}:{})},headers:state.loadedEtag?{ETag:state.loadedEtag}:{}});
+      const opened=state.loadedArtifact??{'@id':state.loadedId,'schema:name':'Opened',properties:{},...(state.unreadable?{unreadable:true}:{})};
+      return route.fulfill({json:opened,headers:state.loadedEtag?{ETag:state.loadedEtag}:{}});
     }
     if(path==='/config/host.json')return route.fulfill({json:{workspaceFrontend:'https://workspace.test',resourceRestAPI:`${ORIGIN}/api`,userRestAPI:`${ORIGIN}/api`}});
     if(path==='/config/version.js')return route.fulfill({contentType:'text/javascript',body:"window.cedarCacheControl='fixture';"});
     if(path==='/scripts/handlers/KeycloakUserHandler.js')return route.fulfill({contentType:'text/javascript',body:`window.KeycloakUserHandler=class{initUserHandler(ok){ok(true)}doLogin(){window.signInCalls=(window.signInCalls||0)+1}getParsedToken(){return{sub:'user'}}getToken(){return 'test'}refreshToken(_n,ok){ok(true)}};`});
     if(path==='/components/manifest.json')return route.fulfill({json:Object.fromEntries(['cedar-embeddable-editor','cedar-embeddable-term-picker','cedar-embeddable-designer'].map(name=>[name,{sha256:'fixture'}]))});
+    // `designerBundle` serves a real designer in place of the stand-in, for cases about what it projects.
+    if(path==='/components/cedar-embeddable-designer.js'&&state.designerBundle)return route.fulfill({contentType:'text/javascript',body:readFileSync(state.designerBundle)});
     if(path==='/components/cedar-embeddable-designer.js')return route.fulfill({contentType:'text/javascript',body:`
       class Designer extends HTMLElement {
         currentArtifact={}; baseline=''; viewState={}; report={valid:true,canSave:true,issues:[]};
@@ -110,8 +117,8 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
   });
   // The host takes its language from the browser's preferences.
   await page.addInitScript(language=>Object.defineProperty(navigator,'languages',{get:()=>[language]}),state.language);
-  await page.goto(`${ORIGIN}/${kind}s/${mode}${mode==='edit'?'/item':''}`);
-  if(state.brokenLoad||state.loadedId!=='item'||state.unreadable||state.openingFailure){
+  await page.goto(`${ORIGIN}/${kind}s/${mode}${mode==='edit'?`/${state.item}`:''}`);
+  if(state.brokenLoad||state.loadedId!==state.item||state.unreadable||state.openingFailure){
     await expect(page.locator('#state')).toHaveText(text(state.language,'State.LoadFailed'));return state;
   }
   await expect(page.locator('#editor')).toBeVisible();

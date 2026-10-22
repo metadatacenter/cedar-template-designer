@@ -123,8 +123,9 @@ async function reopen(attempt) {
   const id = loaded?.data?.['@id'];
   if (!attempt.current() || typeof id !== 'string' || resourcePathId(id) !== resourcePathId(route.id) || !state.matches(attempt, designer)) return false;
   let projection;
-  try { designer.loadArtifact(loaded.data, { preserveView: true }); projection = designer.currentArtifact; } catch { return false; }
-  state.loaded({ artifact: loaded.data, projection, etag: loaded.etag, writable: state.writable });
+  let superseded;
+  try { designer.loadArtifact(loaded.data, { preserveView: true }); projection = designer.currentArtifact; superseded = designer.validationReport?.superseded; } catch { return false; }
+  state.loaded({ artifact: loaded.data, projection, superseded, etag: loaded.etag, writable: state.writable });
   state.reloadRequired = !loaded.etag;
   return true;
 }
@@ -171,7 +172,8 @@ async function settleCreation(check, creation) {
     if (result === 'committed' && !state.dirty(designer)) {
       try {
         designer.loadArtifact(created.data, { preserveView: true });
-        state.loaded({ artifact: created.data, projection: designer.currentArtifact, etag: created.etag, writable: true });
+        state.loaded({ artifact: created.data, projection: designer.currentArtifact,
+          superseded: designer.validationReport?.superseded, etag: created.etag, writable: true });
         state.reloadRequired = !created.etag;
       } catch { /* The submitted projection stays the baseline the designer is compared with. */ }
     }
@@ -393,17 +395,19 @@ try {
       const [loaded, report] = await Promise.all([request(url), request(`${url}/report`)]);
       if (!loaded.data || resourcePathId(loaded.data['@id']) !== resourcePathId(route.id)) throw new Error(t('Error.InvalidArtifact'));
       route.id = loaded.data['@id']; // Keep the stored identity for subsequent PUT bodies.
-      let projection;
+      let projection, superseded;
       try {
         designer.loadArtifact(loaded.data);
         projection = designer.currentArtifact;
+        // Stored shapes the designer cannot represent, which Save must not carry back to the server.
+        superseded = designer.validationReport?.superseded;
       } catch (error) {
         // The reader refuses an artifact it cannot read, such as one whose child is stored under a
         // reserved key, and says why in its own words, which name the place in the artifact.
         unreadable = true;
         throw new Error(t('Error.Unreadable', { detail: error.message }));
       }
-      state.loaded({ artifact: loaded.data, projection, etag: loaded.etag, writable: canEdit(report.data, loaded.data) });
+      state.loaded({ artifact: loaded.data, projection, superseded, etag: loaded.etag, writable: canEdit(report.data, loaded.data) });
       if (state.writable && !loaded.etag) { state.reloadRequired = true; message(t('Error.NoValidator'), true); }
     } else {
       if (!folderId) throw new Error(t('Error.NoFolder'));

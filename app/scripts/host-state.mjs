@@ -1,10 +1,18 @@
 import { JsonSourcePolicy, canonicalJson } from './json-policy.mjs';
-import { applyAuthorChanges } from './author-changes.mjs';
+import { applyAuthorChanges, supersede } from './author-changes.mjs';
 import { creationOutcome, sameRevision, updateOutcome } from './save-recovery.mjs';
 
 /** Compare documents independently of object key order. */
 export function artifactKey(value) {
   return canonicalJson(value);
+}
+
+const supersededShape = shape => shape && typeof shape === 'object' && !Array.isArray(shape) &&
+  typeof shape.location === 'string' && shape.location.startsWith('/') && typeof shape.code === 'string';
+/** The stored shapes a designer reports its projection superseded. A designer that reports none lists nothing. */
+export function supersededShapes(report) {
+  const shapes = report?.superseded;
+  return Array.isArray(shapes) ? JsonSourcePolicy.clone(shapes.filter(supersededShape)) : [];
 }
 
 function validReport(report) {
@@ -36,6 +44,9 @@ export class DesignerCoordinator {
   #server;
   #committed = false;
   #projection;
+  // Stored shapes the designer could not represent and the server refuses. They are put as the projection
+  // holds them before any retained branch is merged, and they no longer exist once a save is confirmed.
+  #superseded = [];
   #replacements = [];
   #pendingUpdate;
   // The identity the next create or new version is sent under. It is minted once and kept, across
@@ -45,7 +56,7 @@ export class DesignerCoordinator {
   // The create or new version whose answer was lost, until a read of its identity settles it.
   #creation;
 
-  loaded({ artifact, projection = artifact, etag, writable }) {
+  loaded({ artifact, projection = artifact, etag, writable, superseded = [] }) {
     if (!this.#active) return;
     this.#generation++;
     this.saving = false;
@@ -53,6 +64,7 @@ export class DesignerCoordinator {
     this.#pendingUpdate = undefined;
     this.stored = JsonSourcePolicy.clone(artifact);
     this.#projection = JsonSourcePolicy.clone(projection);
+    this.#superseded = supersededShapes({ superseded });
     this.#replacements = [];
     this.etag = etag;
     this.writable = writable === true;
@@ -82,6 +94,7 @@ export class DesignerCoordinator {
     const creation = this.#creationOf(write, attempt) ?? this.#creation;
     return JsonSourcePolicy.clone({
       stored: this.stored, projection: this.#projection, etag: this.etag,
+      superseded: this.#superseded,
       replacements: this.#replacements,
       committed: this.#committed, reloadRequired: this.reloadRequired || Boolean(write),
       server: this.#server,
@@ -102,6 +115,9 @@ export class DesignerCoordinator {
       (copy.projection !== undefined && !object(copy.projection)) || (copy.etag !== undefined && typeof copy.etag !== 'string')) throw new Error();
     if (copy.pending && (!object(copy.pending.opened) || !object(copy.pending.submitted) || !object(copy.pending.projection) ||
       typeof copy.pending.etag !== 'string' || !['save', 'access', 'acknowledgement'].includes(copy.pending.purpose))) throw new Error();
+    // A journal written before designers reported superseded shapes has none, and retains as it did.
+    if (copy.superseded !== undefined && (!Array.isArray(copy.superseded) || !copy.superseded.every(supersededShape)))
+      throw new Error();
     if (copy.replacements !== undefined && (!Array.isArray(copy.replacements) || copy.replacements.some(entry =>
       !object(entry?.artifact) || !object(entry?.projection) || typeof entry.artifact['@id'] !== 'string' ||
       entry.artifact['@id'] !== entry.projection['@id'] || entry.artifact['bibo:status'] !== 'bibo:published'))) throw new Error();
@@ -121,6 +137,7 @@ export class DesignerCoordinator {
       sameRevision(copy.etag, this.etag) && artifactKey(copy.stored) === artifactKey(this.stored));
     this.#generation++;
     this.stored = copy.stored; this.#projection = copy.projection; this.etag = copy.etag;
+    this.#superseded = copy.superseded ?? [];
     this.#replacements = copy.replacements ?? [];
     this.#committed = copy.committed;
     this.#pendingUpdate = copy.pending ? { ...copy.pending, attempt: { projection: copy.pending.projection } } : undefined;
@@ -164,10 +181,13 @@ export class DesignerCoordinator {
     this.saving = true;
     return { artifact, projection, key: artifactKey(projection), current: () => this.#active && generation === this.#generation };
   }
-  /** The body this projection would save, retaining untouched stored schema branches. */
+  /**
+   * The body this projection would save, retaining untouched stored schema branches except the shapes the
+   * designer superseded, which are saved as its projection holds them.
+   */
   project(projection) {
     return this.stored === undefined ? JsonSourcePolicy.clone(projection)
-      : applyAuthorChanges(this.stored, this.#projection, projection, this.#replacements);
+      : applyAuthorChanges(supersede(this.stored, this.#superseded), this.#projection, projection, this.#replacements);
   }
   /** Retain the exact assessed release, alongside CED's projection of it, for Save and recovery. */
   rememberReplacement(artifact, document) {
@@ -200,6 +220,7 @@ export class DesignerCoordinator {
     }
     this.stored = JsonSourcePolicy.clone(attempt.artifact);
     this.#projection = JsonSourcePolicy.clone(attempt.projection);
+    this.#superseded = [];
     this.etag = etag;
     this.reloadRequired = requiresReload || !etag;
     this.#committed = true;
