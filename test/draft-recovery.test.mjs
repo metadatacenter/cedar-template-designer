@@ -1,3 +1,4 @@
+import {acceptPayload} from './helpers/validation.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DesignerCoordinator} from '../app/scripts/host-state.mjs';
@@ -5,7 +6,7 @@ import {DesignerDraftStore, discardable, draftScope, readDraft} from '../app/scr
 import {BackendError, useDeploymentApi} from '../app/scripts/host-core.mjs';
 const opened={'@id':'item','schema:name':'Opened'};
 const designer={currentArtifact:{...opened,'schema:name':'Edited'},isDirty:true,validationReport:{valid:true,canSave:true,issues:[]},validate(){return this.validationReport}};
-const fresh=()=>{const state=new DesignerCoordinator();state.loaded({artifact:opened,etag:'"1"',writable:true});return state};
+const fresh=()=>{const state=new DesignerCoordinator(acceptPayload);state.loaded({artifact:opened,etag:'"1"',writable:true});return state};
 test('pre-dispatch journal restores a pending update without callbacks and checks its stored outcome',()=>{
   const state=fresh(),attempt=state.beginSave(designer);attempt.write={body:attempt.artifact,createsIdentity:false};
   const copy=JSON.parse(JSON.stringify(state.captureRecovery(attempt)));
@@ -54,7 +55,7 @@ const component=()=>({currentArtifact:{'@id':SOURCE,'schema:name':'Submitted',pr
 /** A page that sent a create or new version under MINTED, journaled before dispatch, whose answer was lost. */
 function journaled(operation,{lose=true}={}){
   const scope=draftScope('api','u',{collection:'templates',id:operation==='create'?'':UUID},'home');
-  const store=new DesignerDraftStore(scope,memory()),designer=component(),state=new DesignerCoordinator();
+  const store=new DesignerDraftStore(scope,memory()),designer=component(),state=new DesignerCoordinator(acceptPayload);
   if(operation==='create')state.loaded({writable:true});
   else state.loaded({artifact:{'@id':SOURCE,'schema:name':'Opened','bibo:status':'bibo:draft'},etag:'"opened"',writable:true});
   const attempt=state.beginSave(designer);
@@ -71,7 +72,7 @@ for(const operation of ['create','version'])test(`a ${operation} identity round-
     assert.equal(value.coordinator.uncertainCreation,true);assert.equal(discardable(value),false);
     if(operation==='version')assert.deepEqual([value.coordinator.creation.source,value.coordinator.creation.etag],[SOURCE,'"opened"']);
   }
-  const restored=new DesignerCoordinator();
+  const restored=new DesignerCoordinator(acceptPayload);
   if(operation==='create')restored.loaded({writable:true});
   else restored.loaded({artifact:{'@id':SOURCE,'schema:name':'Opened','bibo:status':'bibo:draft'},etag:'"opened"',writable:true});
   restored.restoreRecovery(readDraft(JSON.stringify(store.read()),scope).coordinator);
@@ -103,14 +104,14 @@ for(const operation of ['create','version'])test(`a ${operation} identity is ref
   for(const change of [{uncertainCreation:false},{creation:{...coordinator.creation,submitted:null}},{creation:{...coordinator.creation,projection:[]}},
     ...(operation==='version'?[{creation:{...coordinator.creation,etag:'"other"'}},{creation:{...coordinator.creation,submitted:{...coordinator.creation.submitted,'@id':MINTED}}}]
       :[{creation:{...coordinator.creation,submitted:{...coordinator.creation.submitted,'@id':SOURCE}}}])])
-    assert.throws(()=>new DesignerCoordinator().restoreRecovery({...coordinator,...change}));
+    assert.throws(()=>new DesignerCoordinator(acceptPayload).restoreRecovery({...coordinator,...change}));
 });
 test('a journal written before identities were sent keeps its guard and cannot be checked',()=>{
   const {store,raw}=journaled('create');
   const legacy=JSON.parse(raw());delete legacy.coordinator.identity;delete legacy.coordinator.creation;
   store.write(legacy);const value=store.read();
   assert.equal(discardable(value),false);
-  const restored=new DesignerCoordinator();restored.loaded({writable:true});restored.restoreRecovery(value.coordinator);
+  const restored=new DesignerCoordinator(acceptPayload);restored.loaded({writable:true});restored.restoreRecovery(value.coordinator);
   assert.equal(restored.reloadRequired,true);assert.equal(restored.canCheckSave,false);assert.equal(restored.beginCheck(),null);
   assert.equal(restored.report(component()).canSave,false);
 });
@@ -123,7 +124,7 @@ test('Discard is refused until a create or new version is settled, and allowed o
   assert.equal(discardable(settled),true);
   // The identity outlives the settlement, so a Save after a reload cannot mint a second one.
   assert.equal(settled.coordinator.identity,MINTED);assert.equal(settled.coordinator.creation,undefined);
-  const restored=new DesignerCoordinator();restored.loaded({writable:true});restored.restoreRecovery(settled.coordinator);
+  const restored=new DesignerCoordinator(acceptPayload);restored.loaded({writable:true});restored.restoreRecovery(settled.coordinator);
   assert.equal(restored.reloadRequired,false);assert.equal(restored.canCheckSave,false);
   assert.equal(restored.identity(()=>assert.fail('a second identity was minted')),MINTED);
   // Until its answer arrives, a write journaled before dispatch is unsettled too.

@@ -1,3 +1,4 @@
+import {acceptPayload} from './helpers/validation.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import library from 'cedar-model-typescript-library';
@@ -140,7 +141,7 @@ test('the list comes only from a well-formed report', () => {
 });
 
 function coordinator(superseded) {
-  const state = new DesignerCoordinator();
+  const state = new DesignerCoordinator(acceptPayload);
   state.loaded({artifact: stored(), projection: opened(), superseded, etag: '"opened"', writable: true});
   const designer = {currentArtifact: opened(), isDirty: false, validationReport: {canSave: true, issues: []},
     validate() { return this.validationReport; }};
@@ -164,13 +165,13 @@ test('the list survives a recovery journal, is refused when malformed, and ends 
   const journal = state.captureRecovery();
   assert.deepEqual(journal.superseded, SUPERSEDED);
 
-  const restored = new DesignerCoordinator();
+  const restored = new DesignerCoordinator(acceptPayload);
   restored.loaded({artifact: stored(), projection: opened(), etag: '"opened"', writable: true});
   restored.restoreRecovery(journal);
   assert.deepEqual(restored.captureRecovery().superseded, SUPERSEDED);
-  assert.throws(() => new DesignerCoordinator().restoreRecovery({...journal, superseded: [{location: 3}]}));
+  assert.throws(() => new DesignerCoordinator(acceptPayload).restoreRecovery({...journal, superseded: [{location: 3}]}));
   const older = structuredClone(journal); delete older.superseded;
-  const fromOlder = new DesignerCoordinator(); fromOlder.restoreRecovery(older);
+  const fromOlder = new DesignerCoordinator(acceptPayload); fromOlder.restoreRecovery(older);
   assert.deepEqual(fromOlder.captureRecovery().superseded, []);
 
   const attempt = state.beginSave(designer);

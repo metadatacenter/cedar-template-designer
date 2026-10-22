@@ -35,6 +35,13 @@ jobs:
           node-version: 24.22.0
           cache: npm
 
+      - name: Use Java 17 for payload conformance
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+
       - name: Install the locked dependency graph
         run: npm ci
 

@@ -10,7 +10,10 @@ export async function stagePolicy(root) {
   const destination = resolve(root, 'app/components');
   await mkdir(destination, { recursive: true });
   await writeFile(resolve(destination, 'cedar-validation-policy.mjs'), bytes);
-  const identity = {name: metadata.name, version: metadata.version, sha256: createHash('sha256').update(bytes).digest('hex')};
+  const schema = await readFile(resolve(source, 'schema.esm.js'));
+  await writeFile(resolve(destination, 'cedar-schema-validation.mjs'), schema);
+  const identity = {name: metadata.name, version: metadata.version, sha256: createHash('sha256').update(bytes).digest('hex'),
+    schemaSha256: createHash('sha256').update(schema).digest('hex')};
   await writeFile(resolve(destination, 'policy-manifest.json'), JSON.stringify(identity, null, 2) + '\n');
   return identity;
 }

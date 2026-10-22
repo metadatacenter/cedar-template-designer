@@ -6,6 +6,7 @@
   },
   "description": "Authenticated CED host for CEDAR Workspace",
   "main": "app/scripts/host.mjs",
+  "cedarJavaConformance": true,
   "scripts": {
     "start": "node scripts/designer.mjs start",
     "prepare:components": "node scripts/stage-components.mjs && node scripts/stage-design.mjs",

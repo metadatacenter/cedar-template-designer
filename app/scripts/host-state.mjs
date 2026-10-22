@@ -1,6 +1,7 @@
-import { JsonSourcePolicy, canonicalJson } from './json-policy.mjs';
+import { JsonSourcePolicy, canonicalJson, ValidationPolicy } from './json-policy.mjs';
 import { applyAuthorChanges, supersede } from './author-changes.mjs';
 import { creationOutcome, sameRevision, updateOutcome } from './save-recovery.mjs';
+import { SchemaArtifactValidator } from '../components/cedar-schema-validation.mjs';
 
 /** Compare documents independently of object key order. */
 export function artifactKey(value) {
@@ -30,6 +31,11 @@ export function ownerOnlyRefusal(error) {
 
 /** Owns the host's readiness, pending write and reports about its submitted document. */
 export class DesignerCoordinator {
+  #validatePayload;
+  #payloadValidation;
+  constructor(validatePayload = artifact => SchemaArtifactValidator.validate(artifact)) {
+    this.#validatePayload = validatePayload;
+  }
   ready = false;
   writable = false;
   saving = false;
@@ -121,7 +127,8 @@ export class DesignerCoordinator {
     if (copy.replacements !== undefined && (!Array.isArray(copy.replacements) || copy.replacements.some(entry =>
       !object(entry?.artifact) || !object(entry?.projection) || typeof entry.artifact['@id'] !== 'string' ||
       entry.artifact['@id'] !== entry.projection['@id'] || entry.artifact['bibo:status'] !== 'bibo:published'))) throw new Error();
-    if (copy.server && (typeof copy.server.key !== 'string' || !Array.isArray(copy.server.issues) ||
+    if (copy.server && (typeof copy.server.key !== 'string' ||
+      (copy.server.payloadKey !== undefined && typeof copy.server.payloadKey !== 'string') || !Array.isArray(copy.server.issues) ||
       !copy.server.issues.every(issue => object(issue) && typeof issue.message === 'string' &&
         typeof issue.location === 'string' && ['error', 'warning'].includes(issue.severity) && issue.source === 'server'))) throw new Error();
     // A journal written before identities were sent has neither field and keeps its guard.
@@ -153,17 +160,36 @@ export class DesignerCoordinator {
   }
   report(designer, validation = designer?.validationReport) {
     let readable = true;
-    if (this.#server || validReport(validation)) {
+    let payloadIssues = [];
+    if (this.#server || validation?.canSave || (Array.isArray(validation?.issues) && validation.issues.some(issue => issue?.source === 'host'))) {
       try {
         const artifact = designer?.currentArtifact;
         readable = Boolean(artifact && typeof artifact === 'object' && !Array.isArray(artifact));
-        if (this.#server && this.#server.key !== artifactKey(artifact)) this.#server = undefined;
+        if (this.#server && (this.#server.key !== artifactKey(artifact) ||
+            (this.#server.payloadKey !== undefined && this.#server.payloadKey !== artifactKey(this.project(artifact))))) this.#server = undefined;
+        if (readable && !validation?.pendingValidation && Array.isArray(validation?.issues) &&
+            validation.issues.every(issue => issue.source === 'host' || issue.severity === 'warning')) {
+          const payload = this.project(artifact), key = artifactKey(payload);
+          if (this.#payloadValidation?.key !== key) {
+            const verdict = this.#validatePayload(payload);
+            const findings = verdict?.findings;
+            if (typeof verdict?.canSave !== 'boolean' || !Array.isArray(findings) ||
+                findings.some(finding => !finding || typeof finding.path !== 'string' || typeof finding.message !== 'string' || typeof finding.code !== 'string') ||
+                (!verdict.canSave && !findings.length)) throw new Error();
+            const blocking = findings.filter(finding => ValidationPolicy.blocksSave({...finding, category: ValidationPolicy.category(finding.code)}, 'template'));
+            if (verdict.canSave !== (blocking.length === 0)) throw new Error();
+            this.#payloadValidation = {key, issues: blocking.map(finding => ({
+              location: finding.path, message: finding.message, severity: 'error', source: 'payload', shown: true,
+            }))};
+          }
+          payloadIssues = this.#payloadValidation.issues;
+        }
       }
       catch { readable = false; }
     }
     const complete = Array.isArray(validation?.issues) && validation.issues.every(issue => issue && typeof issue === 'object');
     const local = complete ? validation.issues.filter(issue => issue.source !== 'host') : [];
-    const server = this.#server?.issues ?? [];
+    const server = [...(this.#server?.issues ?? []), ...payloadIssues];
     return {
       canSave: this.#active && this.ready && this.writable && !this.saving && !this.checking && !this.reloadRequired &&
         readable && validReport(validation) &&
@@ -179,7 +205,7 @@ export class DesignerCoordinator {
     const artifact = this.project(projection);
     const generation = ++this.#generation;
     this.saving = true;
-    return { artifact, projection, key: artifactKey(projection), current: () => this.#active && generation === this.#generation };
+    return { artifact, projection, key: artifactKey(projection), payloadKey: artifactKey(artifact), current: () => this.#active && generation === this.#generation };
   }
   /**
    * The body this projection would save, retaining untouched stored schema branches except the shapes the
@@ -209,7 +235,8 @@ export class DesignerCoordinator {
   }
   unchanged(attempt, artifact) { return attempt.current() && attempt.key === artifactKey(artifact); }
   matches(attempt, designer) {
-    try { return validReport(designer.validate()) && this.unchanged(attempt, designer.currentArtifact); }
+    try { return validReport(designer.validate()) && this.unchanged(attempt, designer.currentArtifact) &&
+      (attempt.payloadKey === undefined || attempt.payloadKey === artifactKey(this.project(designer.currentArtifact))); }
     catch { return false; }
   }
   committed(attempt, etag, requiresReload = false, write = attempt.write) {
@@ -265,7 +292,7 @@ export class DesignerCoordinator {
         message: row.message, location: typeof row.location === 'string' ? row.location : '', severity, source: 'server', shown: true,
       });
     }
-    this.#server = { key: attempt.key, issues };
+    this.#server = { key: attempt.key, ...(attempt.payloadKey === undefined ? {} : {payloadKey: attempt.payloadKey}), issues };
     return unconfirmed;
   }
   // An unsettled create or new version is checked by reading the identity it sent. One sent before

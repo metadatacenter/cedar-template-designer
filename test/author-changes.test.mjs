@@ -1,3 +1,4 @@
+import {acceptPayload} from './helpers/validation.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {applyAuthorChanges} from '../app/scripts/author-changes.mjs';
@@ -29,7 +30,7 @@ test('pulling a new identity replaces the complete definition without inheriting
   assert.deepEqual(result._annotations, stored._annotations);
 });
 function setup() {
-  const stored = legacy(), projection = project(stored), state = new DesignerCoordinator();
+  const stored = legacy(), projection = project(stored), state = new DesignerCoordinator(acceptPayload);
   const designer = {currentArtifact: structuredClone(projection), isDirty: true,
     validationReport: {canSave: true, issues: []}, validate() {return this.validationReport;}};
   state.loaded({artifact: stored, projection, etag: '"opened"', writable: true});
@@ -183,7 +184,7 @@ for (const repeated of [false, true]) test(`an assessed release keeps its wire s
   const expected = repeated ? {type: 'array', minItems: 2, items: release} : release;
   assert.deepEqual(state.project(designer.currentArtifact).properties.Field, expected);
   const recovery = JSON.parse(JSON.stringify(state.captureRecovery()));
-  const restored = new DesignerCoordinator();
+  const restored = new DesignerCoordinator(acceptPayload);
   restored.loaded({artifact: stored, projection, etag: '"opened"', writable: true});
   restored.restoreRecovery(recovery);
   assert.deepEqual(restored.project(designer.currentArtifact).properties.Field, expected);

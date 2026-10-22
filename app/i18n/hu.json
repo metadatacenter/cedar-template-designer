@@ -31,8 +31,8 @@
     "ReadOnly": "Ez az artefaktum csak olvasható. A szerkesztéshez hozzon létre egy vázlatot, vagy módosítsa a jogosultságokat a Munkaterületen.",
     "ConfirmDiscard": "Elveti a nem mentett módosításait, és visszatér a Munkaterületre?",
     "ConfirmReload": "Elveti a nem mentett módosításokat, és újratölti az artefaktum legújabb változatát?",
-    "ServerFindings": "Kiszolgálóoldali ellenőrzés: {{count}} megállapítás",
-    "ServerFindingsOne": "Kiszolgálóoldali ellenőrzés: {{count}} megállapítás",
+    "ServerFindings": "Mentés ellenőrzése: {{count}} megállapítás",
+    "ServerFindingsOne": "Mentés ellenőrzése: {{count}} megállapítás",
     "SavedWithChanges": "Mentve. További módosítások maradtak a tervezőben.",
     "SavedNewIdentity": "Új erőforrásként mentve. A további módosítások itt maradnak; újabb mentés előtt töltse be újra a mentett erőforrást.",
     "SavedReloadRequired": "Mentve. Újabb mentés előtt töltse újra a tervezőt.",
@@ -82,6 +82,8 @@
     "OutdatedBundle": "A helyi CED-csomag elavult. Építse újra a CED-et, és indítsa újra a Designert.",
     "InvalidChildren": "Az adattár hiányos gyermeklistát adott vissza. Próbálja újra.",
     "InvalidImpact": "A kiszolgáló nem adott érvényes frissítési értékelést. A módosításai megmaradtak.",
+    "InvalidValidation": "A kiszolgáló nem adott teljes érvényesítési jelentést.",
+    "ValidationFailed": "A dokumentum nem felelt meg a kiszolgáló érvényesítésének.",
     "DocumentChanged": "A dokumentum megváltozott a mentés előkészítése közben. Ellenőrizze, és mentse újra.",
     "InvalidArtifact": "Az adattár eltérő vagy hiányos artefaktumot adott vissza. Próbálja újra az újratöltéssel.",
     "SaveUnconfirmed": "Nem sikerült megerősíteni, hogy a módosítások mentése megtörtént-e. A módosítások megmaradtak a tervezőben. Újabb mentés előtt a Mentés állapotának ellenőrzése gombbal derítse ki, mi történt.",
@@ -97,7 +99,8 @@
     "RecoveryUnresolved": "A tárolt változatot nem sikerült egyeztetni a mentéssel. A szerkesztések megmaradtak; a mentés továbbra is le van tiltva.",
     "RecoveryUnavailable": "Nem sikerült ellenőrizni a mentés állapotát. A szerkesztések megmaradtak. Ellenőrizze a kapcsolatot és a hozzáférést, majd próbálja újra.",
     "AccessUnavailable": "Nem sikerült ellenőrizni a hozzáférést. A szerkesztések megmaradtak. Jelentkezzen be, vagy ellenőrizze a kapcsolatot, majd próbálja újra.",
-    "ReusableUnconfirmed": "Az újrafelhasználható elem mentése nem volt ellenőrizhető. A módosítások megmaradtak. Ismételje meg a műveletet ugyanannak a mentett azonosítónak az ellenőrzéséhez."
+    "ReusableUnconfirmed": "Az újrafelhasználható elem mentése nem volt ellenőrizhető. A módosítások megmaradtak. Ismételje meg a műveletet ugyanannak a mentett azonosítónak az ellenőrzéséhez.",
+    "ValidationTimedOut": "Az ellenőrzés nem fejeződött be időben. Próbálja meg újra a mentést."
   },
   "Draft": {
     "StorageError": "A böngésző nem tudta megőrizni a piszkozatot. A módosítások megőrzéséhez tartsa nyitva ezt az oldalt.",

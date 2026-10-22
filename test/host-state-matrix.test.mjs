@@ -1,6 +1,7 @@
+import {acceptPayload, saveArtifact} from './helpers/validation.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DesignerCoordinator, saveArtifact, BackendError, childSource, createBackend, canCreate, canEdit, waitForDesigner, mintIdentity, useDeploymentApi } from '../app/scripts/host-core.mjs';
+import { DesignerCoordinator, BackendError, childSource, createBackend, canCreate, canEdit, waitForDesigner, mintIdentity, useDeploymentApi } from '../app/scripts/host-core.mjs';
 
 function documentAt(depth) {
   let artifact = {'schema:name': 'Child', properties: {Link: {'schema:name': 'Link', _valueConstraints: {defaultValue: 'bad iri'}}}};
@@ -8,7 +9,7 @@ function documentAt(depth) {
   return artifact;
 }
 function setup(depth = 1, writable = true) {
-  const state = new DesignerCoordinator();
+  const state = new DesignerCoordinator(acceptPayload);
   const designer = { currentArtifact: documentAt(depth), validationReport: {canSave:true,issues:[]}, validate() {return this.validationReport;} };
   state.loaded({artifact:designer.currentArtifact,etag:'"one"',writable});
   return {state,designer};
@@ -168,7 +169,7 @@ const SOURCE = 'https://repo.test/templates/0f1e2d3c-4b5a-4968-8776-655443322110
 const OPENED = {'@id': SOURCE, 'schema:name': 'Opened', 'pav:version': '0.0.1', 'bibo:status': 'bibo:draft', 'pav:createdOn': 'then', properties: {}};
 function lost(operation, status = 0, submitted = body => body) {
   useDeploymentApi('https://resource.test');
-  const state = new DesignerCoordinator();
+  const state = new DesignerCoordinator(acceptPayload);
   const designer = {currentArtifact: {...structuredClone(OPENED), 'schema:name': 'Submitted'}, validationReport: {canSave: true, issues: []}, validate() {return this.validationReport;}};
   if (operation === 'create') { delete designer.currentArtifact['@id']; state.loaded({writable: true}); }
   else state.loaded({artifact: OPENED, etag: '"opened"', writable: true});
@@ -236,7 +237,7 @@ for (const status of [412, 428]) test(`a create refused as occupied (${status}) 
   // The refusal survives a reload in the journal.
   const journal = JSON.parse(JSON.stringify(state.captureRecovery()));
   assert.equal(journal.creation.occupied, true);
-  const restored = new DesignerCoordinator(); restored.loaded({writable: true}); restored.restoreRecovery(journal);
+  const restored = new DesignerCoordinator(acceptPayload); restored.loaded({writable: true}); restored.restoreRecovery(journal);
   for (const coordinator of [state, restored]) {
     const created = {data: stored(body, {'schema:name': 'Stored by an earlier attempt'}), etag: '"1"'};
     assert.equal(settle(coordinator, {created, writable: true}), 'adopted');
@@ -246,7 +247,7 @@ for (const status of [412, 428]) test(`a create refused as occupied (${status}) 
     assert.equal(coordinator.beginSave(designer), null);
     // The designer's content stays unsaved, and its journal restores without an access recheck that could re-enable Save.
     assert.equal(coordinator.dirty(designer), true);
-    const again = new DesignerCoordinator(); again.loaded({artifact: created.data, etag: '"1"', writable: true});
+    const again = new DesignerCoordinator(acceptPayload); again.loaded({artifact: created.data, etag: '"1"', writable: true});
     again.restoreRecovery(JSON.parse(JSON.stringify(coordinator.captureRecovery())));
     assert.equal(again.reloadRequired, true); assert.equal(again.canRecheckAccess, false); assert.equal(again.canCheckSave, false);
     assert.equal(again.beginSave(designer), null);
@@ -259,9 +260,9 @@ test('only a create refused as occupied is journaled as occupied', () => {
   const version = JSON.parse(JSON.stringify(lost('version').state.captureRecovery()));
   assert.equal(version.creation.occupied, undefined);
   // Each journal restores as written, so a refusal below is the altered field's.
-  for (const journal of [occupied, version]) new DesignerCoordinator().restoreRecovery(journal);
-  for (const value of [false, 'yes', null]) assert.throws(() => new DesignerCoordinator().restoreRecovery({...occupied, creation: {...occupied.creation, occupied: value}}));
-  assert.throws(() => new DesignerCoordinator().restoreRecovery({...version, creation: {...version.creation, occupied: true}}));
+  for (const journal of [occupied, version]) new DesignerCoordinator(acceptPayload).restoreRecovery(journal);
+  for (const value of [false, 'yes', null]) assert.throws(() => new DesignerCoordinator(acceptPayload).restoreRecovery({...occupied, creation: {...occupied.creation, occupied: value}}));
+  assert.throws(() => new DesignerCoordinator(acceptPayload).restoreRecovery({...version, creation: {...version.creation, occupied: true}}));
 });
 
 const draftOf = (body, id, extra = {}) => stored(body, {'@id': id, 'pav:version': '0.0.2', 'bibo:status': 'bibo:draft',
@@ -326,7 +327,7 @@ const field = (name, extra = {}) => ({'@id': FIELD, '@type': 'https://schema.met
 const WITH_CHILD = {...OPENED, properties: {Keep: field('Keep')}};
 function lostWithChildren(submitted) {
   useDeploymentApi('https://resource.test');
-  const state = new DesignerCoordinator();
+  const state = new DesignerCoordinator(acceptPayload);
   const designer = {currentArtifact: submitted(structuredClone(WITH_CHILD)), validationReport: {canSave: true, issues: []}, validate() {return this.validationReport;}};
   state.loaded({artifact: WITH_CHILD, etag: '"opened"', writable: true});
   const attempt = state.beginSave(designer);

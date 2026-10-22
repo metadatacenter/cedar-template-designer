@@ -1,6 +1,7 @@
+import {saveArtifact} from './helpers/validation.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BackendError, routeFor, workspaceReturn, canEdit, createBackend, saveArtifact, storageArtifact, childSource, useDeploymentApi } from '../app/scripts/host-core.mjs';
+import { BackendError, routeFor, workspaceReturn, canEdit, createBackend, storageArtifact, childSource, useDeploymentApi } from '../app/scripts/host-core.mjs';
 const base = 'https://resource.example';
 // A create or new version mints its identity on the deployment's base.
 useDeploymentApi(base);

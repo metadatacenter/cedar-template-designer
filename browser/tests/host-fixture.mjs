@@ -37,7 +37,7 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
   // `item` is the opened artifact's identity in the page's address. A real designer refuses a relative
   // identity, so a case serving one names the UUID its absolute `@id` ends in.
   const item=initial.item??'item';
-  const state={allowed,language:'en',writes:[],stored:new Map(),failure:null,impact:{canBeUpdated:true},brokenLoad:false,holdWrite:null,savedId:mode==='edit'?item:undefined,nextEtag:'"next"',loadedId:item,loadedEtag:'"opened"',...initial,item};
+  const state={allowed,language:'en',writes:[],validations:[],stored:new Map(),failure:null,impact:{canBeUpdated:true},brokenLoad:false,holdWrite:null,savedId:mode==='edit'?item:undefined,nextEtag:'"next"',loadedId:item,loadedEtag:'"opened"',...initial,item};
   await page.route('https://workspace.test/**',route=>route.fulfill({contentType:'text/html',body:'<h1>Workspace</h1>'}));
   await page.route(`${ORIGIN}/**`,async route=>{
     const url=new URL(route.request().url()),path=url.pathname;
@@ -49,6 +49,13 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
       if(path.startsWith('/api/folders/'))return route.fulfill({json:{currentUserPermissions:{capabilities:state.allowed?['createInFolder']:[]}}});
       if(path.endsWith('/report'))return route.fulfill({json:{currentUserPermissions:{capabilities:state.allowed?['updateResource']:[]}}});
       if(path.includes('/check-update-template/'))return route.fulfill({json:state.impact});
+      if(path==='/api/command/validate') {
+        const body=route.request().postDataJSON();state.validations.push(body);
+        if(state.holdValidation)await state.holdValidation;
+        if(state.validationFailure)return route.fulfill(state.validationFailure);
+        const verdict=state.validatePayload?await state.validatePayload(body,kind):{canSave:true,isValid:true,errors:[],warnings:[]};
+        return route.fulfill({json:verdict});
+      }
       if(route.request().method()!=='GET'){
         const write={path,query:Object.fromEntries(url.searchParams),body:route.request().postDataJSON(),etag:route.request().headers()['if-match']};
         state.writes.push(write);
@@ -109,6 +116,10 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
         customElements.define('cedar-embeddable-designer',Designer);
       },30);`});
     if(path==='/components/cedar-validation-policy.mjs')return route.fulfill({contentType:'text/javascript',body:source('components/cedar-validation-policy.mjs')});
+    // State-machine fixtures have partial artifacts and a stand-in designer. Real CED tests use
+    // the shipped structural validator; only the stand-in's fixture boundary is stubbed.
+    if(path==='/components/cedar-schema-validation.mjs')return route.fulfill({contentType:'text/javascript',body:state.designerBundle?
+      source('components/cedar-schema-validation.mjs'):'export const SchemaArtifactValidator={validate:()=>({canSave:true,findings:[]})};'});
     if(path==='/components/icons.js')return route.fulfill({contentType:'text/javascript',body:'export const iconSvg=()=>"";'});
     if(path.startsWith('/components/')||path.startsWith('/scripts/keycloak/'))return route.fulfill({contentType:'text/javascript',body:''});
     if(path.startsWith('/scripts/')||path.startsWith('/i18n/'))return route.fulfill({contentType:path.endsWith('.json')?'application/json':'text/javascript',body:source(path.slice(1))});
