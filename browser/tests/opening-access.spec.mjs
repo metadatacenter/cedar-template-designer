@@ -39,3 +39,27 @@ for(const mode of ['edit','create']) for(const status of [401,403]) {
     await edit(page,'Access granted');await page.locator('#save').click();await expect(page.locator('#state')).toHaveText('Saved');
   });
 }
+
+for (const kind of ['template','element','field']) {
+  test(`a published ${kind} says why it is read only and offers no access check`, async ({page}) => {
+    await host(page,kind,'edit',true,{loadedArtifact:{'@id':'item','schema:name':'Opened','bibo:status':'bibo:published','pav:version':'1.0.0',properties:{}}});
+    await expect(page.locator('#state')).toHaveText('Read only');
+    await expect(page.locator('#message')).toHaveText("This artifact is published, so it is read only. Create a draft in Workspace if you'd like to edit a new version of it.");
+    // Neither control can make a published artifact editable, so neither appears.
+    await expect(page.locator('#recheck-access')).toBeHidden();
+    await expect(page.locator('#sign-in-again')).toBeHidden();
+  });
+}
+
+test('an artifact the person may not edit says so and keeps its access check', async ({page}) => {
+  await host(page,'template','edit',false);
+  await expect(page.locator('#message')).toHaveText('You do not have permission to edit this artifact. Ask its owner for edit access, then use Recheck access.');
+  await expect(page.locator('#recheck-access')).toBeVisible();
+  await expect(page.locator('#sign-in-again')).toBeVisible();
+});
+
+test('a folder the person may not create in says so', async ({page}) => {
+  await host(page,'template','create',false);
+  await expect(page.locator('#message')).toHaveText('You do not have permission to create an artifact in this folder. Ask its owner for access, then use Recheck access.');
+  await expect(page.locator('#recheck-access')).toBeVisible();
+});

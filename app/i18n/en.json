@@ -28,7 +28,9 @@
   "Message": {
     "ChangesKept": "Not saved. Your changes remain in the designer.",
     "ChangesDiscarded": "Not saved. Your changes were discarded.",
-    "ReadOnly": "This artifact is read only. Create a draft or change permissions in Workspace to edit it.",
+    "ReadOnly": "You do not have permission to edit this artifact. Ask its owner for edit access, then use Recheck access.",
+    "ReadOnlyPublished": "This artifact is published, so it is read only. Create a draft in Workspace if you'd like to edit a new version of it.",
+    "ReadOnlyFolder": "You do not have permission to create an artifact in this folder. Ask its owner for access, then use Recheck access.",
     "ConfirmDiscard": "Discard your unsaved changes and return to Workspace?",
     "ConfirmReload": "Discard your unsaved changes and reload the latest artifact?",
     "ServerFindings": "Save validation: {{count}} findings",

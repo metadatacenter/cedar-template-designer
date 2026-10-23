@@ -28,7 +28,9 @@
   "Message": {
     "ChangesKept": "Nincs mentve. A módosításai a tervezőben maradtak.",
     "ChangesDiscarded": "Nincs mentve. A módosításait elvetette.",
-    "ReadOnly": "Ez az artefaktum csak olvasható. A szerkesztéshez hozzon létre egy vázlatot, vagy módosítsa a jogosultságokat a Munkaterületen.",
+    "ReadOnly": "Nincs jogosultsága az artefaktum szerkesztéséhez. Kérjen szerkesztési hozzáférést a tulajdonosától, majd válassza a Hozzáférés újraellenőrzése lehetőséget.",
+    "ReadOnlyPublished": "Ez az artefaktum közzé van téve, ezért csak olvasható. Ha új verzióját szeretné szerkeszteni, hozzon létre egy vázlatot a Munkaterületen.",
+    "ReadOnlyFolder": "Nincs jogosultsága artefaktum létrehozásához ebben a mappában. Kérjen hozzáférést a tulajdonosától, majd válassza a Hozzáférés újraellenőrzése lehetőséget.",
     "ConfirmDiscard": "Elveti a nem mentett módosításait, és visszatér a Munkaterületre?",
     "ConfirmReload": "Elveti a nem mentett módosításokat, és újratölti az artefaktum legújabb változatát?",
     "ServerFindings": "Mentés ellenőrzése: {{count}} megállapítás",

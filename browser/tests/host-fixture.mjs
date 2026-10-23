@@ -133,7 +133,9 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
     await expect(page.locator('#state')).toHaveText(text(state.language,'State.LoadFailed'));return state;
   }
   await expect(page.locator('#editor')).toBeVisible();
-  await expect(page.locator('#state')).toHaveText(text(state.language,!allowed?'State.ReadOnly':mode==='edit'&&!state.loadedEtag?'State.ReloadRequired':'State.Unmodified'));
+  // A published artifact opens read only whatever the person may do, as the host decides.
+  const readOnly=!allowed||(mode==='edit'&&state.loadedArtifact?.['bibo:status']==='bibo:published');
+  await expect(page.locator('#state')).toHaveText(text(state.language,readOnly?'State.ReadOnly':mode==='edit'&&!state.loadedEtag?'State.ReloadRequired':'State.Unmodified'));
   return state;
 }
 export async function edit(page, name='Edited', issue=null) {
