@@ -24,9 +24,9 @@
     "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20261026.8c05563a"
   },
   "dependencies": {
-    "cedar-embeddable-designer": "npm:@org.metadatacenter/cedar-embeddable-designer@0.1.0-dev.20261026.4f290cb3",
+    "cedar-embeddable-designer": "npm:@org.metadatacenter/cedar-embeddable-designer@0.1.0-dev.20261026.846568a7",
     "cedar-embeddable-editor": "2.0.29",
-    "cedar-embeddable-term-picker": "npm:@org.metadatacenter/cedar-embeddable-term-picker@0.1.0-dev.20261026.c8906951",
+    "cedar-embeddable-term-picker": "npm:@org.metadatacenter/cedar-embeddable-term-picker@0.1.0-dev.20261026.7b42e8fc",
     "cedar-model-typescript-library": "npm:@org.metadatacenter/cedar-model-typescript-library@1.0.25-dev.20261026.a5c33ae"
   }
 }
