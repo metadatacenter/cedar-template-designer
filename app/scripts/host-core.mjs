@@ -209,7 +209,37 @@ export async function saveArtifact({ request, base, route, artifact, etag, folde
   const current = () => { if (!stillCurrent()) throw new Error(t('Error.DocumentChanged')); };
   // Assessments do not write. Record only the operation that may store an artifact, with the identity
   // it creates, so a failed assessment can be retried while a lost create response cannot create a duplicate.
-  const write = (url, options, operation = 'update', id = null) => {
+  const write = async (url, options, operation = 'update', id = null) => {
+    // Validate the complete final body after retention, storage preparation and identity assignment.
+    // The validator reads its own copy. Neither a late verdict nor a mutated request may authorize
+    // a different document. No write is journaled until this read-only check has passed.
+    const body = JsonSourcePolicy.clone(options.body);
+    const serialized = JsonSourcePolicy.stringify(body);
+    const controller = new AbortController();
+    let timer;
+    const deadline = new Promise((_resolve, reject) => {
+      timer = setTimeout(() => {
+        controller.abort();
+        reject(new BackendError(504, {message: t('Error.ValidationTimedOut')}));
+      }, 30000);
+    });
+    let report;
+    try {
+      ({data: report} = await Promise.race([request(`${base}/command/validate?resource_type=${route.kind}`, {
+        method: 'POST', body: JsonSourcePolicy.clone(body), signal: controller.signal,
+      }), deadline]));
+    } catch (error) {
+      if (controller.signal.aborted) throw new BackendError(504, {message: t('Error.ValidationTimedOut')});
+      throw error;
+    } finally { clearTimeout(timer); }
+    current();
+    if (serialized !== JsonSourcePolicy.stringify(options.body)) throw new Error(t('Error.DocumentChanged'));
+    if (typeof report?.canSave !== 'boolean' || !Array.isArray(report.errors) || !Array.isArray(report.warnings) ||
+        [...report.errors, ...report.warnings].some(issue => !issue || typeof issue.message !== 'string'))
+      throw new BackendError(502, {message: t('Error.InvalidValidation')});
+    if (!report.canSave || report.errors.length)
+      throw new BackendError(400, {message: t('Error.ValidationFailed'), validationReport: report});
+    options = {...options, body};
     onWrite({ createsIdentity: operation !== 'update', operation, identity: id, body: JsonSourcePolicy.clone(options.body) });
     return request(url, options);
   };

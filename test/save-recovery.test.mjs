@@ -1,3 +1,4 @@
+import {acceptPayload} from './helpers/validation.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {DesignerCoordinator} from '../app/scripts/host-state.mjs';
@@ -40,7 +41,7 @@ test('only root update provenance and object order may differ in a matching save
   assert.equal(sameRevision('"opaque"','"opaque--gzip"'),false);
 });
 function setup(createsIdentity=false){
-  const state=new DesignerCoordinator();
+  const state=new DesignerCoordinator(acceptPayload);
   const designer={currentArtifact:structuredClone(opened),isDirty:true,validationReport:{canSave:true,issues:[]},validate(){return this.validationReport;}};
   state.loaded({artifact:opened,etag:pending.etag,writable:true});
   designer.currentArtifact=structuredClone(submitted);

@@ -28,11 +28,13 @@
   "Message": {
     "ChangesKept": "Not saved. Your changes remain in the designer.",
     "ChangesDiscarded": "Not saved. Your changes were discarded.",
-    "ReadOnly": "This artifact is read only. Create a draft or change permissions in Workspace to edit it.",
+    "ReadOnly": "You do not have permission to edit this artifact. Ask its owner for edit access, then use Recheck access.",
+    "ReadOnlyPublished": "This artifact is published, so it is read only. Create a draft in Workspace if you'd like to edit a new version of it.",
+    "ReadOnlyFolder": "You do not have permission to create an artifact in this folder. Ask its owner for access, then use Recheck access.",
     "ConfirmDiscard": "Discard your unsaved changes and return to Workspace?",
     "ConfirmReload": "Discard your unsaved changes and reload the latest artifact?",
-    "ServerFindings": "Server validation: {{count}} findings",
-    "ServerFindingsOne": "Server validation: {{count}} finding",
+    "ServerFindings": "Save validation: {{count}} findings",
+    "ServerFindingsOne": "Save validation: {{count}} finding",
     "SavedWithChanges": "Saved. Further changes remain in the designer.",
     "SavedNewIdentity": "Saved as a new artifact. Further changes remain here; reload the saved artifact before saving again.",
     "SavedReloadRequired": "Saved. Reload the designer before saving again.",
@@ -82,6 +84,8 @@
     "OutdatedBundle": "The local CED bundle is out of date. Rebuild CED and restart Designer.",
     "InvalidChildren": "The repository returned an incomplete child list. Please retry.",
     "InvalidImpact": "The server did not provide a valid update assessment. Your changes have been kept.",
+    "InvalidValidation": "The server did not provide a complete validation report.",
+    "ValidationFailed": "The document did not pass server validation.",
     "DocumentChanged": "The document changed while saving was being prepared. Review it and save again.",
     "InvalidArtifact": "The repository returned a different or incomplete artifact. Reload to try again.",
     "SaveUnconfirmed": "We could not confirm whether your changes were saved. Your changes remain in the designer. Use Check save status to find out before saving again.",
@@ -97,7 +101,8 @@
     "RecoveryUnresolved": "The stored version could not be reconciled with your save. Your edits have been kept; saving remains blocked.",
     "RecoveryUnavailable": "Save status could not be checked. Your edits have been kept. Check your connection and access, then try again.",
     "AccessUnavailable": "Access could not be checked. Your edits have been kept. Sign in or check your connection, then try again.",
-    "ReusableUnconfirmed": "The reusable artifact could not be confirmed. Your changes are kept. Retry this action to check the same saved identity."
+    "ReusableUnconfirmed": "The reusable artifact could not be confirmed. Your changes are kept. Retry this action to check the same saved identity.",
+    "ValidationTimedOut": "Validation did not finish in time. Try saving again."
   },
   "Draft": {
     "StorageError": "This browser could not retain the draft. Keep this page open to avoid losing your changes.",

@@ -1,3 +1,4 @@
+import {acceptPayload, saveArtifact} from './helpers/validation.mjs';
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -137,8 +138,9 @@ async function host(isDirty = true, languages = ['en-US'], existing = false, imp
   await run(window, document, location, fetch, { whenDefined: async () => {}, get: () => true },
     { randomUUID: () => 'session' }, { languages }, { ...core,
       canEdit: () => true,
+      DesignerCoordinator: class extends core.DesignerCoordinator { constructor() { super(acceptPayload); } },
       createBackend: () => request,
-      saveArtifact: realSave ? core.saveArtifact : options => impact ? options.confirmVersion(impact).then(confirmed => confirmed ? saved : null) : saved,
+      saveArtifact: realSave ? saveArtifact : options => impact ? options.confirmVersion(impact).then(confirmed => confirmed ? saved : null) : saved,
     }, i18n, drafts, policy, reusables);
   designer.started = true;
   assert.equal(node('save').disabled, false);

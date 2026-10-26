@@ -1,3 +1,4 @@
+import {acceptPayload} from './helpers/validation.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseJson, canonicalJson, JsonSourcePolicy} from '../app/scripts/json-policy.mjs';
@@ -16,7 +17,7 @@ test('HTTP responses and subsequent writes retain exact numeric tokens', async (
   assert.equal(calls[1].body, source);
 });
 test('merge, recovery and comparison preserve numeric atoms without treating them as properties', () => {
-  const data = parseJson(source), state = new DesignerCoordinator();
+  const data = parseJson(source), state = new DesignerCoordinator(acceptPayload);
   state.loaded({artifact: data, etag: '"1"', writable: true});
   const scope = draftScope('api', 'user', {collection: 'templates', id: 'item'}, '');
   const memory = new Map();

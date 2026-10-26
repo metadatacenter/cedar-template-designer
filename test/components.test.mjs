@@ -20,6 +20,7 @@ async function fixture(t) {
   const policy = join(root, 'node_modules/cedar-model-typescript-library');
   await mkdir(policy, { recursive: true });
   await writeFile(join(policy, 'policy.esm.js'), 'export const fixture = true;');
+  await writeFile(join(policy, 'schema.esm.js'), 'export const schemaFixture = true;');
   await writeFile(join(policy, 'package.json'), JSON.stringify({name: 'cedar-model-typescript-library', version:'1.0.0'}));
   return root;
 }
@@ -29,6 +30,9 @@ test('stages verified installed packages with published identities', async t => 
   const policy = await readFile(join(root, 'app/components/cedar-validation-policy.mjs'));
   const identity = JSON.parse(await readFile(join(root, 'app/components/policy-manifest.json'), 'utf8'));
   assert.equal(policy.toString(), 'export const fixture = true;');
+  const schema = await readFile(join(root, 'app/components/cedar-schema-validation.mjs'));
+  assert.equal(schema.toString(), 'export const schemaFixture = true;');
+  assert.equal(identity.schemaSha256, createHash('sha256').update(schema).digest('hex'));
   assert.equal(identity.sha256, createHash('sha256').update(policy).digest('hex'));
   for (const name of names) {
     assert.equal(manifest[name].version, '0.1.0-dev.test');

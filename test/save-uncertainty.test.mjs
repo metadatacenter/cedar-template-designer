@@ -1,6 +1,7 @@
+import {acceptPayload, saveArtifact} from './helpers/validation.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {DesignerCoordinator, saveArtifact, BackendError, useDeploymentApi} from '../app/scripts/host-core.mjs';
+import {DesignerCoordinator, BackendError, useDeploymentApi} from '../app/scripts/host-core.mjs';
 
 // A create or a new version mints its identity on the base https://repo.test/.
 useDeploymentApi('https://resource.test');
@@ -14,7 +15,7 @@ const VALIDATION = {objects: {validationReport: {errors: [{location: '/propertie
 for (const operation of ['assessment', 'create', 'update', 'version'])
   for (const status of [0, 400, 401, 403, 404, 408, 409, 412, 428, 500, 'body interrupted'])
     test(`${operation}: ${status} preserves work and only uncertain writes block repetition`, async () => {
-      const state = new DesignerCoordinator();
+      const state = new DesignerCoordinator(acceptPayload);
       const artifact = {'schema:name': 'Submitted'};
       const designer = {currentArtifact: artifact, isDirty: true, validate: () => ({canSave: true, issues: []})};
       state.loaded({artifact: {'@id': 'https://repo.test/templates/item', 'schema:name': 'Opened'}, etag: '"opened"', writable: true});
@@ -84,7 +85,7 @@ for (const operation of ['assessment', 'create', 'update', 'version'])
 // means the template changed since it was opened, which the author resolves by reopening it.
 for (const errorKey of ['nodeAlreadyPresent', 'artifactHasMovedOn', undefined])
   test(`version: 412 ${errorKey ?? 'without an error key'} is ${errorKey === 'nodeAlreadyPresent' ? '' : 'not '}taken as possibly stored`, async () => {
-    const state = new DesignerCoordinator();
+    const state = new DesignerCoordinator(acceptPayload);
     const designer = {currentArtifact: {'schema:name': 'Submitted'}, isDirty: true, validate: () => ({canSave: true, issues: []})};
     state.loaded({artifact: {'@id': 'https://repo.test/templates/item', 'schema:name': 'Opened'}, etag: '"opened"', writable: true});
     const attempt = state.beginSave(designer);
@@ -113,7 +114,7 @@ for (const [status, errorKey] of VERSIONING_REFUSALS)
     : status === 403 ? 'still refuses access' : 'is still a plain refusal'}`, async () => {
     const ownerOnly = errorKey === 'versioningOnlyByOwner', accessRefused = status === 403 && !ownerOnly;
     const opened = {'@id': 'https://repo.test/templates/item', 'schema:name': 'Opened'};
-    const state = new DesignerCoordinator();
+    const state = new DesignerCoordinator(acceptPayload);
     const designer = {currentArtifact: {'schema:name': 'Submitted'}, isDirty: true, validate: () => ({canSave: true, issues: []})};
     state.loaded({artifact: opened, etag: '"opened"', writable: true});
     const attempt = state.beginSave(designer);
@@ -146,7 +147,7 @@ for (const [status, errorKey] of VERSIONING_REFUSALS)
     assert.equal(journal.uncertainCreation, false);
     assert.equal(journal.creation, undefined);
     assert.equal(journal.pending?.purpose, accessRefused ? 'access' : undefined);
-    const restored = new DesignerCoordinator();
+    const restored = new DesignerCoordinator(acceptPayload);
     restored.loaded({artifact: opened, etag: '"opened"', writable: true});
     restored.restoreRecovery(journal);
     assert.equal(restored.reloadRequired, accessRefused);
@@ -156,7 +157,7 @@ for (const [status, errorKey] of VERSIONING_REFUSALS)
   });
 
 test('a create sent without an identity, as before identities were sent, stays guarded and cannot be checked', async () => {
-  const state = new DesignerCoordinator();
+  const state = new DesignerCoordinator(acceptPayload);
   const designer = {currentArtifact: {'schema:name': 'Submitted'}, isDirty: true, validate: () => ({canSave: true, issues: []})};
   state.loaded({writable: true});
   const attempt = state.beginSave(designer);

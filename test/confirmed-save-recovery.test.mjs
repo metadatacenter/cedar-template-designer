@@ -1,10 +1,11 @@
+import {acceptPayload} from './helpers/validation.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {DesignerCoordinator} from '../app/scripts/host-state.mjs';
 
 const opened = {'@id':'urn:item','schema:name':'Opened', properties:{}, extra:'Keep'};
 function setup({createsIdentity=false, requiresReload=false, hasOpenedRevision=true}={}) {
-  const state = new DesignerCoordinator();
+  const state = new DesignerCoordinator(acceptPayload);
   const designer = {currentArtifact:{...opened,'schema:name':'Submitted'}, isDirty:true,
     validationReport:{canSave:true,issues:[]}, validate(){return this.validationReport;}};
   state.loaded({artifact:opened,etag:hasOpenedRevision?'"opened"':null,writable:true});

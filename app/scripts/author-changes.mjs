@@ -85,3 +85,25 @@ export function applyAuthorChanges(stored, opened, edited, replacements = []) {
   }
   return result;
 }
+
+/**
+ * The stored artifact with each shape the designer reports having superseded put as its projection holds
+ * it: the projection's value where it has one, and nothing where it has none. These are shapes the
+ * designer cannot represent and the server refuses, so retaining them would carry a refusal into every
+ * save. Every other stored branch is left exactly as it was, to be retained as before.
+ */
+export function supersede(stored, shapes = []) {
+  const result = JsonSourcePolicy.clone(stored);
+  for (const shape of shapes) {
+    const parts = shape.location.split('/').slice(1).map(part => part.replaceAll('~1', '/').replaceAll('~0', '~'));
+    const key = parts.pop();
+    // A location whose container is missing no longer describes this artifact, and is left alone.
+    let parent = result;
+    for (const part of parts) parent = object(parent) && Object.hasOwn(parent, part) ? parent[part] : undefined;
+    if (!object(parent) || key === undefined) continue;
+    if (Object.hasOwn(shape, 'value'))
+      Object.defineProperty(parent, key, {value: JsonSourcePolicy.clone(shape.value), enumerable: true, configurable: true, writable: true});
+    else delete parent[key];
+  }
+  return result;
+}

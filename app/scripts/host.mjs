@@ -16,6 +16,10 @@ const state = new DesignerCoordinator();
 let designer, leaving = false, discarded = false, returnUrl, route, saved = false, folderId, request, config, auth, draftStore, offeredDraft;
 // The stored artifact is one the designer cannot read, so reloading it cannot help.
 let unreadable = false, openingAccessRefused = false, forwardedFindings;
+// Why a clean opening cannot be edited: 'published', 'access' to the artifact or 'folder' access to
+// create in. It decides what the page says, and whether an access check could change anything.
+let readOnlyReason = null;
+const READ_ONLY_MESSAGES = {published: 'Message.ReadOnlyPublished', access: 'Message.ReadOnly', folder: 'Message.ReadOnlyFolder'};
 // The read that settles a lost create or new version was refused for the session.
 let creationCheckSignedOut = false;
 function message(text, error = false) { ui.message.textContent = text; ui.message.dataset.tone = error ? 'error' : 'info'; }
@@ -23,9 +27,11 @@ function dirty() { return !leaving && state.dirty(designer); }
 // A new field opens its type chooser as a dialog over the whole page, which would cover the offer of a
 // retained draft and leave neither Restore nor Discard reachable. The chooser waits for that decision.
 function choiceWouldCoverOffer() { return route?.kind === 'field' && !route.id && Boolean(offeredDraft); }
+// A published artifact stays read only whatever access the person has, so neither checking access
+// again nor signing in again is offered for one.
 function canRecheckOpeningAccess() {
   return !offeredDraft && !dirty() && ((state.loadFailed && openingAccessRefused) ||
-    (state.ready && !state.writable && !state.reloadRequired));
+    (state.ready && !state.writable && !state.reloadRequired && readOnlyReason !== 'published'));
 }
 function keepDraft(attempt) {
   if (leaving || !draftStore || !designer || offeredDraft || !state.ready || (state.saving && !attempt?.write) || typeof designer.captureDraft !== 'function') return;
@@ -123,8 +129,9 @@ async function reopen(attempt) {
   const id = loaded?.data?.['@id'];
   if (!attempt.current() || typeof id !== 'string' || resourcePathId(id) !== resourcePathId(route.id) || !state.matches(attempt, designer)) return false;
   let projection;
-  try { designer.loadArtifact(loaded.data, { preserveView: true }); projection = designer.currentArtifact; } catch { return false; }
-  state.loaded({ artifact: loaded.data, projection, etag: loaded.etag, writable: state.writable });
+  let superseded;
+  try { designer.loadArtifact(loaded.data, { preserveView: true }); projection = designer.currentArtifact; superseded = designer.validationReport?.superseded; } catch { return false; }
+  state.loaded({ artifact: loaded.data, projection, superseded, etag: loaded.etag, writable: state.writable });
   state.reloadRequired = !loaded.etag;
   return true;
 }
@@ -171,7 +178,8 @@ async function settleCreation(check, creation) {
     if (result === 'committed' && !state.dirty(designer)) {
       try {
         designer.loadArtifact(created.data, { preserveView: true });
-        state.loaded({ artifact: created.data, projection: designer.currentArtifact, etag: created.etag, writable: true });
+        state.loaded({ artifact: created.data, projection: designer.currentArtifact,
+          superseded: designer.validationReport?.superseded, etag: created.etag, writable: true });
         state.reloadRequired = !created.etag;
       } catch { /* The submitted projection stays the baseline the designer is compared with. */ }
     }
@@ -393,27 +401,31 @@ try {
       const [loaded, report] = await Promise.all([request(url), request(`${url}/report`)]);
       if (!loaded.data || resourcePathId(loaded.data['@id']) !== resourcePathId(route.id)) throw new Error(t('Error.InvalidArtifact'));
       route.id = loaded.data['@id']; // Keep the stored identity for subsequent PUT bodies.
-      let projection;
+      let projection, superseded;
       try {
         designer.loadArtifact(loaded.data);
         projection = designer.currentArtifact;
+        // Stored shapes the designer cannot represent, which Save must not carry back to the server.
+        superseded = designer.validationReport?.superseded;
       } catch (error) {
         // The reader refuses an artifact it cannot read, such as one whose child is stored under a
         // reserved key, and says why in its own words, which name the place in the artifact.
         unreadable = true;
         throw new Error(t('Error.Unreadable', { detail: error.message }));
       }
-      state.loaded({ artifact: loaded.data, projection, etag: loaded.etag, writable: canEdit(report.data, loaded.data) });
+      state.loaded({ artifact: loaded.data, projection, superseded, etag: loaded.etag, writable: canEdit(report.data, loaded.data) });
+      readOnlyReason = state.writable ? null : loaded.data['bibo:status'] === 'bibo:published' ? 'published' : 'access';
       if (state.writable && !loaded.etag) { state.reloadRequired = true; message(t('Error.NoValidator'), true); }
     } else {
       if (!folderId) throw new Error(t('Error.NoFolder'));
       const {data: folder} = await request(`${config.resourceRestAPI}/folders/${encodeURIComponent(resourcePathId(folderId))}`);
       designer.newArtifact(route.kind === 'field' ? undefined : route.kind);
       state.loaded({writable: canCreate(folder)});
+      readOnlyReason = state.writable ? null : 'folder';
     }
     designer.readOnly = !state.writable || choiceWouldCoverOffer();
     ui.editor.hidden = false;
-    if (!state.reloadRequired) message(state.writable ? '' : t('Message.ReadOnly'));
+    if (!state.reloadRequired) message(state.writable ? '' : t(READ_ONLY_MESSAGES[readOnlyReason]));
     update();
   }
 } catch (error) {

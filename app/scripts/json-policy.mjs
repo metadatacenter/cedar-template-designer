@@ -1,5 +1,5 @@
-import { ExactDecimal, JsonSourcePolicy, IdentifierPolicy, TextPolicy } from '../components/cedar-validation-policy.mjs';
-export { ExactDecimal, JsonSourcePolicy, IdentifierPolicy, TextPolicy };
+import { ExactDecimal, JsonSourcePolicy, IdentifierPolicy, TextPolicy, ValidationPolicy } from '../components/cedar-validation-policy.mjs';
+export { ExactDecimal, JsonSourcePolicy, IdentifierPolicy, TextPolicy, ValidationPolicy };
 // The artifact parser requires an object; the wrapper also permits HTTP arrays and primitives.
 export function parseJson(source) {
   const wrapper = JsonSourcePolicy.parse('{"value":' + source + '}');

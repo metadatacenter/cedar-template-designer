@@ -15,36 +15,34 @@ draws it in the warning colour, `status-warning-text`.
 
 ## Local development
 
-Install the locked packages and start the host using the CEDAR profile:
+Use the CEDAR frontend reactor for development:
 
 ```sh
-export CEDAR_HOME="$HOME/CEDAR" CEDAR_PROFILE=develop
-source "$CEDAR_HOME/cedar-development/bin/templates/cedar-profile-native.sh"
-cd "$CEDAR_HOME/cedar-template-designer" && npm ci
-cedarcli native restart frontend designer
+cedarcli build frontends
 ```
+
+It automatically supplies current local CED, CEE/CEF, CETP, model and token packages, including
+uncommitted edits, then checks, restarts and verifies the local frontends and runs whole-stack smoke.
+No publication, manual pin update, commit or follow-up approval is needed. `cedarcli test frontends`
+performs the builds and checks without deployment. `cedarcli build this` from this repository
+builds the host and its local package dependencies without the full deployment and smoke.
 
 The development server uses port 4202 (`CEDAR_FRONTEND_PORT` overrides it).
 `npm start` runs the same host directly. `npm run prepare:components` stages the
 installed packages without restarting the server.
 Reload the page after staging.
 
-| Component | Pinned package |
-| --- | --- |
-| CED | `@org.metadatacenter/cedar-embeddable-designer@0.1.0-dev.20260916.2593d382` (Nexus) |
-| CETP | `@org.metadatacenter/cedar-embeddable-term-picker@0.1.0-dev.20260915.0ec47d9c` (Nexus) |
-| CEE/CEF | `cedar-embeddable-editor@2.0.15` (npmjs) |
-
-The npm aliases and scoped registry in `.npmrc` route only the development
-components to Nexus. No sibling checkouts are needed. Staging checks each
+For standalone registry installs, [package.json](package.json) and its lockfile name the exact
+packages; `.npmrc` routes scoped packages to Nexus. Local reactor builds instead select the
+packages produced from current sibling source. Staging checks each
 bundle's bytes against its published manifest, then records package name,
 version and SHA-256 in `app/components/manifest.json`. Those hashes also
 cache-bust the component scripts. `npm pack` stages and includes these components;
 environment configuration is generated separately by Gulp.
 
-For local component development, build a sibling and explicitly set
+For scratch diagnostics outside the reactor, build a sibling and explicitly set
 `CEDAR_CED_BUNDLE`, `CEDAR_CEE_BUNDLE` or `CEDAR_CETP_BUNDLE` to its bundle path
-when staging. There is no implicit fallback to a sibling. Server payloads reject
+when staging. The normal reactor handles package selection automatically. Server payloads reject
 these overrides and require the locked packages. Generated files stay out of Git.
 
 ## Routes and saving
@@ -81,7 +79,7 @@ edits on that response and does not refresh the validator behind the user's back
 Standalone `/fields/*` routes use CEFD from the CED bundle. The host owns the
 same ETag and permission checks as element editing. CEFD provides a type chooser
 and edits one field definition using CED’s shared controls. A CED snapshot with
-CEFD registration is required; during development stage it with `CEDAR_CED_BUNDLE`.
+CEFD registration is required; the development reactor supplies the current local CED package.
 
 CED continues to support fields inside templates/elements and reusable repository children.
 

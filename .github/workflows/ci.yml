@@ -29,11 +29,20 @@ jobs:
       - name: Check out the Template Designer
         uses: actions/checkout@v7
 
-      - name: Use Node 24.22.0
+      - name: Use Node 24.22.1
         uses: actions/setup-node@v6
         with:
-          node-version: 24.22.0
+          node-version: 24.22.1
           cache: npm
+
+      - name: Use Java 17 for payload conformance
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+          # The oracle POM arrives with the model npm package, after Java setup.
+          cache-dependency-path: package-lock.json
 
       - name: Install the locked dependency graph
         run: npm ci

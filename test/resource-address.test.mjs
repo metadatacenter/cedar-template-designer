@@ -1,10 +1,11 @@
+import {saveArtifact} from './helpers/validation.mjs';
 // The compact address of a folder or artifact, across the deployment's base, the form an identifier
 // arrives in and the collection. The server expands a short selector onto its own base only, so the
 // host may shorten an identity on that base and nothing else, and shortening must round-trip.
 import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { identityIn, mintIdentity, resourceIri, resourcePathId, resourceSelector, useDeploymentApi, useDeploymentDomain } from '../app/scripts/resource-address.mjs';
-import { saveArtifact } from '../app/scripts/host-core.mjs';
+
 
 const UUID = '0f1e2d3c-4b5a-4968-8776-655443322110';
 const V4 = '[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}';
