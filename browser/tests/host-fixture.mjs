@@ -89,6 +89,7 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
         currentArtifact={}; baseline=''; viewState={}; report={valid:true,canSave:true,issues:[]};
         connectedCallback(){this.textContent='Designer fixture'}
         get canSave(){return this.report.canSave}get validationReport(){return this.report}validate(){return this.report}
+        ${state.designerValidates?'validateArtifact(){window.__designerValidations=(window.__designerValidations??0)+1;return {canSave:true,structurallyValid:true,isValid:true,findings:[]}}':''}
         get isDirty(){return JSON.stringify(this.currentArtifact)!==this.baseline}
         loadArtifact(value,options){if(!options?.preserveView)this.viewState={};if(value.unreadable)throw new Error('Child schema uses a reserved instance property name at /properties/@foo/');this.currentArtifact=structuredClone(value);this.baseline=JSON.stringify(value)}
         captureDraft(){return {format:'cedar-designer-draft',version:1,kind:'template',state:JSON.stringify({artifact:this.currentArtifact,baseline:this.baseline,report:this.report})}}
@@ -118,6 +119,7 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
     if(path==='/components/cedar-validation-policy.mjs')return route.fulfill({contentType:'text/javascript',body:source('components/cedar-validation-policy.mjs')});
     // State-machine fixtures have partial artifacts and a stand-in designer. Real CED tests use
     // the shipped structural validator; only the stand-in's fixture boundary is stubbed.
+    if(path==='/components/cedar-schema-validation.mjs')state.validatorRequests=(state.validatorRequests??0)+1;
     if(path==='/components/cedar-schema-validation.mjs')return route.fulfill({contentType:'text/javascript',body:state.designerBundle?
       source('components/cedar-schema-validation.mjs'):'export const SchemaArtifactValidator={validate:()=>({canSave:true,findings:[]})};'});
     if(path==='/components/icons.js')return route.fulfill({contentType:'text/javascript',body:'export const iconSvg=()=>"";'});

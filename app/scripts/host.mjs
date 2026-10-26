@@ -12,7 +12,10 @@ const { t, counted, detectLanguage, setLanguage, localizeDocument } = await impo
 const language = setLanguage(detectLanguage(navigator.languages));
 localizeDocument(document);
 const ui = Object.fromEntries(['back', 'save', 'save-help', 'title', 'state', 'message', 'editor', 'version-dialog', 'version-message', 'version-explanation', 'reload', 'check-save', 'recheck-access', 'server-issues', 'server-issues-title', 'server-issues-list', 'draft-offer', 'restore-draft', 'discard-draft', 'draft-storage-error', 'sign-in-again'].map(id => [id, document.getElementById(id)]));
-const state = new DesignerCoordinator();
+// Payloads are checked with the meta-schema validator the designer carries, chosen once it is connected.
+let validateArtifact;
+const validatePayload = artifact => validateArtifact(artifact);
+const state = new DesignerCoordinator(validatePayload);
 let designer, leaving = false, discarded = false, returnUrl, route, saved = false, folderId, request, config, auth, draftStore, offeredDraft;
 // The stored artifact is one the designer cannot read, so reloading it cannot help.
 let unreadable = false, openingAccessRefused = false, forwardedFindings;
@@ -232,7 +235,7 @@ ui['restore-draft'].addEventListener('click', () => {
   if (dirty() && !window.confirm(t('Message.ConfirmDiscard'))) return;
   try {
     // Validate host state separately before the component atomically adopts its snapshot.
-    const candidate = new DesignerCoordinator(); candidate.restoreRecovery(offeredDraft.coordinator);
+    const candidate = new DesignerCoordinator(validatePayload); candidate.restoreRecovery(offeredDraft.coordinator);
     designer.restoreDraft(offeredDraft.draft);
     state.restoreRecovery(offeredDraft.coordinator);
     offeredDraft = null; ui.editor.hidden = false;
@@ -395,6 +398,12 @@ try {
     ui.editor.hidden = true;
     ui.editor.append(designer);
     if (typeof designer.loadArtifact !== 'function') throw new Error(t('Error.OutdatedBundle'));
+    // A designer built before it offered its validator leaves the host to import its own staged copy.
+    if (typeof designer.validateArtifact === 'function') validateArtifact = artifact => designer.validateArtifact(artifact);
+    else {
+      const { SchemaArtifactValidator } = await import(`../components/cedar-schema-validation.mjs?v=${version}`);
+      validateArtifact = artifact => SchemaArtifactValidator.validate(artifact);
+    }
     for (const event of ['artifactChange', 'validationChange', 'dirtyChange']) designer.addEventListener(event, update);
     if (route.id) {
       const url = artifactUrl();
