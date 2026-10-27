@@ -1,7 +1,6 @@
 import { JsonSourcePolicy, canonicalJson, ValidationPolicy } from './json-policy.mjs';
 import { applyAuthorChanges, supersede } from './author-changes.mjs';
 import { creationOutcome, sameRevision, updateOutcome } from './save-recovery.mjs';
-import { SchemaArtifactValidator } from '../components/cedar-schema-validation.mjs';
 
 /** Compare documents independently of object key order. */
 export function artifactKey(value) {
@@ -29,11 +28,14 @@ export function ownerOnlyRefusal(error) {
   return error?.status === 403 && error.data?.errorKey === 'versioningOnlyByOwner';
 }
 
+/** A coordinator given no validator cannot vouch for any payload, so it lets none be saved. */
+const unvalidated = () => { throw new Error(); };
+
 /** Owns the host's readiness, pending write and reports about its submitted document. */
 export class DesignerCoordinator {
   #validatePayload;
   #payloadValidation;
-  constructor(validatePayload = artifact => SchemaArtifactValidator.validate(artifact)) {
+  constructor(validatePayload = unvalidated) {
     this.#validatePayload = validatePayload;
   }
   ready = false;

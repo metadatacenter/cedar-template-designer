@@ -89,6 +89,7 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
         currentArtifact={}; baseline=''; viewState={}; report={valid:true,canSave:true,issues:[]};
         connectedCallback(){this.textContent='Designer fixture'}
         get canSave(){return this.report.canSave}get validationReport(){return this.report}validate(){return this.report}
+        ${state.designerValidates?'validateArtifact(){window.__designerValidations=(window.__designerValidations??0)+1;return {canSave:true,structurallyValid:true,isValid:true,findings:[]}}':''}
         get isDirty(){return JSON.stringify(this.currentArtifact)!==this.baseline}
         loadArtifact(value,options){if(!options?.preserveView)this.viewState={};if(value.unreadable)throw new Error('Child schema uses a reserved instance property name at /properties/@foo/');this.currentArtifact=structuredClone(value);this.baseline=JSON.stringify(value)}
         captureDraft(){return {format:'cedar-designer-draft',version:1,kind:'template',state:JSON.stringify({artifact:this.currentArtifact,baseline:this.baseline,report:this.report})}}
@@ -118,6 +119,7 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
     if(path==='/components/cedar-validation-policy.mjs')return route.fulfill({contentType:'text/javascript',body:source('components/cedar-validation-policy.mjs')});
     // State-machine fixtures have partial artifacts and a stand-in designer. Real CED tests use
     // the shipped structural validator; only the stand-in's fixture boundary is stubbed.
+    if(path==='/components/cedar-schema-validation.mjs')state.validatorRequests=(state.validatorRequests??0)+1;
     if(path==='/components/cedar-schema-validation.mjs')return route.fulfill({contentType:'text/javascript',body:state.designerBundle?
       source('components/cedar-schema-validation.mjs'):'export const SchemaArtifactValidator={validate:()=>({canSave:true,findings:[]})};'});
     if(path==='/components/icons.js')return route.fulfill({contentType:'text/javascript',body:'export const iconSvg=()=>"";'});
@@ -132,7 +134,9 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
   if(state.brokenLoad||state.loadedId!==state.item||state.unreadable||state.openingFailure){
     await expect(page.locator('#state')).toHaveText(text(state.language,'State.LoadFailed'));return state;
   }
-  await expect(page.locator('#editor')).toBeVisible();
+  // The real designer bundle can take longer than the default 5 s to open on a loaded machine:
+  // build train 2.9.30-dev.20261027.1144 timed out here on a test that passed in the train before.
+  await expect(page.locator('#editor')).toBeVisible({timeout:15000});
   // A published artifact opens read only whatever the person may do, as the host decides.
   const readOnly=!allowed||(mode==='edit'&&state.loadedArtifact?.['bibo:status']==='bibo:published');
   await expect(page.locator('#state')).toHaveText(text(state.language,readOnly?'State.ReadOnly':mode==='edit'&&!state.loadedEtag?'State.ReloadRequired':'State.Unmodified'));

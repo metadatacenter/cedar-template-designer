@@ -1,18 +1,21 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import model from 'cedar-model-typescript-library';
+import schema from 'cedar-model-typescript-library/schema.js';
 import {DesignerCoordinator} from '../app/scripts/host-state.mjs';
 import {saveArtifact, BackendError} from '../app/scripts/host-core.mjs';
 import {accepted} from './helpers/validation.mjs';
 
 const {CedarBuilders, CedarWriters} = model;
+// The validator CED's validateArtifact carries; the host is given it rather than importing its own.
+const validate = artifact => schema.SchemaArtifactValidator.validate(artifact);
 function artifact() {
   return CedarWriters.json().getStrict().getTemplateWriter().getAsJsonNode(
     CedarBuilders.templateBuilder().withSchemaName('Study').withDescription('Schema definition').build());
 }
 const designer = value => ({currentArtifact: value, validationReport: {canSave: true, issues: []}, validate() {return this.validationReport;}});
 function coordinator(stored = artifact(), projection = structuredClone(stored)) {
-  const state = new DesignerCoordinator();
+  const state = new DesignerCoordinator(validate);
   state.loaded({artifact: stored, projection, writable: true, etag: '"one"'});
   return {state, component: designer(structuredClone(projection))};
 }
@@ -38,7 +41,7 @@ test('recomputes a retained-payload verdict after a repair and after recovery', 
   assert.equal(state.report(component).canSave, false);
   component.currentArtifact['@context']['@language'] = 'en';
   assert.equal(state.report(component).canSave, true);
-  const restored = new DesignerCoordinator();
+  const restored = new DesignerCoordinator(validate);
   restored.loaded({artifact: source, writable: true, etag: '"one"'});
   restored.restoreRecovery(state.captureRecovery());
   assert.equal(restored.report(component).canSave, true);
@@ -101,7 +104,7 @@ for(const verdict of [null, {}, {canSave:true}, {canSave:true,errors:[],warnings
   });
 
 test('unavailable preflight is a retryable read failure, never an uncertain creation', async () => {
-  const state = new DesignerCoordinator();state.loaded({writable:true});
+  const state = new DesignerCoordinator(validate);state.loaded({writable:true});
   const component=designer(artifact()), attempt=state.beginSave(component);
   const error=new BackendError(503);
   await assert.rejects(saveArtifact({...create,artifact:attempt.artifact,onWrite:write=>attempt.write=write,
@@ -165,4 +168,12 @@ test('the validation deadline also settles a transport that ignores cancellation
   await refused;
   resolve(accepted());await Promise.resolve();await Promise.resolve();
   assert.equal(writes,0);assert.equal(recorded,0);
+});
+
+test('a coordinator given no validator never lets a payload be saved', () => {
+  const state = new DesignerCoordinator();
+  state.loaded({artifact: artifact(), writable: true, etag: '"one"'});
+  const report = state.report(designer(artifact()));
+  assert.equal(report.canSave, false);
+  assert.equal(state.beginSave(designer(artifact())), null);
 });

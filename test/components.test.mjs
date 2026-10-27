@@ -54,3 +54,39 @@ test('local overrides are explicit and cannot enter server payloads', async t =>
   assert.equal(manifest[names[0]].source, 'local-override');
   await assert.rejects(stageComponents(root, { CEDAR_CED_BUNDLE: path, CEDAR_FRONTEND_BEHAVIOR: 'server' }), /locked package/);
 });
+async function withHostFonts(root, names = ['cedar-embeddable-designer', 'cedar-embeddable-editor', 'cedar-embeddable-term-picker']) {
+  const tokens = join(root, 'node_modules/@org.metadatacenter/cedar-design-tokens/dist');
+  await mkdir(tokens, { recursive: true });
+  await writeFile(join(tokens, 'fonts.css'), '@font-face {}');
+  for (const name of names) {
+    const bytes = Buffer.from(`// ${name} without fonts`);
+    await writeFile(join(root, 'node_modules', name, `${name}.host-fonts.js`), bytes);
+    await writeFile(join(root, 'node_modules', name, 'bundle-manifest.host-fonts.json'), JSON.stringify({ bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') }));
+  }
+}
+test('a page that registers the fonts serves each host-fonts bundle under its usual name', async t => {
+  const root = await fixture(t);
+  await withHostFonts(root);
+  const manifest = await stageComponents(root, {});
+  for (const name of names) {
+    assert.equal(manifest[name].bundle, `${name}.host-fonts.js`);
+    assert.equal(await readFile(join(root, 'app/components', `${name}.js`), 'utf8'), `// ${name} without fonts`);
+  }
+});
+test('without the fonts, or for a package with no host-fonts bundle, the self-contained bundle is served', async t => {
+  const root = await fixture(t);
+  await withHostFonts(root, [names[0]]);
+  await rm(join(root, 'node_modules/@org.metadatacenter/cedar-design-tokens/dist/fonts.css'));
+  assert.equal((await stageComponents(root, {}))[names[0]].bundle, `${names[0]}.js`);
+  await writeFile(join(root, 'node_modules/@org.metadatacenter/cedar-design-tokens/dist/fonts.css'), '@font-face {}');
+  const manifest = await stageComponents(root, {});
+  assert.equal(manifest[names[0]].bundle, `${names[0]}.host-fonts.js`);
+  assert.equal(manifest[names[1]].bundle, `${names[1]}.js`);
+  assert.equal(await readFile(join(root, 'app/components', `${names[1]}.js`), 'utf8'), `// ${names[1]}`);
+});
+test('a host-fonts bundle that does not match its own manifest is refused', async t => {
+  const root = await fixture(t);
+  await withHostFonts(root);
+  await writeFile(join(root, 'node_modules', names[2], `${names[2]}.host-fonts.js`), '// tampered');
+  await assert.rejects(stageComponents(root, {}), /published bundle manifest/);
+});

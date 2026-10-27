@@ -18,6 +18,8 @@ async function host(isDirty = true, languages = ['en-US'], existing = false, imp
   const saved = new Promise((resolve, reject) => { resolveSave = resolve; rejectSave = reject; });
   const designer = {
     isDirty, canSave: true, currentArtifact: {}, validationReport: { canSave: true, issues: [] }, validate: () => ({ canSave: true, issues: [] }),
+    // A current CED carries the meta-schema validator, so the host imports no copy of its own.
+    validateArtifact: acceptPayload,
     newArtifact() {}, addEventListener(event, callback) { events.set('designer:' + event, callback); },
     // Like CED, loading takes the artifact as the document and the baseline the designer compares
     // edits with. A load while the host starts leaves alone the state each test starts from.

@@ -1,3 +1,5 @@
+/* Registers CEDAR Roboto once for the page and every component on it. */
+@import '../components/fonts.css';
 @import '../components/motion.css';
 @import '../components/custom-properties.css';
 @import '../components/icon-contract.css';

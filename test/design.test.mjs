@@ -21,3 +21,15 @@ test('a missing token package fails before replacing served assets', async t => 
   await assert.rejects(stageDesign(root), /ENOENT/);
   assert.equal(await readFile(join(root, 'app/components/icons.js'), 'utf8'), 'previous');
 });
+test('stages the compiled fonts, or a placeholder when the token package has none', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'ced-design-'));
+  t.after(() => rm(root, {recursive: true, force: true}));
+  const source = join(root, 'node_modules/@org.metadatacenter/cedar-design-tokens/dist');
+  await mkdir(source, {recursive: true});
+  for (const name of ['icons.js', 'custom-properties.css', 'motion.css', 'icon-contract.css', 'save-state.css', 'tooltip.css', 'notice.css', 'secondary-action.css', 'focus.css']) await writeFile(join(source, name), name);
+  await stageDesign(root);
+  assert.doesNotMatch(await readFile(join(root, 'app/components/fonts.css'), 'utf8'), /@font-face/);
+  await writeFile(join(source, 'fonts.css'), '@font-face {}');
+  await stageDesign(root);
+  assert.equal(await readFile(join(root, 'app/components/fonts.css'), 'utf8'), '@font-face {}');
+});
