@@ -134,7 +134,9 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
   if(state.brokenLoad||state.loadedId!==state.item||state.unreadable||state.openingFailure){
     await expect(page.locator('#state')).toHaveText(text(state.language,'State.LoadFailed'));return state;
   }
-  await expect(page.locator('#editor')).toBeVisible();
+  // The real designer bundle can take longer than the default 5 s to open on a loaded machine:
+  // build train 2.9.30-dev.20261027.1144 timed out here on a test that passed in the train before.
+  await expect(page.locator('#editor')).toBeVisible({timeout:15000});
   // A published artifact opens read only whatever the person may do, as the host decides.
   const readOnly=!allowed||(mode==='edit'&&state.loadedArtifact?.['bibo:status']==='bibo:published');
   await expect(page.locator('#state')).toHaveText(text(state.language,readOnly?'State.ReadOnly':mode==='edit'&&!state.loadedEtag?'State.ReloadRequired':'State.Unmodified'));
