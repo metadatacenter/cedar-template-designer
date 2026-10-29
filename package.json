@@ -21,7 +21,7 @@
   "author": "Metadatacenter.org",
   "license": "BSD-2-Clause",
   "devDependencies": {
-    "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20261028.430591a0"
+    "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20261028.f26a7bb0"
   },
   "dependencies": {
     "cedar-embeddable-designer": "npm:@org.metadatacenter/cedar-embeddable-designer@0.1.0-dev.20261028.fea70562",
