@@ -40,3 +40,11 @@ test('a stale shared script fails even if it is small enough', async t => {
   await put('components/cedar-editors.js', '// modified');
   await assert.rejects(pageSize(root), /differs from manifest/);
 });
+test('external font subsets count toward the total and must exist', async t => {
+  const { root, put } = await fixture(t);
+  await put('styles/host.css', "@font-face{src:url('../components/fonts/subset.woff2')}");
+  await assert.rejects(pageSize(root), /ENOENT/);
+  await put('components/fonts/subset.woff2', 'font bytes');
+  const report = await pageSize(root);
+  assert.equal(report.files.find(file => file.path.endsWith('subset.woff2')).phase, 'deferred');
+});

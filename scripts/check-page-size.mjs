@@ -16,6 +16,11 @@ export async function pageSize(root) {
     files.set(path, { path, phase, bytes: bytes.length, gzip: gzipSync(bytes, { level: 9 }).length, sha256: sha256(bytes) });
     if (path.endsWith('.css')) for (const match of bytes.toString().matchAll(/@import\s+['"]([^'"]+)['"]/g))
       await add(relative(app, resolve(dirname(absolute), match[1])), phase);
+    if (path.endsWith('.css')) for (const match of bytes.toString().matchAll(/url\(['"]?([^)'"\s]+)['"]?\)/g)) {
+      if (match[1].startsWith('data:') || !/\.woff2(?:[?#]|$)/.test(match[1])) continue;
+      if (/^(?:[a-z]+:|\/\/)/i.test(match[1])) throw new Error(`Unmeasured remote font: ${match[1]}`);
+      await add(relative(app, resolve(dirname(absolute), match[1].split(/[?#]/)[0])), 'deferred');
+    }
   }
   async function scripts(dir) {
     for (const entry of await readdir(resolve(app, dir), { withFileTypes: true })) {

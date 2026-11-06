@@ -1,4 +1,4 @@
-import {mkdir, readFile, writeFile} from 'node:fs/promises';
+import {cp, mkdir, readFile, writeFile} from 'node:fs/promises';
 import {existsSync} from 'node:fs';
 import {resolve, dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -14,8 +14,12 @@ export async function stageDesign(root) {
   const source = tokens(root);
   const destination = resolve(root, 'app/components');
   const files = await Promise.all(['icons.js', 'custom-properties.css', 'motion.css', 'icon-contract.css', 'save-state.css', 'tooltip.css', 'notice.css', 'secondary-action.css', 'focus.css'].map(async name => [name, await readFile(resolve(source, name))]));
-  files.push(['fonts.css', hostFonts(root) ? await readFile(resolve(source, 'fonts.css')) : Buffer.from(noFonts)]);
+  const hosted = existsSync(resolve(source, 'fonts-hosted.css'));
+  files.push(['fonts.css', hostFonts(root) ? await readFile(resolve(source, hosted ? 'fonts-hosted.css' : 'fonts.css')) : Buffer.from(noFonts)]);
   await mkdir(destination, {recursive: true});
+  // Publish content-hashed assets before the stylesheet that references them. Retain older
+  // hashes for pages already open across a local rebuild or deployment.
+  if (hosted) await cp(resolve(source, 'fonts'), resolve(destination, 'fonts'), {recursive: true});
   for (const [name, bytes] of files) await writeFile(resolve(destination, name), bytes);
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

@@ -30,7 +30,7 @@ test('one shared request renders real summaries, preview and editing without rec
   expect(requests).not.toContain('/components/cedar-schema-validation.mjs');
   const budget = JSON.parse(readFileSync(new URL('components/page-size.json', app), 'utf8'));
   const covered = new Set(budget.files.map(file => '/' + file.path));
-  for (const path of requests.filter(path => /\.(m?js|css)$/.test(path) && !path.startsWith('/config/'))) expect(covered.has(path), path).toBe(true);
+  for (const path of requests.filter(path => /\.(m?js|css|woff2)$/.test(path) && !path.startsWith('/config/'))) expect(covered.has(path), path).toBe(true);
   expect(errors).toEqual([]);
 });
 
