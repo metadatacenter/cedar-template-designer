@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "skipLibCheck": true
+  },
+  "files": [
+    "src/editors.ts",
+    "src/integration.d.ts"
+  ]
+}

@@ -1,4 +1,5 @@
 node_modules/
+.angular/
 dist/
 .DS_Store
 app/config/version.js

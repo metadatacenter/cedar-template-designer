@@ -42,7 +42,7 @@ export async function configure(base = root, env = process.env) {
 
 /** Copy the installed component bundles and design files into the tree the host serves. */
 export function stage(base = root) {
-  for (const script of ['scripts/stage-components.mjs', 'scripts/stage-design.mjs']) {
+  for (const script of ['scripts/stage-components.mjs', 'scripts/stage-design.mjs', 'scripts/check-page-size.mjs']) {
     execFileSync(process.execPath, [script], { cwd: base, stdio: 'inherit' });
   }
 }

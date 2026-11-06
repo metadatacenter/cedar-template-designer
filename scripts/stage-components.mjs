@@ -1,6 +1,7 @@
 import { stagePolicy } from './stage-policy.mjs';
 import { hostFonts } from './stage-design.mjs';
-import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
+import { sharedEditors } from './shared-editors.mjs';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
@@ -24,6 +25,23 @@ async function packageBundle(packageDir, name, fontsFromHost) {
 export async function stageComponents(root, env = process.env) {
   const staged = [];
   const fontsFromHost = hostFonts(root);
+  const names = Object.keys(components);
+  // Old registry packages and explicit standalone overrides retain the original delivery path.
+  // A complete integration cohort is verified strictly: corruption never falls back silently.
+  if (fontsFromHost && !Object.values(components).some(key => env[key]) &&
+      (await Promise.all(names.map(name => exists(resolve(root, 'node_modules', name, 'integration-manifest.json'))))).every(Boolean)) {
+    const { inputs, bytes, delivery } = await sharedEditors(root, names);
+    await stagePolicy(root);
+    const destination = resolve(root, 'app/components');
+    await mkdir(destination, { recursive: true });
+    await writeFile(resolve(destination, delivery.file), bytes);
+    await writeFile(resolve(destination, 'third-party-licenses.txt'), await readFile(resolve(root, 'dist/editors/third-party-licenses.txt')));
+    const manifest = Object.fromEntries(names.map(name => [name, { ...inputs[name], delivery }]));
+    await writeFile(resolve(destination, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
+    for (const name of names) await rm(resolve(destination, `${name}.js`), { force: true });
+    console.log(`Shared editors: ${bytes.length} bytes (${delivery.sha256.slice(0, 12)})`);
+    return manifest;
+  }
   for (const [name, overrideKey] of Object.entries(components)) {
     const override = env[overrideKey];
     if (override && env.CEDAR_FRONTEND_BEHAVIOR === 'server') {
@@ -59,6 +77,7 @@ export async function stageComponents(root, env = process.env) {
     console.log(`${name}: ${identity.version || 'local override'}${identity.bundle?.endsWith('.host-fonts.js') ? ', host fonts' : ''} (${identity.sha256.slice(0, 12)})`);
   }
   await writeFile(resolve(destination, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
+  await rm(resolve(destination, 'cedar-editors.js'), { force: true });
   return manifest;
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
