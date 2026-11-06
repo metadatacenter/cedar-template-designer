@@ -3,7 +3,7 @@ import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { resolve, relative, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
-import { sha256 } from './shared-editors.mjs';
+import { sha256, assetName, deliveryAssets } from './shared-editors.mjs';
 
 export async function pageSize(root) {
   const app = resolve(root, 'app'), files = new Map();
@@ -41,6 +41,11 @@ export async function pageSize(root) {
     const file = entry.delivery?.file ?? `${name}.js`;
     if (!/^[\w-]+\.js$/.test(file)) throw new Error(`Invalid component filename: ${file}`);
     await add(`components/${file}`, 'initial', entry.delivery?.sha256 ?? entry.sha256);
+    if (entry.delivery) {
+      await deliveryAssets(resolve(app, 'components'), entry.delivery);
+      for (const [asset, metadata] of Object.entries(entry.delivery.assets ?? {}))
+        await add(`components/${assetName(asset)}`, 'deferred', metadata.sha256);
+    }
   }
   await add('components/cedar-schema-validation.mjs', 'deferred');
   const sum = phase => [...files.values()].filter(file => !phase || file.phase === phase)

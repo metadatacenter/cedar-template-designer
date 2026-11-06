@@ -28,10 +28,49 @@ test('one shared request renders real summaries, preview and editing without rec
   expect(requests.filter(path => path === '/components/cedar-editors.js')).toHaveLength(1);
   expect(requests.filter(path => /\/cedar-embeddable-.*\.js$/.test(path))).toEqual([]);
   expect(requests).not.toContain('/components/cedar-schema-validation.mjs');
+  expect(requests.filter(path => path.includes('/cedar-rdf-'))).toEqual([]);
   const budget = JSON.parse(readFileSync(new URL('components/page-size.json', app), 'utf8'));
   const covered = new Set(budget.files.map(file => '/' + file.path));
   for (const path of requests.filter(path => /\.(m?js|css|woff2)$/.test(path) && !path.startsWith('/config/'))) expect(covered.has(path), path).toBe(true);
   expect(errors).toEqual([]);
+});
+
+test('RDF export loads its processors on demand and reuses them for the next format', async ({ page }) => {
+  const requests = [];
+  page.on('request', request => requests.push(new URL(request.url()).pathname));
+  await host(page, 'template', 'create', true, { shared: true });
+  await expect(page.locator('#editor > cedar-embeddable-designer').getByPlaceholder('Template name')).toBeVisible();
+  const artifact = stored();
+  await page.evaluate(artifact => {
+    const editor = document.createElement('cedar-embeddable-editor');
+    editor.id = 'rdf-editor';
+    editor.config = { showDownloadMenu: true, readOnlyMode: true };
+    document.body.append(editor);
+    editor.templateObject = artifact;
+    editor.instanceObject = {
+      '@id': 'https://example.org/instances/deferred-rdf',
+      '@context': { Text: 'https://example.org/text' },
+      'schema:isBasedOn': artifact['@id'],
+      Text: { '@value': 'Deferred export content' },
+    };
+  }, artifact);
+  const editor = page.locator('#rdf-editor');
+  await expect(editor.locator('.download-trigger')).toBeVisible();
+  expect(requests.filter(path => path.includes('/cedar-rdf-'))).toEqual([]);
+  for (const format of ['instanceTurtle', 'instanceNQuads']) {
+    await editor.locator('.download-trigger').click();
+    const downloaded = page.waitForEvent('download');
+    await page.locator(`[data-download="${format}"]`).click();
+    const download = await downloaded, stream = await download.createReadStream(), chunks = [];
+    for await (const chunk of stream) chunks.push(chunk);
+    const body = Buffer.concat(chunks).toString('utf8');
+    expect(body).toContain('https://example.org/instances/deferred-rdf');
+    expect(body).toContain('Deferred export content');
+    expect(download.suggestedFilename()).toMatch(format === 'instanceTurtle' ? /\.ttl$/ : /\.nq$/);
+  }
+  const manifest = JSON.parse(readFileSync(new URL('components/manifest.json', app), 'utf8'));
+  const assets = Object.keys(Object.values(manifest)[0].delivery.assets ?? {});
+  for (const asset of assets) expect(requests.filter(path => path === `/components/${asset}`)).toHaveLength(1);
 });
 
 test('two designers retain independent documents and UI languages', async ({ page }) => {

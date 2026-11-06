@@ -48,3 +48,16 @@ test('external font subsets count toward the total and must exist', async t => {
   const report = await pageSize(root);
   assert.equal(report.files.find(file => file.path.endsWith('subset.woff2')).phase, 'deferred');
 });
+test('deferred RDF processors are counted once and must match their manifest', async t => {
+  const { root, put, manifest, save } = await fixture(t);
+  const name = 'cedar-rdf-jsonld-123456abcdef.js', bytes = Buffer.from('// RDF processor');
+  for (const entry of Object.values(manifest)) entry.delivery.assets = { [name]: { bytes: bytes.length, sha256: sha256(bytes) } };
+  await save();
+  await assert.rejects(pageSize(root), /ENOENT/);
+  await put(`components/${name}`, bytes);
+  const report = await pageSize(root);
+  assert.equal(report.files.filter(file => file.path.endsWith(name)).length, 1);
+  assert.equal(report.files.find(file => file.path.endsWith(name)).phase, 'deferred');
+  await put(`components/${name}`, Buffer.alloc(bytes.length, 'x'));
+  await assert.rejects(pageSize(root), /differs from manifest/);
+});

@@ -7,6 +7,20 @@ import { modelRuntimeSha256 } from './model-runtime.mjs';
 
 const json = async path => JSON.parse(await readFile(path, 'utf8'));
 export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
+export function assetName(name) {
+  if (!/^cedar-rdf-(jsonld|n3)-[a-f0-9]{12}\.js$/.test(name)) throw new Error(`Invalid deferred asset: ${name}`);
+  return name;
+}
+export async function deliveryAssets(directory, delivery) {
+  const assets = {};
+  for (const [name, expected] of Object.entries(delivery.assets ?? {})) {
+    const bytes = await readFile(resolve(directory, assetName(name)));
+    if (bytes.length !== expected.bytes || sha256(bytes) !== expected.sha256)
+      throw new Error(`Deferred asset differs from manifest: ${name}`);
+    assets[name] = bytes;
+  }
+  return assets;
+}
 async function modelDigest(dir) {
   const metadata = await json(resolve(dir, 'package.json'));
   const hash = createHash('sha256');
@@ -57,7 +71,8 @@ export async function sharedEditors(root, names) {
   try { previous = await json(resolve(directory, 'delivery.json')); } catch { /* First build. */ }
   if (previous?.key === key) {
     const bytes = await readFile(resolve(directory, 'cedar-editors.js')).catch(() => null);
-    if (bytes && sha256(bytes) === previous.sha256) return { inputs, bytes, delivery: previous };
+    const assets = await deliveryAssets(directory, previous).catch(() => null);
+    if (bytes && assets && sha256(bytes) === previous.sha256) return { inputs, bytes, assets, delivery: previous };
   }
   const result = spawnSync(process.execPath, [resolve(root, 'node_modules/@angular/cli/bin/ng.js'), 'build'], { cwd: root, stdio: 'inherit' });
   if (result.status !== 0) throw result.error || new Error('Shared editor build failed');
@@ -67,13 +82,31 @@ export async function sharedEditors(root, names) {
     const copies = new Set(Object.keys(stats.inputs).filter(path => path.includes(marker)).map(path => path.slice(0, path.lastIndexOf(marker) + marker.length)));
     if (copies.size > 1) throw new Error(`Shared build contains multiple copies of ${dependency}: ${[...copies].join(', ')}`);
   }
-  // Angular links the libraries; esbuild flattens its module graph into one side-effecting script.
-  const bundled = await build({ entryPoints: [resolve(directory, 'browser/main.js')], bundle: true, format: 'iife', platform: 'browser', minify: true, write: false, legalComments: 'inline' });
+  // Keep RDF processors outside the initial script. Older integration packages already contain
+  // them and need no extra files. Hash names let an open page finish using its original build.
+  const assets = {}, processors = {};
+  for (const name of ['jsonld', 'n3'].filter(name => runtimes[name])) {
+    const compiled = await build({ stdin: { contents: name === 'jsonld' ? `export { default } from '${name}';` : `export { DataFactory, Parser, Writer } from '${name}';`, resolveDir: root },
+      bundle: true, format: 'esm', platform: 'browser', minify: true, write: false, legalComments: 'inline' });
+    const bytes = Buffer.from(compiled.outputFiles[0].contents);
+    const file = `cedar-rdf-${name}-${sha256(bytes).slice(0, 12)}.js`;
+    processors[name] = file; assets[file] = bytes;
+  }
+  // Angular links the libraries; esbuild flattens the eager graph into one side-effecting script.
+  const bundled = await build({ entryPoints: [resolve(directory, 'browser/main.js')], bundle: true, format: 'iife', platform: 'browser', minify: true, write: false, legalComments: 'inline',
+    plugins: [{ name: 'deferred-rdf', setup(build) {
+      build.onResolve({ filter: /^(jsonld|n3)$/ }, args => {
+        if (!processors[args.path]) throw new Error(`Missing deferred processor: ${args.path}`);
+        return { path: `./${processors[args.path]}`, external: true };
+      });
+    } }] });
   const bytes = Buffer.from(bundled.outputFiles[0].contents);
   const notices = await Promise.all([resolve(directory, '3rdpartylicenses.txt'), ...names.map(name => resolve(root, 'node_modules', name, 'integration-licenses.txt'))].map(path => readFile(path)));
   await writeFile(resolve(directory, 'third-party-licenses.txt'), Buffer.concat(notices.map(bytes => Buffer.concat([bytes, Buffer.from('\n')]))));
-  const delivery = { file: 'cedar-editors.js', sha256: sha256(bytes), bytes: bytes.length, key };
+  const delivery = { file: 'cedar-editors.js', sha256: sha256(bytes), bytes: bytes.length, key,
+    assets: Object.fromEntries(Object.entries(assets).map(([name, bytes]) => [name, { sha256: sha256(bytes), bytes: bytes.length }])) };
+  for (const [name, bytes] of Object.entries(assets)) await writeFile(resolve(directory, name), bytes);
   await writeFile(resolve(directory, delivery.file), bytes);
   await writeFile(resolve(directory, 'delivery.json'), JSON.stringify(delivery, null, 2) + '\n');
-  return { inputs, bytes, delivery };
+  return { inputs, bytes, assets, delivery };
 }

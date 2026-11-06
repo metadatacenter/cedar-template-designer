@@ -1,7 +1,7 @@
 import { stagePolicy } from './stage-policy.mjs';
 import { hostFonts } from './stage-design.mjs';
 import { access, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
-import { sharedEditors } from './shared-editors.mjs';
+import { sharedEditors, assetName } from './shared-editors.mjs';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
@@ -30,10 +30,11 @@ export async function stageComponents(root, env = process.env) {
   // A complete integration cohort is verified strictly: corruption never falls back silently.
   if (fontsFromHost && !Object.values(components).some(key => env[key]) &&
       (await Promise.all(names.map(name => exists(resolve(root, 'node_modules', name, 'integration-manifest.json'))))).every(Boolean)) {
-    const { inputs, bytes, delivery } = await sharedEditors(root, names);
+    const { inputs, bytes, assets, delivery } = await sharedEditors(root, names);
     await stagePolicy(root);
     const destination = resolve(root, 'app/components');
     await mkdir(destination, { recursive: true });
+    for (const [name, bytes] of Object.entries(assets)) await writeFile(resolve(destination, assetName(name)), bytes);
     await writeFile(resolve(destination, delivery.file), bytes);
     await writeFile(resolve(destination, 'third-party-licenses.txt'), await readFile(resolve(root, 'dist/editors/third-party-licenses.txt')));
     const manifest = Object.fromEntries(names.map(name => [name, { ...inputs[name], delivery }]));

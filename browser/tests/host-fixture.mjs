@@ -83,7 +83,7 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
     if(path==='/scripts/handlers/KeycloakUserHandler.js')return route.fulfill({contentType:'text/javascript',body:`window.KeycloakUserHandler=class{initUserHandler(ok){ok(true)}doLogin(){window.signInCalls=(window.signInCalls||0)+1}getParsedToken(){return{sub:'user'}}getToken(){return 'test'}refreshToken(_n,ok){ok(true)}};`});
     if(path==='/components/manifest.json'&&state.shared)return route.fulfill({contentType:'application/json',body:source('components/manifest.json')});
     if(path==='/components/manifest.json')return route.fulfill({json:Object.fromEntries(['cedar-embeddable-editor','cedar-embeddable-term-picker','cedar-embeddable-designer'].map(name=>[name,{sha256:'fixture'}]))});
-    if(state.shared&&path.startsWith('/components/'))return route.fulfill({contentType:path.endsWith('.css')?'text/css':path.endsWith('.json')?'application/json':'text/javascript',body:source(path.slice(1))});
+    if(state.shared&&path.startsWith('/components/'))return route.fulfill({contentType:path.endsWith('.css')?'text/css':path.endsWith('.json')?'application/json':path.endsWith('.woff2')?'font/woff2':'text/javascript',body:readFileSync(new URL(path.slice(1),root))});
     // `designerBundle` serves a real designer in place of the stand-in, for cases about what it projects.
     if(path==='/components/cedar-embeddable-designer.js'&&state.designerBundle)return route.fulfill({contentType:'text/javascript',body:readFileSync(state.designerBundle)});
     if(path==='/components/cedar-embeddable-designer.js')return route.fulfill({contentType:'text/javascript',body:`
