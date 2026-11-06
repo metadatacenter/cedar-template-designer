@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { integrationInputs, sha256 } from '../scripts/shared-editors.mjs';
+import { modelRuntimeSha256 } from '../scripts/model-runtime.mjs';
 
 async function fixture(t) {
   const root = await mkdtemp(join(tmpdir(), 'ced-shared-'));
@@ -37,4 +38,46 @@ test('a component compiled against another Angular version cannot share this run
   manifest.runtimes['@angular/core'].version = '22.2.5';
   await save();
   await assert.rejects(integrationInputs(root, ['component']), /same @angular\/core runtime/);
+});
+
+async function modelFixture(t) {
+  const fixtureData = await fixture(t);
+  const dir = join(fixtureData.root, 'node_modules/cedar-model-typescript-library');
+  await mkdir(join(dir, 'esm'), { recursive: true });
+  const metadata = { name: 'cedar-model-typescript-library', version: '1.0.27', module: 'esm/index.js' };
+  await writeFile(join(dir, 'package.json'), JSON.stringify(metadata));
+  await writeFile(join(dir, 'esm/index.js'), 'export const model = 1;');
+  fixtureData.manifest.runtimes['cedar-model-typescript-library'] = {
+    version: metadata.version, sha256: 'a'.repeat(64), runtimeSha256: modelRuntimeSha256(dir),
+  };
+  await fixtureData.save();
+  return { ...fixtureData, modelDir: dir, metadata };
+}
+
+test('a public component accepts byte-equivalent train model code', async t => {
+  const { root, modelDir, metadata } = await modelFixture(t);
+  await writeFile(join(modelDir, 'package.json'), JSON.stringify({ ...metadata,
+    name: '@org.metadatacenter/cedar-model-typescript-library', version: '1.0.28-dev.20261106.abcdef0',
+    publishConfig: { registry: 'https://nexus.bmir.stanford.edu/repository/npm-cedar/', tag: 'dev' },
+  }));
+  await integrationInputs(root, ['component']);
+});
+
+test('changing model ESM code is rejected even at the same version', async t => {
+  const { root, modelDir } = await modelFixture(t);
+  await writeFile(join(modelDir, 'esm/index.js'), 'export const model = 2;');
+  await assert.rejects(integrationInputs(root, ['component']), /same cedar-model-typescript-library runtime/);
+});
+
+test('changing model resolver metadata is rejected', async t => {
+  const { root, modelDir, metadata } = await modelFixture(t);
+  await writeFile(join(modelDir, 'package.json'), JSON.stringify({ ...metadata, sideEffects: false }));
+  await assert.rejects(integrationInputs(root, ['component']), /same cedar-model-typescript-library runtime/);
+});
+
+test('legacy model manifests still require the exact version', async t => {
+  const { root, manifest, save } = await modelFixture(t);
+  manifest.runtimes['cedar-model-typescript-library'] = { version: '1.0.26' };
+  await save();
+  await assert.rejects(integrationInputs(root, ['component']), /same cedar-model-typescript-library runtime/);
 });

@@ -3,6 +3,7 @@ import { readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { resolve, relative } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { build } from 'esbuild';
+import { modelRuntimeSha256 } from './model-runtime.mjs';
 
 const json = async path => JSON.parse(await readFile(path, 'utf8'));
 export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -33,7 +34,11 @@ export async function integrationInputs(root, names) {
     for (const [dependency, expected] of Object.entries(manifest.runtimes)) {
       const installed = resolve(root, 'node_modules', dependency);
       const metadata = await json(resolve(installed, 'package.json'));
-      if (metadata.version !== expected.version || (expected.sha256 && await modelDigest(installed) !== expected.sha256))
+      const promotedModel = dependency === 'cedar-model-typescript-library' && expected.runtimeSha256;
+      const compatible = promotedModel
+        ? /^[a-f0-9]{64}$/.test(expected.runtimeSha256) && modelRuntimeSha256(installed) === expected.runtimeSha256
+        : metadata.version === expected.version && (!expected.sha256 || await modelDigest(installed) === expected.sha256);
+      if (!compatible)
         throw new Error(`${name} requires the same ${dependency} runtime it was built with (${expected.version}). Rebuild the coordinated frontend sources.`);
       runtimes[dependency] = expected;
     }
