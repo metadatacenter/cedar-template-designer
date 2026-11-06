@@ -322,10 +322,10 @@ ui.save.addEventListener('click', async () => {
     message(unconfirmed ? t('Error.SaveUnconfirmed') : saveMessage(error), true);
   } finally { state.finish(attempt); update(); }
 });
-async function loadScript(name, digest) {
+async function loadScript(name, digest, file = `${name}.js`) {
   await new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = `components/${name}.js?v=${digest}`;
+    script.src = `components/${file}?v=${digest}`;
     const timer = setTimeout(() => fail(), 30000);
     const fail = () => { clearTimeout(timer); script.onload = null; script.onerror = null; script.remove?.(); reject(new Error(t('Error.ComponentLoad', { name }))); };
     script.onload = () => { clearTimeout(timer); script.onload = null; script.onerror = null; resolve(); };
@@ -365,10 +365,14 @@ try {
       try { offeredDraft = draftStore.read(); } catch { ui['draft-storage-error'].hidden = false; }
     }
     const manifest = await readJson(`components/manifest.json?v=${version}`, 'Error.ManifestLoad', { cache: 'no-store' });
+    const loadedScripts = new Set();
     for (const name of ['cedar-embeddable-editor', 'cedar-embeddable-term-picker', 'cedar-embeddable-designer']) {
-      const digest = manifest?.[name]?.sha256;
-      if (typeof digest !== 'string') throw new Error(t('Error.ComponentLoad', { name }));
-      await loadScript(name, digest);
+      const entry = manifest?.[name];
+      const digest = entry?.delivery?.sha256 ?? entry?.sha256;
+      const file = entry?.delivery?.file ?? `${name}.js`;
+      if (typeof digest !== 'string' || !/^[a-zA-Z0-9-]+\.js$/.test(file)) throw new Error(t('Error.ComponentLoad', { name }));
+      const key = `${file}?v=${digest}`;
+      if (!loadedScripts.has(key)) { await loadScript(name, digest, file); loadedScripts.add(key); }
     }
     const elementName = route.kind === 'field' ? 'cedar-embeddable-field-designer' : 'cedar-embeddable-designer';
     await waitForDesigner(customElements);

@@ -9,24 +9,49 @@
   "cedarJavaConformance": true,
   "scripts": {
     "start": "node scripts/designer.mjs start",
-    "prepare:components": "node scripts/stage-components.mjs && node scripts/stage-design.mjs",
+    "prepare:components": "node scripts/stage-components.mjs && node scripts/stage-design.mjs && npm run check:size",
     "test": "node --test test/*.test.mjs",
     "pretest:browser": "node scripts/stage-policy.mjs",
     "test:browser": "npm --prefix browser test",
-    "pretest": "node scripts/stage-policy.mjs"
+    "pretest": "node scripts/stage-policy.mjs",
+    "check:size": "node scripts/check-page-size.mjs"
   },
   "allowScripts": {
-    "fsevents@2.3.3": true
+    "fsevents@2.3.3": true,
+    "@parcel/watcher@2.6.0": true,
+    "esbuild@0.28.2": true,
+    "lmdb@3.5.6": true,
+    "msgpackr-extract@3.0.7": true
   },
   "author": "Metadatacenter.org",
   "license": "BSD-2-Clause",
   "devDependencies": {
-    "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20261105.908ae7b0"
+    "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20261105.908ae7b0",
+    "@angular/common": "22.2.4",
+    "@angular/compiler": "22.2.4",
+    "@angular/core": "22.2.4",
+    "@angular/elements": "22.2.4",
+    "@angular/forms": "22.2.4",
+    "@angular/platform-browser": "22.2.4",
+    "@angular/compiler-cli": "22.2.4",
+    "@angular/build": "22.2.6",
+    "@angular/cli": "22.2.6",
+    "@angular/cdk": "22.2.6",
+    "@angular/material": "22.2.6",
+    "@ngx-translate/core": "18.0.0",
+    "rxjs": "7.8.2",
+    "tslib": "2.9.1",
+    "zone.js": "0.16.3",
+    "esbuild": "0.28.2",
+    "typescript": "6.0.3"
   },
   "dependencies": {
     "cedar-embeddable-designer": "npm:@org.metadatacenter/cedar-embeddable-designer@0.1.0-dev.20261105.b520f181",
     "cedar-embeddable-editor": "npm:@org.metadatacenter/cedar-embeddable-editor@2.0.32-dev.20261105.dfab45a",
     "cedar-embeddable-term-picker": "npm:@org.metadatacenter/cedar-embeddable-term-picker@0.1.0-dev.20261105.b7b34e23",
     "cedar-model-typescript-library": "npm:@org.metadatacenter/cedar-model-typescript-library@1.0.27-dev.20261104.1ebac93"
+  },
+  "engines": {
+    "node": "^24.15.0"
   }
 }

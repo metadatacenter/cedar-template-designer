@@ -21,7 +21,7 @@ export const OPENING_REQUESTS={
   configuration:(path)=>path==='/config/host.json',
   profile:(path)=>path==='/api/users/user',
   manifest:(path)=>path==='/components/manifest.json',
-  component:(path)=>path==='/components/cedar-embeddable-designer.js',
+  component:(path)=>path==='/components/cedar-embeddable-designer.js'||path==='/components/cedar-editors.js',
   artifact:(path,method)=>method==='GET'&&/^\/api\/(templates|template-elements|template-fields)\/item$/.test(path),
   report:(path)=>path.endsWith('/report'),
   folder:(path)=>path.startsWith('/api/folders/'),
@@ -81,7 +81,9 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
     if(path==='/config/host.json')return route.fulfill({json:{workspaceFrontend:'https://workspace.test',resourceRestAPI:`${ORIGIN}/api`,userRestAPI:`${ORIGIN}/api`}});
     if(path==='/config/version.js')return route.fulfill({contentType:'text/javascript',body:"window.cedarCacheControl='fixture';"});
     if(path==='/scripts/handlers/KeycloakUserHandler.js')return route.fulfill({contentType:'text/javascript',body:`window.KeycloakUserHandler=class{initUserHandler(ok){ok(true)}doLogin(){window.signInCalls=(window.signInCalls||0)+1}getParsedToken(){return{sub:'user'}}getToken(){return 'test'}refreshToken(_n,ok){ok(true)}};`});
+    if(path==='/components/manifest.json'&&state.shared)return route.fulfill({contentType:'application/json',body:source('components/manifest.json')});
     if(path==='/components/manifest.json')return route.fulfill({json:Object.fromEntries(['cedar-embeddable-editor','cedar-embeddable-term-picker','cedar-embeddable-designer'].map(name=>[name,{sha256:'fixture'}]))});
+    if(state.shared&&path.startsWith('/components/'))return route.fulfill({contentType:path.endsWith('.css')?'text/css':path.endsWith('.json')?'application/json':'text/javascript',body:source(path.slice(1))});
     // `designerBundle` serves a real designer in place of the stand-in, for cases about what it projects.
     if(path==='/components/cedar-embeddable-designer.js'&&state.designerBundle)return route.fulfill({contentType:'text/javascript',body:readFileSync(state.designerBundle)});
     if(path==='/components/cedar-embeddable-designer.js')return route.fulfill({contentType:'text/javascript',body:`

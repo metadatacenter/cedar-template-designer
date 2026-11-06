@@ -1,0 +1,33 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "cli": {
+    "analytics": false
+  },
+  "projects": {
+    "cedar-template-designer": {
+      "projectType": "application",
+      "root": "",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "browser": "src/editors.ts",
+            "tsConfig": "tsconfig.json",
+            "outputPath": "dist/editors",
+            "index": false,
+            "optimization": true,
+            "outputHashing": "none",
+            "statsJson": true,
+            "budgets": [
+              {
+                "type": "initial",
+                "maximumError": "3600000"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
