@@ -348,6 +348,21 @@ async function readJson(url, failure, options) {
   if (!response.ok) throw new Error(t(failure));
   try { return await response.json(); } catch { throw new Error(t(failure)); }
 }
+async function loadComponents() {
+  const manifest = await readJson(`components/manifest.json?v=${version}`, 'Error.ManifestLoad', { cache: 'no-store' });
+  const loadedScripts = new Set();
+  for (const name of ['cedar-embeddable-editor', 'cedar-embeddable-term-picker', 'cedar-embeddable-designer']) {
+    const entry = manifest?.[name];
+    const digest = entry?.delivery?.sha256 ?? entry?.sha256;
+    const file = entry?.delivery?.file ?? `${name}.js`;
+    if (typeof digest !== 'string' || !/^[a-zA-Z0-9-]+\.js$/.test(file)) throw new Error(t('Error.ComponentLoad', { name }));
+    const key = `${file}?v=${digest}`;
+    if (!loadedScripts.has(key)) { await loadScript(name, digest, file); loadedScripts.add(key); }
+  }
+}
+// Work may finish before the opening sequence reaches its result. Observe rejection now,
+// but keep the original promise so its existing error presentation is preserved when awaited.
+function openingWork(promise) { void promise.catch(() => {}); return promise; }
 try {
   route = routeFor(location.pathname === '/' ? '/templates/create' : location.pathname);
   // The address says which designer this is, so the heading waits for nothing the page loads.
@@ -357,10 +372,17 @@ try {
   const params = new URLSearchParams(location.search);
   folderId = params.get('folderId');
   returnUrl = workspaceReturn(config.workspaceFrontend, params.get('returnTo'), folderId);
+  // Static component bytes need no session. Download them during SSO, without mounting an editor.
+  const components = openingWork(loadComponents());
   auth = new window.KeycloakUserHandler();
   const authenticated = await new Promise((resolve, reject) => auth.initUserHandler(resolve, cause => reject(new Error(t('Error.SignIn'), { cause }))));
   if (!authenticated) { auth.doLogin(); } else {
     request = createBackend(auth, crypto.randomUUID());
+    // These authenticated reads are independent. Keep the editor hidden and inert until all
+    // opening checks pass; an early artifact response never grants permission to edit it.
+    const openingArtifact = route.id ? openingWork(Promise.all([
+      request(artifactUrl()), request(`${artifactUrl()}/report`),
+    ])) : null;
     // Existing records and explicit destinations can find their scoped retained draft before profile loading.
     if (route.id || folderId) {
       selectDraftStore();
@@ -372,16 +394,7 @@ try {
       selectDraftStore();
       try { offeredDraft = draftStore.read(); } catch { ui['draft-storage-error'].hidden = false; }
     }
-    const manifest = await readJson(`components/manifest.json?v=${version}`, 'Error.ManifestLoad', { cache: 'no-store' });
-    const loadedScripts = new Set();
-    for (const name of ['cedar-embeddable-editor', 'cedar-embeddable-term-picker', 'cedar-embeddable-designer']) {
-      const entry = manifest?.[name];
-      const digest = entry?.delivery?.sha256 ?? entry?.sha256;
-      const file = entry?.delivery?.file ?? `${name}.js`;
-      if (typeof digest !== 'string' || !/^[a-zA-Z0-9-]+\.js$/.test(file)) throw new Error(t('Error.ComponentLoad', { name }));
-      const key = `${file}?v=${digest}`;
-      if (!loadedScripts.has(key)) { await loadScript(name, digest, file); loadedScripts.add(key); }
-    }
+    await components;
     const elementName = route.kind === 'field' ? 'cedar-embeddable-field-designer' : 'cedar-embeddable-designer';
     await waitForDesigner(customElements);
     if (!customElements.get(elementName)) throw new Error(t('Error.MissingFieldDesigner'));
@@ -418,8 +431,7 @@ try {
     }
     for (const event of ['artifactChange', 'validationChange', 'dirtyChange']) designer.addEventListener(event, update);
     if (route.id) {
-      const url = artifactUrl();
-      const [loaded, report] = await Promise.all([request(url), request(`${url}/report`)]);
+      const [loaded, report] = await openingArtifact;
       if (!loaded.data || resourcePathId(loaded.data['@id']) !== resourcePathId(route.id)) throw new Error(t('Error.InvalidArtifact'));
       route.id = loaded.data['@id']; // Keep the stored identity for subsequent PUT bodies.
       let projection, superseded;

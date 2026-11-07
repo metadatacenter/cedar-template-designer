@@ -41,6 +41,7 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
   await page.route('https://workspace.test/**',route=>route.fulfill({contentType:'text/html',body:'<h1>Workspace</h1>'}));
   await page.route(`${ORIGIN}/**`,async route=>{
     const url=new URL(route.request().url()),path=url.pathname;
+    await state.waitForOpening?.(path);
     // A request named in `openingFailure` gets that answer instead of its own.
     const failing=state.openingFailure;
     if(failing&&OPENING_REQUESTS[failing.request](path,route.request().method()))return failing.answer(route);
@@ -80,7 +81,7 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
     }
     if(path==='/config/host.json')return route.fulfill({json:{workspaceFrontend:'https://workspace.test',resourceRestAPI:`${ORIGIN}/api`,userRestAPI:`${ORIGIN}/api`}});
     if(path==='/config/version.js')return route.fulfill({contentType:'text/javascript',body:"window.cedarCacheControl='fixture';"});
-    if(path==='/scripts/handlers/KeycloakUserHandler.js')return route.fulfill({contentType:'text/javascript',body:`window.KeycloakUserHandler=class{initUserHandler(ok){ok(true)}doLogin(){window.signInCalls=(window.signInCalls||0)+1}getParsedToken(){return{sub:'user'}}getToken(){return 'test'}refreshToken(_n,ok){ok(true)}};`});
+    if(path==='/scripts/handlers/KeycloakUserHandler.js')return route.fulfill({contentType:'text/javascript',body:`window.KeycloakUserHandler=class{initUserHandler(ok){${state.holdSignIn ? 'window.completeTestSignIn=()=>ok(true)' : 'ok(true)'}}doLogin(){window.signInCalls=(window.signInCalls||0)+1}getParsedToken(){return{sub:'user'}}getToken(){return 'test'}refreshToken(_n,ok){ok(true)}};`});
     if(path==='/components/manifest.json'&&state.shared)return route.fulfill({contentType:'application/json',body:source('components/manifest.json')});
     if(path==='/components/manifest.json')return route.fulfill({json:Object.fromEntries(['cedar-embeddable-editor','cedar-embeddable-term-picker','cedar-embeddable-designer'].map(name=>[name,{sha256:'fixture'}]))});
     if(state.shared&&path.startsWith('/components/'))return route.fulfill({contentType:path.endsWith('.css')?'text/css':path.endsWith('.json')?'application/json':path.endsWith('.woff2')?'font/woff2':'text/javascript',body:readFileSync(new URL(path.slice(1),root))});
