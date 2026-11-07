@@ -12,6 +12,15 @@ const stored = () => {
 };
 
 test('one shared request renders real summaries, preview and editing without recovery controls', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__bodyShifts = [];
+    new PerformanceObserver(list => {
+      for (const shift of list.getEntries()) {
+        if (!shift.hadRecentInput && shift.sources.some(source => source.node === document.body))
+          window.__bodyShifts.push(shift.value);
+      }
+    }).observe({type: 'layout-shift', buffered: true});
+  });
   const requests = [], errors = [];
   page.on('request', request => requests.push(new URL(request.url()).pathname));
   page.on('pageerror', error => errors.push(error.message));
@@ -26,6 +35,8 @@ test('one shared request renders real summaries, preview and editing without rec
   await expect(designer.locator('app-cee-preview .title-label').first()).toBeVisible();
   for (const id of ['reload', 'check-save', 'recheck-access', 'draft-offer', 'draft-storage-error']) await expect(page.locator('#' + id)).toBeHidden();
   expect(requests.filter(path => path === '/components/cedar-editors.js')).toHaveLength(1);
+  for (const path of ['/scripts/host-core.mjs', '/scripts/host-state.mjs', '/scripts/i18n.mjs', '/i18n/en.json', '/i18n/hu.json'])
+    expect(requests.filter(request => request === path), path).toHaveLength(1);
   expect(requests.filter(path => /\/cedar-embeddable-.*\.js$/.test(path))).toEqual([]);
   expect(requests).not.toContain('/components/cedar-schema-validation.mjs');
   expect(requests.filter(path => path.includes('/cedar-rdf-'))).toEqual([]);
@@ -33,6 +44,7 @@ test('one shared request renders real summaries, preview and editing without rec
   const covered = new Set(budget.files.map(file => '/' + file.path));
   for (const path of requests.filter(path => /\.(m?js|css|woff2)$/.test(path) && !path.startsWith('/config/'))) expect(covered.has(path), path).toBe(true);
   expect(errors).toEqual([]);
+  expect(await page.evaluate(() => window.__bodyShifts.filter(value => value > 0.1))).toEqual([]);
 });
 
 test('RDF export loads its processors on demand and reuses them for the next format', async ({ page }) => {

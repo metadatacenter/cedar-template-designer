@@ -3,7 +3,8 @@
 // passed on to the maps, so a cache-busting version reaches them too.
 const search = new URL(import.meta.url).search;
 const load = name => import(`../i18n/${name}.json${search}`, { with: { type: 'json' } }).then(module => module.default);
-export const translations = { en: await load('en'), hu: await load('hu') };
+const [en, hu] = await Promise.all([load('en'), load('hu')]);
+export const translations = { en, hu };
 export const languages = Object.keys(translations);
 
 export let language = 'en';

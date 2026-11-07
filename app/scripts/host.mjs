@@ -4,11 +4,19 @@ document.getElementById('back-icon').innerHTML = iconSvg('back');
 // Workspace heads its Create Draft dialog with this icon, and this dialog also ends in a new draft.
 document.getElementById('version-icon').innerHTML = iconSvg('new-record');
 const version = encodeURIComponent(window.cedarCacheControl || 'local');
-const { resourceSelector, resourcePathId, useDeploymentApi, mintIdentity, routeFor, workspaceReturn, canEdit, canCreate, createBackend, openingMessage, saveMessage, childSource, saveArtifact, DesignerCoordinator, waitForDesigner } = await import(`./host-core.mjs?v=${version}`);
-const { DesignerDraftStore, draftScope, discardable } = await import(`./host-draft.mjs?v=${version}`);
-const { reusableSource, ReusableJournal } = await import(`./reusable-artifacts.mjs?v=${version}`);
-// host-core.mjs imports this same versioned URL, so both modules share one active language.
-const { t, counted, detectLanguage, setLanguage, localizeDocument } = await import(`./i18n.mjs?v=${version}`);
+// Independent modules can be fetched together; their own imports retain dependency ordering.
+// The versioned i18n URL is shared with host-core so both use one active language.
+const [
+  { resourceSelector, resourcePathId, useDeploymentApi, mintIdentity, routeFor, workspaceReturn, canEdit, canCreate, createBackend, openingMessage, saveMessage, childSource, saveArtifact, DesignerCoordinator, waitForDesigner },
+  { DesignerDraftStore, draftScope, discardable },
+  { reusableSource, ReusableJournal },
+  { t, counted, detectLanguage, setLanguage, localizeDocument },
+] = await Promise.all([
+  import(`./host-core.mjs?v=${version}`),
+  import(`./host-draft.mjs?v=${version}`),
+  import(`./reusable-artifacts.mjs?v=${version}`),
+  import(`./i18n.mjs?v=${version}`),
+]);
 const language = setLanguage(detectLanguage(navigator.languages));
 localizeDocument(document);
 const ui = Object.fromEntries(['back', 'save', 'save-help', 'title', 'state', 'message', 'editor', 'version-dialog', 'version-message', 'version-explanation', 'reload', 'check-save', 'recheck-access', 'server-issues', 'server-issues-title', 'server-issues-list', 'draft-offer', 'restore-draft', 'discard-draft', 'draft-storage-error', 'sign-in-again'].map(id => [id, document.getElementById(id)]));
