@@ -127,6 +127,7 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
       source('components/cedar-schema-validation.mjs'):'export const SchemaArtifactValidator={validate:()=>({canSave:true,findings:[]})};'});
     if(path==='/components/icons.js')return route.fulfill({contentType:'text/javascript',body:'export const iconSvg=()=>"";'});
     if(path.startsWith('/components/')||path.startsWith('/scripts/keycloak/'))return route.fulfill({contentType:'text/javascript',body:''});
+    if(path.startsWith('/host/'))return route.fulfill({contentType:path.endsWith('.css')?'text/css':'text/javascript',body:source(path.slice(1))});
     if(path.startsWith('/scripts/')||path.startsWith('/i18n/'))return route.fulfill({contentType:path.endsWith('.json')?'application/json':'text/javascript',body:source(path.slice(1))});
     if(path.startsWith('/styles/'))return route.fulfill({contentType:'text/css',body:source(path.slice(1))});
     return route.fulfill({contentType:'text/html',body:source('index.html')});

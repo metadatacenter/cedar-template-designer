@@ -9,9 +9,9 @@
   "cedarJavaConformance": true,
   "scripts": {
     "start": "node scripts/designer.mjs start",
-    "prepare:components": "node scripts/stage-components.mjs && node scripts/stage-design.mjs && npm run check:size",
+    "prepare:components": "node scripts/stage-components.mjs && node scripts/stage-design.mjs && node scripts/stage-host.mjs && npm run check:size",
     "test": "node --test test/*.test.mjs",
-    "pretest:browser": "node scripts/stage-policy.mjs",
+    "pretest:browser": "node scripts/stage-policy.mjs && node scripts/stage-host.mjs && npm run check:size",
     "test:browser": "npm --prefix browser test",
     "pretest": "node scripts/stage-policy.mjs",
     "check:size": "node scripts/check-page-size.mjs"

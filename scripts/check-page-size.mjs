@@ -29,12 +29,12 @@ export async function pageSize(root) {
       else if (/\.[cm]?js$/.test(path)) await add(path);
     }
   }
-  // All host scripts are initial imports today. Counting the directory also prevents a new
-  // host module escaping the budget, while the browser test proves observed requests are covered.
-  await scripts('scripts');
-  await add('styles/host.css');
-  await add('components/icons.js');
-  await add('components/cedar-validation-policy.mjs');
+  // Count the emitted host graph, not its unused source modules. The browser gate checks
+  // every actual script, stylesheet and font request against this inventory.
+  await add('host/host.mjs');
+  await add('host/host.css');
+  await scripts('scripts/keycloak');
+  await scripts('scripts/handlers');
   const manifest = JSON.parse(await readFile(resolve(app, 'components/manifest.json'), 'utf8'));
   const shared = Object.values(manifest).every(entry => entry.bundle === 'integration.mjs');
   for (const [name, entry] of Object.entries(manifest)) {

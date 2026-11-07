@@ -1,11 +1,8 @@
 import { JsonSourcePolicy, canonicalJson, parseJson } from './json-policy.mjs';
 import { resourcePathId, resourceSelector, mintIdentity, identityIn } from './resource-address.mjs';
 import { sameWritten } from './save-recovery.mjs';
-// Use the host's versioned core, avoiding a second core/state/translation module graph.
-const [{ storageArtifact, canCreate }, { t }] = await Promise.all([
-  import(`./host-core.mjs${new URL(import.meta.url).search}`),
-  import(`./i18n.mjs${new URL(import.meta.url).search}`),
-]);
+import { storageArtifact, canCreate } from './host-core.mjs';
+import { t } from './i18n.mjs';
 const collections = { template: 'templates', element: 'template-elements', field: 'template-fields' };
 const metadata = ['@id', 'schema:name', 'schema:description', 'title', 'description', 'pav:version',
   'bibo:status', 'pav:derivedFrom', 'pav:previousVersion', 'pav:createdOn', 'pav:createdBy',

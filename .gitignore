@@ -6,5 +6,6 @@ app/config/version.js
 app/config/build-info.json
 app/config/host.json
 app/components/
+app/host/
 browser/test-results/
 browser/playwright-report/

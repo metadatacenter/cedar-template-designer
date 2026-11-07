@@ -1,12 +1,8 @@
 import { JsonSourcePolicy, TextPolicy, parseJson } from './json-policy.mjs';
 import { resourceSelector, resourcePathId, useDeploymentApi, mintIdentity } from './resource-address.mjs';
 export { resourceSelector, resourcePathId, useDeploymentApi, mintIdentity };
-// Loading the maps with this module's query string keeps one shared instance with host.mjs,
-// which imports the same versioned URL and sets the active language on it.
-const [{ t }, { DesignerCoordinator, ownerOnlyRefusal }] = await Promise.all([
-  import(`./i18n.mjs${new URL(import.meta.url).search}`),
-  import(`./host-state.mjs${new URL(import.meta.url).search}`),
-]);
+import { t } from './i18n.mjs';
+import { DesignerCoordinator, ownerOnlyRefusal } from './host-state.mjs';
 export { DesignerCoordinator };
 
 /** Angular registers CED asynchronously after its script has loaded. Bound that wait. */

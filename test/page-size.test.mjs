@@ -13,7 +13,7 @@ async function fixture(t) {
     const file = join(root, 'app', path);
     await mkdir(dirname(file), { recursive: true }); await writeFile(file, bytes);
   }
-  for (const name of ['scripts/host.mjs', 'styles/host.css', 'components/icons.js', 'components/cedar-validation-policy.mjs', 'components/cedar-schema-validation.mjs']) await put(name, '// fixture');
+  for (const name of ['host/host.mjs', 'host/host.css', 'scripts/keycloak/keycloak.min.js', 'scripts/handlers/KeycloakUserHandler.js', 'components/cedar-schema-validation.mjs']) await put(name, '// fixture');
   const bytes = Buffer.from('// shared script');
   await put('components/cedar-editors.js', bytes);
   const manifest = Object.fromEntries(['cee', 'ced', 'cetp'].map(name => [name, { bundle: 'integration.mjs', delivery: { file: 'cedar-editors.js', sha256: sha256(bytes) } }]));
@@ -42,7 +42,7 @@ test('a stale shared script fails even if it is small enough', async t => {
 });
 test('external font subsets count toward the total and must exist', async t => {
   const { root, put } = await fixture(t);
-  await put('styles/host.css', "@font-face{src:url('../components/fonts/subset.woff2')}");
+  await put('host/host.css', "@font-face{src:url('../components/fonts/subset.woff2')}");
   await assert.rejects(pageSize(root), /ENOENT/);
   await put('components/fonts/subset.woff2', 'font bytes');
   const report = await pageSize(root);

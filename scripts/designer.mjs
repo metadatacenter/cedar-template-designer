@@ -6,6 +6,7 @@ import { createServer } from 'node:http';
 import { execFileSync } from 'node:child_process';
 import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { writeHostAssetVersion } from './stage-host.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 
@@ -38,11 +39,12 @@ export async function configure(base = root, env = process.env) {
   };
   await writeFile(resolve(output, 'version.js'),
     Object.entries(globals).map(([key, value]) => `window.${key} = ${JSON.stringify(value)};`).join('\n') + '\n');
+  await writeHostAssetVersion(base);
 }
 
 /** Copy the installed component bundles and design files into the tree the host serves. */
 export function stage(base = root) {
-  for (const script of ['scripts/stage-components.mjs', 'scripts/stage-design.mjs', 'scripts/check-page-size.mjs']) {
+  for (const script of ['scripts/stage-components.mjs', 'scripts/stage-design.mjs', 'scripts/stage-host.mjs', 'scripts/check-page-size.mjs']) {
     execFileSync(process.execPath, [script], { cwd: base, stdio: 'inherit' });
   }
 }

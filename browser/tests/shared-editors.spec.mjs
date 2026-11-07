@@ -35,8 +35,9 @@ test('one shared request renders real summaries, preview and editing without rec
   await expect(designer.locator('app-cee-preview .title-label').first()).toBeVisible();
   for (const id of ['reload', 'check-save', 'recheck-access', 'draft-offer', 'draft-storage-error']) await expect(page.locator('#' + id)).toBeHidden();
   expect(requests.filter(path => path === '/components/cedar-editors.js')).toHaveLength(1);
-  for (const path of ['/scripts/host-core.mjs', '/scripts/host-state.mjs', '/scripts/i18n.mjs', '/i18n/en.json', '/i18n/hu.json'])
+  for (const path of ['/host/host.mjs', '/host/host.css'])
     expect(requests.filter(request => request === path), path).toHaveLength(1);
+  expect(requests.filter(path => /^\/scripts\/.*\.mjs$/.test(path) || path.startsWith('/i18n/'))).toEqual([]);
   expect(requests.filter(path => /\/cedar-embeddable-.*\.js$/.test(path))).toEqual([]);
   expect(requests).not.toContain('/components/cedar-schema-validation.mjs');
   expect(requests.filter(path => path.includes('/cedar-rdf-'))).toEqual([]);
