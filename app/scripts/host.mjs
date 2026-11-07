@@ -350,7 +350,7 @@ try {
   folderId = params.get('folderId');
   returnUrl = workspaceReturn(config.workspaceFrontend, params.get('returnTo'), folderId);
   auth = new window.KeycloakUserHandler();
-  const authenticated = await new Promise((resolve, reject) => auth.initUserHandler(resolve, () => reject(new Error(t('Error.SignIn')))));
+  const authenticated = await new Promise((resolve, reject) => auth.initUserHandler(resolve, cause => reject(new Error(t('Error.SignIn'), { cause }))));
   if (!authenticated) { auth.doLogin(); } else {
     request = createBackend(auth, crypto.randomUUID());
     // Existing records and explicit destinations can find their scoped retained draft before profile loading.
