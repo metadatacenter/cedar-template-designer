@@ -1,9 +1,7 @@
-// The host's translation maps use the file shape and placeholder syntax of ngx-translate, so
-// they read like the maps in cedar-embeddable-editor. The query string of this module's URL is
-// passed on to the maps, so a cache-busting version reaches them too.
-const search = new URL(import.meta.url).search;
-const load = name => import(`../i18n/${name}.json${search}`, { with: { type: 'json' } }).then(module => module.default);
-export const translations = { en: await load('en'), hu: await load('hu') };
+// Bundled with the host so translations and code always share one content identity.
+import en from '../i18n/en.json' with { type: 'json' };
+import hu from '../i18n/hu.json' with { type: 'json' };
+export const translations = { en, hu };
 export const languages = Object.keys(translations);
 
 export let language = 'en';

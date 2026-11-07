@@ -1,0 +1,42 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtemp, mkdir, readFile, writeFile, rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join, dirname} from 'node:path';
+import {stageHost} from '../scripts/stage-host.mjs';
+
+test('bundles transitive code/maps and ordered styles, and refreshes cache identity when only an input changes', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'ced-host-assets-'));
+  t.after(() => rm(root, {recursive:true, force:true}));
+  const put = async (path, value) => {
+    const file = join(root, 'app', path);
+    await mkdir(dirname(file), {recursive:true}); await writeFile(file, value);
+  };
+  await put('scripts/host.mjs', "import {label} from './helper.mjs';window.label=label;");
+  await put('scripts/helper.mjs', "import map from '../i18n/en.json' with {type:'json'};export const label=map.label;");
+  await put('i18n/en.json', '{"label":"Original"}');
+  await put('styles/host.css', "@import '../components/tokens.css';body{color:blue}");
+  await put('components/tokens.css', "@font-face{font-family:Test;src:url('./fonts/face.woff2')}body{color:red}");
+  await put('config/version.js', 'window.cedarCacheControl = "unchanged";\n');
+  const metadata = await stageHost(root);
+  const read = path => readFile(join(root, 'app', path), 'utf8');
+  const first = JSON.parse(await read('host/manifest.json'));
+  const script = await read('host/host.mjs'), css = await read('host/host.css');
+  assert.match(script, /Original/);
+  assert.doesNotMatch(script, /\bimport\s/);
+  assert.doesNotMatch(css, /@import/);
+  assert.ok(css.includes('color:#00f'));
+  assert.ok(!css.includes('color:red') || css.indexOf('color:red') < css.indexOf('color:#00f'));
+  assert.match(css, /\.\.\/components\/fonts\/face\.woff2/);
+  assert.ok(Object.keys(metadata.inputs).some(path => path.endsWith('i18n/en.json')));
+  await put('i18n/en.json', '{"label":"Changed"}');
+  await stageHost(root);
+  const second = JSON.parse(await read('host/manifest.json'));
+  assert.notEqual(first.script.sha256, second.script.sha256);
+  assert.equal(first.style.sha256, second.style.sha256);
+  const version = await read('config/version.js');
+  assert.match(version, /cedarCacheControl = "unchanged"/);
+  assert.equal(version.match(/window.cedarHostAssets/g).length, 1);
+  assert.ok(version.includes(second.script.sha256));
+  assert.ok(!version.includes(first.script.sha256));
+});

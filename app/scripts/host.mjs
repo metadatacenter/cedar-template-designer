@@ -4,11 +4,11 @@ document.getElementById('back-icon').innerHTML = iconSvg('back');
 // Workspace heads its Create Draft dialog with this icon, and this dialog also ends in a new draft.
 document.getElementById('version-icon').innerHTML = iconSvg('new-record');
 const version = encodeURIComponent(window.cedarCacheControl || 'local');
-const { resourceSelector, resourcePathId, useDeploymentApi, mintIdentity, routeFor, workspaceReturn, canEdit, canCreate, createBackend, openingMessage, saveMessage, childSource, saveArtifact, DesignerCoordinator, waitForDesigner } = await import(`./host-core.mjs?v=${version}`);
-const { DesignerDraftStore, draftScope, discardable } = await import(`./host-draft.mjs?v=${version}`);
-const { reusableSource, ReusableJournal } = await import(`./reusable-artifacts.mjs?v=${version}`);
-// host-core.mjs imports this same versioned URL, so both modules share one active language.
-const { t, counted, detectLanguage, setLanguage, localizeDocument } = await import(`./i18n.mjs?v=${version}`);
+// The production host is bundled; these imports share one translation/state instance.
+import { resourceSelector, resourcePathId, useDeploymentApi, mintIdentity, routeFor, workspaceReturn, canEdit, canCreate, createBackend, openingMessage, saveMessage, childSource, saveArtifact, DesignerCoordinator, waitForDesigner } from './host-core.mjs';
+import { DesignerDraftStore, draftScope, discardable } from './host-draft.mjs';
+import { reusableSource, ReusableJournal } from './reusable-artifacts.mjs';
+import { t, counted, detectLanguage, setLanguage, localizeDocument } from './i18n.mjs';
 const language = setLanguage(detectLanguage(navigator.languages));
 localizeDocument(document);
 const ui = Object.fromEntries(['back', 'save', 'save-help', 'title', 'state', 'message', 'editor', 'version-dialog', 'version-message', 'version-explanation', 'reload', 'check-save', 'recheck-access', 'server-issues', 'server-issues-title', 'server-issues-list', 'draft-offer', 'restore-draft', 'discard-draft', 'draft-storage-error', 'sign-in-again'].map(id => [id, document.getElementById(id)]));
@@ -340,6 +340,21 @@ async function readJson(url, failure, options) {
   if (!response.ok) throw new Error(t(failure));
   try { return await response.json(); } catch { throw new Error(t(failure)); }
 }
+async function loadComponents() {
+  const manifest = await readJson(`components/manifest.json?v=${version}`, 'Error.ManifestLoad', { cache: 'no-store' });
+  const loadedScripts = new Set();
+  for (const name of ['cedar-embeddable-editor', 'cedar-embeddable-term-picker', 'cedar-embeddable-designer']) {
+    const entry = manifest?.[name];
+    const digest = entry?.delivery?.sha256 ?? entry?.sha256;
+    const file = entry?.delivery?.file ?? `${name}.js`;
+    if (typeof digest !== 'string' || !/^[a-zA-Z0-9-]+\.js$/.test(file)) throw new Error(t('Error.ComponentLoad', { name }));
+    const key = `${file}?v=${digest}`;
+    if (!loadedScripts.has(key)) { await loadScript(name, digest, file); loadedScripts.add(key); }
+  }
+}
+// Work may finish before the opening sequence reaches its result. Observe rejection now,
+// but keep the original promise so its existing error presentation is preserved when awaited.
+function openingWork(promise) { void promise.catch(() => {}); return promise; }
 try {
   route = routeFor(location.pathname === '/' ? '/templates/create' : location.pathname);
   // The address says which designer this is, so the heading waits for nothing the page loads.
@@ -349,10 +364,17 @@ try {
   const params = new URLSearchParams(location.search);
   folderId = params.get('folderId');
   returnUrl = workspaceReturn(config.workspaceFrontend, params.get('returnTo'), folderId);
+  // Static component bytes need no session. Download them during SSO, without mounting an editor.
+  const components = openingWork(loadComponents());
   auth = new window.KeycloakUserHandler();
-  const authenticated = await new Promise((resolve, reject) => auth.initUserHandler(resolve, () => reject(new Error(t('Error.SignIn')))));
+  const authenticated = await new Promise((resolve, reject) => auth.initUserHandler(resolve, cause => reject(new Error(t('Error.SignIn'), { cause }))));
   if (!authenticated) { auth.doLogin(); } else {
     request = createBackend(auth, crypto.randomUUID());
+    // These authenticated reads are independent. Keep the editor hidden and inert until all
+    // opening checks pass; an early artifact response never grants permission to edit it.
+    const openingArtifact = route.id ? openingWork(Promise.all([
+      request(artifactUrl()), request(`${artifactUrl()}/report`),
+    ])) : null;
     // Existing records and explicit destinations can find their scoped retained draft before profile loading.
     if (route.id || folderId) {
       selectDraftStore();
@@ -364,16 +386,7 @@ try {
       selectDraftStore();
       try { offeredDraft = draftStore.read(); } catch { ui['draft-storage-error'].hidden = false; }
     }
-    const manifest = await readJson(`components/manifest.json?v=${version}`, 'Error.ManifestLoad', { cache: 'no-store' });
-    const loadedScripts = new Set();
-    for (const name of ['cedar-embeddable-editor', 'cedar-embeddable-term-picker', 'cedar-embeddable-designer']) {
-      const entry = manifest?.[name];
-      const digest = entry?.delivery?.sha256 ?? entry?.sha256;
-      const file = entry?.delivery?.file ?? `${name}.js`;
-      if (typeof digest !== 'string' || !/^[a-zA-Z0-9-]+\.js$/.test(file)) throw new Error(t('Error.ComponentLoad', { name }));
-      const key = `${file}?v=${digest}`;
-      if (!loadedScripts.has(key)) { await loadScript(name, digest, file); loadedScripts.add(key); }
-    }
+    await components;
     const elementName = route.kind === 'field' ? 'cedar-embeddable-field-designer' : 'cedar-embeddable-designer';
     await waitForDesigner(customElements);
     if (!customElements.get(elementName)) throw new Error(t('Error.MissingFieldDesigner'));
@@ -405,13 +418,14 @@ try {
     // A designer built before it offered its validator leaves the host to import its own staged copy.
     if (typeof designer.validateArtifact === 'function') validateArtifact = artifact => designer.validateArtifact(artifact);
     else {
-      const { SchemaArtifactValidator } = await import(`../components/cedar-schema-validation.mjs?v=${version}`);
+      // This compatibility fallback is a separately staged asset, not part of the eager host bundle.
+      const validatorUrl = `../components/cedar-schema-validation.mjs?v=${version}`;
+      const { SchemaArtifactValidator } = await import(validatorUrl);
       validateArtifact = artifact => SchemaArtifactValidator.validate(artifact);
     }
     for (const event of ['artifactChange', 'validationChange', 'dirtyChange']) designer.addEventListener(event, update);
     if (route.id) {
-      const url = artifactUrl();
-      const [loaded, report] = await Promise.all([request(url), request(`${url}/report`)]);
+      const [loaded, report] = await openingArtifact;
       if (!loaded.data || resourcePathId(loaded.data['@id']) !== resourcePathId(route.id)) throw new Error(t('Error.InvalidArtifact'));
       route.id = loaded.data['@id']; // Keep the stored identity for subsequent PUT bodies.
       let projection, superseded;

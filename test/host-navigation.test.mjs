@@ -130,10 +130,10 @@ async function host(isDirty = true, languages = ['en-US'], existing = false, imp
   const source = (await readFile(new URL('../app/scripts/host.mjs', import.meta.url), 'utf8'))
     .replace(/^import \{[^;]+from '\.\/json-policy\.mjs';/m, 'const { JsonSourcePolicy, TextPolicy } = policy;')
     .replace(/^import \{iconSvg\} from [^;]+;/m, 'const iconSvg = () => "";')
-    .replace(/await import\(`\.\/host-core\.mjs\?v=\$\{version\}`\)/, 'core')
-    .replace(/await import\(`\.\/host-draft\.mjs\?v=\$\{version\}`\)/, 'drafts')
-    .replace(/await import\(`\.\/reusable-artifacts\.mjs\?v=\$\{version\}`\)/, 'reusables')
-    .replace(/await import\(`\.\/i18n\.mjs\?v=\$\{version\}`\)/, 'i18n');
+    .replace(/^import \{([^}]+)\} from '\.\/host-core\.mjs';/m, 'const {$1} = core;')
+    .replace(/^import \{([^}]+)\} from '\.\/host-draft\.mjs';/m, 'const {$1} = drafts;')
+    .replace(/^import \{([^}]+)\} from '\.\/reusable-artifacts\.mjs';/m, 'const {$1} = reusables;')
+    .replace(/^import \{([^}]+)\} from '\.\/i18n\.mjs';/m, 'const {$1} = i18n;');
   const run = new (Object.getPrototypeOf(async function() {}).constructor)(
     'window', 'document', 'location', 'fetch', 'customElements', 'crypto', 'navigator', 'core', 'i18n', 'drafts', 'policy', 'reusables', source,
   );

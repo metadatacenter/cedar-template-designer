@@ -1,8 +1,8 @@
 import { JsonSourcePolicy, canonicalJson, parseJson } from './json-policy.mjs';
 import { resourcePathId, resourceSelector, mintIdentity, identityIn } from './resource-address.mjs';
-import { storageArtifact, canCreate } from './host-core.mjs';
 import { sameWritten } from './save-recovery.mjs';
-const { t } = await import(`./i18n.mjs${new URL(import.meta.url).search}`);
+import { storageArtifact, canCreate } from './host-core.mjs';
+import { t } from './i18n.mjs';
 const collections = { template: 'templates', element: 'template-elements', field: 'template-fields' };
 const metadata = ['@id', 'schema:name', 'schema:description', 'title', 'description', 'pav:version',
   'bibo:status', 'pav:derivedFrom', 'pav:previousVersion', 'pav:createdOn', 'pav:createdBy',

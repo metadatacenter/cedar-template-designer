@@ -13,7 +13,7 @@ async function fixture(t) {
     const file = join(root, 'app', path);
     await mkdir(dirname(file), { recursive: true }); await writeFile(file, bytes);
   }
-  for (const name of ['scripts/host.mjs', 'styles/host.css', 'components/icons.js', 'components/cedar-validation-policy.mjs', 'components/cedar-schema-validation.mjs']) await put(name, '// fixture');
+  for (const name of ['host/host.mjs', 'host/host.css', 'scripts/keycloak/keycloak.min.js', 'scripts/handlers/KeycloakUserHandler.js', 'components/cedar-schema-validation.mjs']) await put(name, '// fixture');
   const bytes = Buffer.from('// shared script');
   await put('components/cedar-editors.js', bytes);
   const manifest = Object.fromEntries(['cee', 'ced', 'cetp'].map(name => [name, { bundle: 'integration.mjs', delivery: { file: 'cedar-editors.js', sha256: sha256(bytes) } }]));
@@ -38,5 +38,26 @@ test('new manifest deliveries cannot escape the page budget', async t => {
 test('a stale shared script fails even if it is small enough', async t => {
   const { root, put } = await fixture(t);
   await put('components/cedar-editors.js', '// modified');
+  await assert.rejects(pageSize(root), /differs from manifest/);
+});
+test('external font subsets count toward the total and must exist', async t => {
+  const { root, put } = await fixture(t);
+  await put('host/host.css', "@font-face{src:url('../components/fonts/subset.woff2')}");
+  await assert.rejects(pageSize(root), /ENOENT/);
+  await put('components/fonts/subset.woff2', 'font bytes');
+  const report = await pageSize(root);
+  assert.equal(report.files.find(file => file.path.endsWith('subset.woff2')).phase, 'deferred');
+});
+test('deferred RDF processors are counted once and must match their manifest', async t => {
+  const { root, put, manifest, save } = await fixture(t);
+  const name = 'cedar-rdf-jsonld-123456abcdef.js', bytes = Buffer.from('// RDF processor');
+  for (const entry of Object.values(manifest)) entry.delivery.assets = { [name]: { bytes: bytes.length, sha256: sha256(bytes) } };
+  await save();
+  await assert.rejects(pageSize(root), /ENOENT/);
+  await put(`components/${name}`, bytes);
+  const report = await pageSize(root);
+  assert.equal(report.files.filter(file => file.path.endsWith(name)).length, 1);
+  assert.equal(report.files.find(file => file.path.endsWith(name)).phase, 'deferred');
+  await put(`components/${name}`, Buffer.alloc(bytes.length, 'x'));
   await assert.rejects(pageSize(root), /differs from manifest/);
 });

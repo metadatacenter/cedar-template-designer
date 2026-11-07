@@ -52,8 +52,10 @@ function KeycloakUserHandler() {
           silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html'
         }).then(function (authenticated) {
       return successCallback(authenticated);
-    }).catch(function () {
-      return failureCallback();
+    }).catch(function (error) {
+      // Keep the adapter's error and stack available without logging tokens or auth state.
+      console.error('CEDAR authentication initialization failed', error);
+      return failureCallback(error);
     });
   };
 }

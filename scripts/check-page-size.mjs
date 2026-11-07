@@ -3,7 +3,7 @@ import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { resolve, relative, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
-import { sha256 } from './shared-editors.mjs';
+import { sha256, assetName, deliveryAssets } from './shared-editors.mjs';
 
 export async function pageSize(root) {
   const app = resolve(root, 'app'), files = new Map();
@@ -16,6 +16,11 @@ export async function pageSize(root) {
     files.set(path, { path, phase, bytes: bytes.length, gzip: gzipSync(bytes, { level: 9 }).length, sha256: sha256(bytes) });
     if (path.endsWith('.css')) for (const match of bytes.toString().matchAll(/@import\s+['"]([^'"]+)['"]/g))
       await add(relative(app, resolve(dirname(absolute), match[1])), phase);
+    if (path.endsWith('.css')) for (const match of bytes.toString().matchAll(/url\(['"]?([^)'"\s]+)['"]?\)/g)) {
+      if (match[1].startsWith('data:') || !/\.woff2(?:[?#]|$)/.test(match[1])) continue;
+      if (/^(?:[a-z]+:|\/\/)/i.test(match[1])) throw new Error(`Unmeasured remote font: ${match[1]}`);
+      await add(relative(app, resolve(dirname(absolute), match[1].split(/[?#]/)[0])), 'deferred');
+    }
   }
   async function scripts(dir) {
     for (const entry of await readdir(resolve(app, dir), { withFileTypes: true })) {
@@ -24,18 +29,23 @@ export async function pageSize(root) {
       else if (/\.[cm]?js$/.test(path)) await add(path);
     }
   }
-  // All host scripts are initial imports today. Counting the directory also prevents a new
-  // host module escaping the budget, while the browser test proves observed requests are covered.
-  await scripts('scripts');
-  await add('styles/host.css');
-  await add('components/icons.js');
-  await add('components/cedar-validation-policy.mjs');
+  // Count the emitted host graph, not its unused source modules. The browser gate checks
+  // every actual script, stylesheet and font request against this inventory.
+  await add('host/host.mjs');
+  await add('host/host.css');
+  await scripts('scripts/keycloak');
+  await scripts('scripts/handlers');
   const manifest = JSON.parse(await readFile(resolve(app, 'components/manifest.json'), 'utf8'));
   const shared = Object.values(manifest).every(entry => entry.bundle === 'integration.mjs');
   for (const [name, entry] of Object.entries(manifest)) {
     const file = entry.delivery?.file ?? `${name}.js`;
     if (!/^[\w-]+\.js$/.test(file)) throw new Error(`Invalid component filename: ${file}`);
     await add(`components/${file}`, 'initial', entry.delivery?.sha256 ?? entry.sha256);
+    if (entry.delivery) {
+      await deliveryAssets(resolve(app, 'components'), entry.delivery);
+      for (const [asset, metadata] of Object.entries(entry.delivery.assets ?? {}))
+        await add(`components/${assetName(asset)}`, 'deferred', metadata.sha256);
+    }
   }
   await add('components/cedar-schema-validation.mjs', 'deferred');
   const sum = phase => [...files.values()].filter(file => !phase || file.phase === phase)

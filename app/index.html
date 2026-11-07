@@ -7,6 +7,14 @@
   <base href="/">
   <link href="favicon.ico" rel="icon">
   <script src="config/version.js"></script>
+  <script>
+    // Register the versioned stylesheet before the body can paint unstyled.
+    const style = document.createElement('link');
+    style.rel = 'stylesheet';
+    style.setAttribute('blocking', 'render');
+    style.href = window.cedarHostAssets?.style || `host/host.css?v=${encodeURIComponent(window.cedarCacheControl || 'local')}`;
+    document.head.append(style);
+  </script>
 </head>
 <body>
   <header>
@@ -42,9 +50,7 @@
   <script src="scripts/handlers/KeycloakUserHandler.js"></script>
   <script type="module">
     const version = encodeURIComponent(window.cedarCacheControl || 'local');
-    const style = document.createElement('link');
-    style.rel = 'stylesheet'; style.href = `styles/host.css?v=${version}`; document.head.append(style);
-    import(`./scripts/host.mjs?v=${version}`);
+    import(window.cedarHostAssets?.script ? `./${window.cedarHostAssets.script}` : `./host/host.mjs?v=${version}`);
   </script>
 </body>
 </html>
