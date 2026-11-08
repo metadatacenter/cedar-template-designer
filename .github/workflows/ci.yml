@@ -70,3 +70,21 @@ jobs:
 
       - name: Reject independent icon sources
         run: python3 shared-design-checks/tools/check_icons.py --repo .
+
+      - name: Save the tested host for paired performance measurements
+        uses: actions/upload-artifact@v7
+        with:
+          name: designer-performance-app
+          path: app
+          if-no-files-found: error
+          retention-days: 2
+
+  performance:
+    name: Designer and equivalent CEF performance
+    needs: package
+    uses: metadatacenter/cedar-development/.github/workflows/frontend-performance-paired.yml@35bb2660b2470f4bfaac46fe37bb2e1079dea640
+    with:
+      component: designer
+      baseline-ref: ${{ github.event.pull_request.base.sha || github.event.before }}
+      candidate-artifact: designer-performance-app
+      harness-ref: 35bb2660b2470f4bfaac46fe37bb2e1079dea640
