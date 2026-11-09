@@ -48,9 +48,9 @@
     "zone.js": "0.16.3"
   },
   "dependencies": {
-    "cedar-embeddable-designer": "npm:@org.metadatacenter/cedar-embeddable-designer@0.1.0-dev.20261108.gbe8f533c3b80.t2032",
-    "cedar-embeddable-editor": "2.0.33",
-    "cedar-embeddable-term-picker": "npm:@org.metadatacenter/cedar-embeddable-term-picker@0.1.0-dev.20261108.gbd877b7d0c59.t2032",
+    "cedar-embeddable-designer": "npm:@org.metadatacenter/cedar-embeddable-designer@0.1.1-dev.20261109.6282ff16",
+    "cedar-embeddable-editor": "npm:@org.metadatacenter/cedar-embeddable-editor@2.0.34-dev.20261109.12cc58f",
+    "cedar-embeddable-term-picker": "npm:@org.metadatacenter/cedar-embeddable-term-picker@0.1.1-dev.20261109.f9b5ef2b",
     "cedar-model-typescript-library": "npm:@org.metadatacenter/cedar-model-typescript-library@1.0.28-dev.20261109.518f68b"
   },
   "engines": {
