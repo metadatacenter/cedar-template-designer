@@ -38,7 +38,7 @@
     "@angular/material": "22.2.6",
     "@angular/platform-browser": "22.2.4",
     "@ngx-translate/core": "18.0.0",
-    "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20261108.g80589684d6ec.t2032",
+    "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20261109.a4da5115",
     "esbuild": "0.28.2",
     "jsonld": "9.0.0",
     "n3": "2.13.12",
@@ -51,7 +51,7 @@
     "cedar-embeddable-designer": "npm:@org.metadatacenter/cedar-embeddable-designer@0.1.0-dev.20261108.gbe8f533c3b80.t2032",
     "cedar-embeddable-editor": "2.0.33",
     "cedar-embeddable-term-picker": "npm:@org.metadatacenter/cedar-embeddable-term-picker@0.1.0-dev.20261108.gbd877b7d0c59.t2032",
-    "cedar-model-typescript-library": "npm:@org.metadatacenter/cedar-model-typescript-library@1.0.28-dev.20261108.g99988bcea5c1.t2032"
+    "cedar-model-typescript-library": "npm:@org.metadatacenter/cedar-model-typescript-library@1.0.28-dev.20261109.518f68b"
   },
   "engines": {
     "node": "^24.15.0"
