@@ -38,7 +38,7 @@
     "@angular/material": "22.2.6",
     "@angular/platform-browser": "22.2.4",
     "@ngx-translate/core": "18.0.0",
-    "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20261110.2c339c55",
+    "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20261110.c8930a66",
     "esbuild": "0.28.2",
     "jsonld": "9.0.0",
     "n3": "2.13.12",
