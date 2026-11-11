@@ -2,6 +2,7 @@
   "schema": 1,
   "repo": "cedar-template-designer",
   "browserHelper": "browser/tests/surface-contracts.generated.mjs",
+  "layoutHelper": "browser/tests/layout-resilience.generated.mjs",
   "surfaces": [
     {
       "id": "designer.confirmations",

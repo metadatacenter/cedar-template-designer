@@ -124,6 +124,29 @@ Run `npm run smoke:journey -- pull-versions reusable-publication` and
 
 `npm test` exercises navigation, permission checks, conditional saving, versioning,
 error retention, token refresh and repository child search without the stack.
+
+`npm run test:browser` stages the installed components and runs the Playwright suite in
+`browser/`. It serves the real host page and answers its backend, sign-in and designer in
+the browser.
+
+`browser/tests/accessibility.spec.mjs` checks the host's own page with axe-core in each state
+the other browser specs reach. These include opening and its failures, editing and saving,
+the access and save-status checks, retained drafts, server findings and the version dialog.
+Several are scanned again at a phone's width, and each kind of control the host draws is
+scanned hovered and focused from the keyboard. The scan applies every rule axe-core tags for
+WCAG 2.0, 2.1 and 2.2 at levels A and AA. It also applies Label in Name by name, because
+axe-core marks that rule experimental. It leaves out CED and its field designer, CEE and its
+field element, and the term picker, whose own suites measure them. A result axe cannot decide
+fails unless the spec's `SETTLED` list records a measurement that the spec repeats. A finding
+that only a visible change can fix is recorded in `EXCEPTIONS` with that change, and an entry
+that no longer matches fails.
+
+`browser/tests/layout-resilience.spec.mjs` runs the shared layout checks over the same states.
+The design tokens generate them into `browser/tests/layout-resilience.generated.mjs`, which
+`.ui-surfaces.json` names as its `layoutHelper`. They measure reflow at 320 CSS px, a 640 by
+400 viewport for 200% zoom and WCAG text spacing. They also measure the contrast of
+placeholders, field boundaries, icons, focus indicators and selection marks. The spec's
+`EXCEPTIONS` record each finding that waits on a visible change, in the same way.
 The live CED host smoke covers create/update without leaving Designer, stale-save
 rejection, versioning with metadata instances, cancellation and the return to Workspace.
 It is in `cedar-development/ops/e2e/ced-host-smoke.mjs`.

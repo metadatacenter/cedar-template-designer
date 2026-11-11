@@ -59,6 +59,22 @@ function selectDraftStore() {
   }
   draftStore = next;
 }
+// A long list of server findings scrolls within its notice. While it scrolls it is a tab stop named by its
+// count, so a keyboard can scroll it. A list that fits adds no stop. Its findings, opening the notice and
+// the window's size each decide whether it scrolls.
+function syncFindingsScroll() {
+  const list = ui['server-issues-list'];
+  if (!ui['server-issues'].hidden && ui['server-issues'].open && list.scrollHeight > list.clientHeight) {
+    list.setAttribute('tabindex', '0');
+    list.setAttribute('aria-labelledby', 'server-issues-title');
+  } else {
+    list.removeAttribute('tabindex');
+    list.removeAttribute('aria-labelledby');
+  }
+}
+ui['server-issues'].addEventListener('toggle', syncFindingsScroll);
+window.addEventListener('resize', syncFindingsScroll);
+if (typeof ResizeObserver === 'function') new ResizeObserver(syncFindingsScroll).observe(ui['server-issues-list']);
 function update() {
   const report = state.report(designer);
   const findingsKey = JSON.stringify(report.server);
@@ -94,6 +110,7 @@ function update() {
     } else row.textContent = text;
     ui['server-issues-list'].append(row);
   }
+  syncFindingsScroll();
   // While the designer lists errors, Save says why it is refused. An error it holds back, such as a name nobody has touched, is not yet one to point at.
   const blocked = state.writable && !state.saving && Boolean(report.issues.some(issue => issue.shown && issue.severity !== 'warning'));
   ui['save-help'].dataset.blocked = String(blocked);
@@ -357,8 +374,9 @@ async function loadComponents() {
 function openingWork(promise) { void promise.catch(() => {}); return promise; }
 try {
   route = routeFor(location.pathname === '/' ? '/templates/create' : location.pathname);
-  // The address says which designer this is, so the heading waits for nothing the page loads.
-  ui.title.textContent = t(`Header.Title.${route.kind}`);
+  // The address says which designer this is, so the heading waits for nothing the page loads. A narrow
+  // window shortens the heading with an ellipsis, so its title holds the whole of it.
+  ui.title.textContent = ui.title.title = t(`Header.Title.${route.kind}`);
   config = await readJson(`config/host.json?v=${version}`, 'Error.ConfigurationLoad');
   useDeploymentApi(config.resourceRestAPI);
   const params = new URLSearchParams(location.search);
