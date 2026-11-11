@@ -54,6 +54,9 @@ jobs:
         run: npm test
 
       - name: Validate rendered host surfaces
+        env:
+          # The pinned packages provide integration modules, so staging must take the shared path.
+          CEDAR_REQUIRE_SHARED_EDITORS: "1"
         run: |
           npm --prefix browser ci
           ./browser/node_modules/.bin/playwright install --with-deps chromium
