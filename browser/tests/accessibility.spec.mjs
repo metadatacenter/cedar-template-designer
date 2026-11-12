@@ -90,8 +90,10 @@ for (const [kind, [open, find]] of Object.entries(controls)) {
   states[`focused ${kind}`] = async page => {
     await opened(page);
     const control = find(page);
+    // Start inside the page before the last control, avoiding the browser toolbar boundary.
+    if (kind === 'findings summary') await page.locator('#back').focus();
     // A key press first, so focus is drawn as it is for someone using the keyboard.
-    await page.keyboard.press('Shift');
+    await page.keyboard.press(kind === 'menu item' ? 'ArrowDown' : 'Tab');
     await control.focus();
     await expect.poll(() => control.evaluate(element => element.matches(':focus-visible'))).toBe(true);
   };
@@ -287,7 +289,7 @@ test('a long findings list is a tab stop named by its count and shows the shared
   await expect(list).toHaveAttribute('tabindex', '0');
   await expect(page.getByRole('list', {name: text('en', 'Message.ServerFindings', {count: 40}), exact: true})).toBeVisible();
   // The ring every host control takes from the keyboard.
-  await page.keyboard.press('Shift');
+  await page.keyboard.press('Tab');
   await page.locator('#back').focus();
   const ring = await outline(page.locator('#back'));
   expect(ring[0]).toBe('solid');

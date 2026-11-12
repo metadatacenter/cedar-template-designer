@@ -23,6 +23,15 @@ export default defineConfig({
   workers: process.env.CEDAR_TEST_WORKERS ? Number(process.env.CEDAR_TEST_WORKERS) : undefined,
   testDir: "./tests",
   testIgnore: sharedEditorsStaged() ? [] : ["**/shared-editors.spec.mjs"],
+  // Keep pixel baselines in their original project; measure accessibility in every engine.
+  projects: [
+    { name: "", use: { browserName: "chromium" } },
+    ...["firefox", "webkit"].map((browserName) => ({
+      name: `${browserName}-accessibility`,
+      testMatch: /(?:accessibility|layout-resilience)\.spec\.mjs/,
+      use: { browserName },
+    })),
+  ],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
