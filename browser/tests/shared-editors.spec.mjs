@@ -1,10 +1,9 @@
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { test, expect } from '@playwright/test';
 import { host } from './host-fixture.mjs';
 
+// The config runs this file only where staging combined the editors into one shared script.
 const app = new URL('../../app/', import.meta.url);
-const shared = existsSync(new URL('components/cedar-editors.js', app));
-test.skip(!shared, 'Old registry pins have standalone scripts; the source reactor supplies integration modules.');
 const stored = () => {
   const artifact = JSON.parse(readFileSync(new URL('./fixtures/stored-template.json', import.meta.url), 'utf8'));
   artifact['@id'] = `https://repo.designer.test/templates/${artifact['@id'].split('/').pop()}`;

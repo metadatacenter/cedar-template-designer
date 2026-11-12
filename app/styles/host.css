@@ -12,10 +12,15 @@
 body { margin: 0; font-size: var(--cedar-font-size); line-height: var(--cedar-control-line-height-default); }
 strong, b { font-weight: var(--cedar-font-weight-medium); }
 header { display: flex; align-items: center; gap: var(--cedar-space-4); padding: var(--cedar-space-3) var(--cedar-space-4); background: var(--cedar-surface-raised); border-bottom: 1px solid var(--cedar-border-rule); }
+/* The status and Save move to a line of their own only when the whole heading cannot fit beside them, so a narrow
+   window still shows the heading. A window too narrow for the heading alone shortens it. */
+header { flex-wrap: wrap; }
+#header-lead, #header-actions { display: flex; align-items: center; gap: var(--cedar-space-4); }
+#header-lead { flex: 0 1 auto; min-width: 0; }
+#header-actions { margin-left: auto; }
 /* The designer names itself at the size a template's title is given in the form. */
 #title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--cedar-font-size-artifact-title); line-height: var(--cedar-line-height-heading); color: var(--cedar-text-title); }
 #state {
-  margin-left: auto;
   display: inline-flex;
   align-items: center;
   gap: var(--cedar-space-2);
@@ -51,6 +56,8 @@ header, #notices { flex: none; }
 cedar-embeddable-designer { display: block; height: 100%; }
 /* A long list of server findings scrolls beneath its count rather than pushing the designer out of the window. */
 #server-issues-list { max-height: 25vh; overflow: auto; }
+/* A finding's location is one unbroken path, which breaks at any character rather than run past a narrow window. */
+#server-issues-list li { overflow-wrap: anywhere; }
 dialog { max-width: 34rem; color: var(--cedar-text-primary); font: inherit; border: 1px solid var(--cedar-border-rule); border-radius: var(--cedar-radius); padding: var(--cedar-space-6); background: var(--cedar-surface-raised); box-shadow: var(--cedar-shadow-overlay); }
 dialog::backdrop { background: var(--cedar-dialog-backdrop); }
 dialog h2 { display: flex; align-items: center; gap: var(--cedar-space-2); margin: 0 0 var(--cedar-space-4); color: var(--cedar-text-title); font-size: var(--cedar-font-size-artifact-title); font-weight: var(--cedar-font-weight-medium); line-height: var(--cedar-line-height-heading); }
