@@ -14,7 +14,9 @@ for (const allowed of [true, false]) {
     });
     void opening.catch(() => {});
     try {
-      await page.waitForFunction(() => typeof window.completeTestSignIn === 'function');
+      // Do not evaluate against the about:blank context while host() replaces it.
+      await page.locator('#editor').waitFor({state: 'attached'});
+      await expect.poll(() => page.evaluate(() => typeof window.completeTestSignIn === 'function'), { timeout: 30_000 }).toBeTruthy();
       await expect.poll(() => requests.includes('/components/cedar-embeddable-designer.js')).toBe(true);
       expect(requests.filter(path => path.startsWith('/api/'))).toEqual([]);
       await expect(page.locator('#editor')).toBeHidden();

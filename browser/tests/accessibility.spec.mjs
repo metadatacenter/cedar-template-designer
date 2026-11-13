@@ -19,21 +19,17 @@ import {EXCLUDED, states as reached, saveMeets, draftOffer, findingsOpen, versio
  * out, so it runs by name, as in Workspace's, CED's, the term picker's and CEE's gates.
  */
 async function audit(page) {
-  const builders = [
-    new AxeBuilder({page}).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']),
-    new AxeBuilder({page}).withRules(['label-content-name-mismatch']),
-  ];
-  const verdicts = [];
-  // axe runs one analysis at a time in a page.
-  for (const builder of builders) {
-    for (const selector of EXCLUDED) builder.exclude(selector);
-    verdicts.push(await builder.analyze());
-  }
-  expect(verdicts[1].passes.concat(verdicts[1].violations, verdicts[1].incomplete, verdicts[1].inapplicable)
+  // Explicit rule options retain Label in Name in the tagged analysis, without a second scan.
+  const builder = new AxeBuilder({page})
+    .options({rules: {'label-content-name-mismatch': {enabled: true}}})
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']);
+  for (const selector of EXCLUDED) builder.exclude(selector);
+  const verdict = await builder.analyze();
+  expect(verdict.passes.concat(verdict.violations, verdict.incomplete, verdict.inapplicable)
     .some(result => result.id === 'label-content-name-mismatch'), 'label-content-name-mismatch did not run').toBe(true);
   return {
-    violations: verdicts.flatMap(verdict => verdict.violations.flatMap(result => result.nodes.map(node => ({rule: result.id, node})))),
-    undecided: verdicts.flatMap(verdict => verdict.incomplete.flatMap(result => result.nodes.map(node => ({rule: result.id, node})))),
+    violations: verdict.violations.flatMap(result => result.nodes.map(node => ({rule: result.id, node}))),
+    undecided: verdict.incomplete.flatMap(result => result.nodes.map(node => ({rule: result.id, node}))),
   };
 }
 
