@@ -24,45 +24,28 @@ function sharedEditorsStaged() {
   }
 }
 
-// Functional browser contracts share the existing worker budget; pixel baselines keep their own projects.
-const functionalSpecs = [
-  "save-matrix.spec.mjs",
-  "save-recovery.spec.mjs",
-  "save-uncertainty.spec.mjs",
-  "draft-recovery.spec.mjs",
-  "access-recheck.spec.mjs",
-  "opening-access.spec.mjs",
-  "opening-matrix.spec.mjs",
-  "startup-overlap.spec.mjs",
-  "state-coordination.spec.mjs",
-  "shared-editors.spec.mjs",
-  "confirmed-save-recovery.spec.mjs",
-];
-
 export default defineConfig({
   workers: process.env.CEDAR_TEST_WORKERS
     ? Number(process.env.CEDAR_TEST_WORKERS)
     : undefined,
   testDir: "./tests",
   testIgnore: sharedEditorsStaged() ? [] : ["**/shared-editors.spec.mjs"],
-  // Keep pixel baselines in their original project; measure accessibility in every engine.
+  // Every functional/accessibility spec runs in all engines by default.
   projects: [
-    ...["firefox", "webkit"].map((browserName) => ({
-      name: `${browserName}-functional`,
-      testMatch: functionalSpecs,
-      use: { browserName },
-    })),
     { name: "", use: { browserName: "chromium" } },
     ...["firefox", "webkit"].map((browserName) => ({
-      name: `${browserName}-accessibility`,
-      testMatch: /(?:accessibility|layout-resilience)\.spec\.mjs/,
+      name: browserName,
       use: { browserName },
     })),
   ],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
-  // Stop a known-red CI/reactor run after a test exhausts its retry.
+  retries: 0,
+  // Fail on the first failure in CI; a retry must not hide an unreliable case.
   maxFailures: process.env.CI ? 1 : 0,
-  use: { browserName: "chromium", trace: "retain-on-failure" },
+  use: {
+    browserName: "chromium",
+    trace: process.env.CEDAR_TEST_TRACE === "on" ? "retain-on-failure" : "off",
+    screenshot: process.env.CI ? "only-on-failure" : "off",
+  },
 });

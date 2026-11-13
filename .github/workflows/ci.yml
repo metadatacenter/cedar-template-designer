@@ -53,14 +53,11 @@ jobs:
       - name: Run host contract tests
         run: npm test
 
-      - name: Validate rendered host surfaces
+      - name: Stage the production host once for browser and performance checks
         env:
           # The pinned packages provide integration modules, so staging must take the shared path.
           CEDAR_REQUIRE_SHARED_EDITORS: "1"
-        run: |
-          npm --prefix browser ci
-          ./browser/node_modules/.bin/playwright install --with-deps chromium firefox webkit
-          npm run test:browser
+        run: npm run prepare:components
 
       - name: Stage the shared icon registry
         run: node scripts/stage-design.mjs
@@ -74,13 +71,64 @@ jobs:
       - name: Reject independent icon sources
         run: python3 shared-design-checks/tools/check_icons.py --repo .
 
-      - name: Save the tested host for paired performance measurements
+      - name: Share the production host with browser and performance checks
         uses: actions/upload-artifact@v7
         with:
           name: designer-performance-app
           path: app
           if-no-files-found: error
           retention-days: 2
+
+  browser:
+    name: Browser contracts (${{ matrix.browser }})
+    needs: package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CEDAR_TEST_WORKERS: '2'
+      CEDAR_REQUIRE_SHARED_EDITORS: '1'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - browser: chromium
+            project: ''
+          - browser: firefox
+            project: firefox
+          - browser: webkit
+            project: webkit
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.22.1
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            browser/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+          cache-dependency-path: package-lock.json
+      - name: Install test dependencies
+        run: |
+          npm ci
+          npm --prefix browser ci
+          ./browser/node_modules/.bin/playwright install --with-deps ${{ matrix.browser }}
+      - uses: actions/download-artifact@v8
+        with:
+          name: designer-performance-app
+          path: app
+      # Call the browser suite directly so it consumes the shared app without restaging it.
+      - name: Validate rendered host surfaces
+        run: npm --prefix browser test -- --project="${{ matrix.project }}" --retries=0
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: designer-${{ matrix.browser }}-diagnostics
+          path: browser/test-results
 
   performance:
     name: Designer and equivalent CEF performance
