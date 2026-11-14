@@ -19,21 +19,17 @@ import {EXCLUDED, states as reached, saveMeets, draftOffer, findingsOpen, versio
  * out, so it runs by name, as in Workspace's, CED's, the term picker's and CEE's gates.
  */
 async function audit(page) {
-  const builders = [
-    new AxeBuilder({page}).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']),
-    new AxeBuilder({page}).withRules(['label-content-name-mismatch']),
-  ];
-  const verdicts = [];
-  // axe runs one analysis at a time in a page.
-  for (const builder of builders) {
-    for (const selector of EXCLUDED) builder.exclude(selector);
-    verdicts.push(await builder.analyze());
-  }
-  expect(verdicts[1].passes.concat(verdicts[1].violations, verdicts[1].incomplete, verdicts[1].inapplicable)
+  // Explicit rule options retain Label in Name in the tagged analysis, without a second scan.
+  const builder = new AxeBuilder({page})
+    .options({rules: {'label-content-name-mismatch': {enabled: true}}})
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']);
+  for (const selector of EXCLUDED) builder.exclude(selector);
+  const verdict = await builder.analyze();
+  expect(verdict.passes.concat(verdict.violations, verdict.incomplete, verdict.inapplicable)
     .some(result => result.id === 'label-content-name-mismatch'), 'label-content-name-mismatch did not run').toBe(true);
   return {
-    violations: verdicts.flatMap(verdict => verdict.violations.flatMap(result => result.nodes.map(node => ({rule: result.id, node})))),
-    undecided: verdicts.flatMap(verdict => verdict.incomplete.flatMap(result => result.nodes.map(node => ({rule: result.id, node})))),
+    violations: verdict.violations.flatMap(result => result.nodes.map(node => ({rule: result.id, node}))),
+    undecided: verdict.incomplete.flatMap(result => result.nodes.map(node => ({rule: result.id, node}))),
   };
 }
 
@@ -90,8 +86,10 @@ for (const [kind, [open, find]] of Object.entries(controls)) {
   states[`focused ${kind}`] = async page => {
     await opened(page);
     const control = find(page);
+    // Start inside the page before the last control, avoiding the browser toolbar boundary.
+    if (kind === 'findings summary') await page.locator('#back').focus();
     // A key press first, so focus is drawn as it is for someone using the keyboard.
-    await page.keyboard.press('Shift');
+    await page.keyboard.press(kind === 'menu item' ? 'ArrowDown' : 'Tab');
     await control.focus();
     await expect.poll(() => control.evaluate(element => element.matches(':focus-visible'))).toBe(true);
   };
@@ -287,7 +285,7 @@ test('a long findings list is a tab stop named by its count and shows the shared
   await expect(list).toHaveAttribute('tabindex', '0');
   await expect(page.getByRole('list', {name: text('en', 'Message.ServerFindings', {count: 40}), exact: true})).toBeVisible();
   // The ring every host control takes from the keyboard.
-  await page.keyboard.press('Shift');
+  await page.keyboard.press('Tab');
   await page.locator('#back').focus();
   const ring = await outline(page.locator('#back'));
   expect(ring[0]).toBe('solid');

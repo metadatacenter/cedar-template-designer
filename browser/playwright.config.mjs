@@ -12,7 +12,12 @@ import { defineConfig } from "@playwright/test";
 function sharedEditorsStaged() {
   if (process.env.CEDAR_REQUIRE_SHARED_EDITORS === "1") return true;
   try {
-    const manifest = JSON.parse(readFileSync(new URL("../app/components/manifest.json", import.meta.url), "utf8"));
+    const manifest = JSON.parse(
+      readFileSync(
+        new URL("../app/components/manifest.json", import.meta.url),
+        "utf8",
+      ),
+    );
     return Object.values(manifest).some((component) => component?.delivery);
   } catch {
     return false;
@@ -20,11 +25,27 @@ function sharedEditorsStaged() {
 }
 
 export default defineConfig({
-  workers: process.env.CEDAR_TEST_WORKERS ? Number(process.env.CEDAR_TEST_WORKERS) : undefined,
+  workers: process.env.CEDAR_TEST_WORKERS
+    ? Number(process.env.CEDAR_TEST_WORKERS)
+    : undefined,
   testDir: "./tests",
   testIgnore: sharedEditorsStaged() ? [] : ["**/shared-editors.spec.mjs"],
+  // Every functional/accessibility spec runs in all engines by default.
+  projects: [
+    { name: "", use: { browserName: "chromium" } },
+    ...["firefox", "webkit"].map((browserName) => ({
+      name: browserName,
+      use: { browserName },
+    })),
+  ],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
-  use: { browserName: "chromium", trace: "retain-on-failure" },
+  retries: 0,
+  // Fail on the first failure in CI; a retry must not hide an unreliable case.
+  maxFailures: process.env.CI ? 1 : 0,
+  use: {
+    browserName: "chromium",
+    trace: process.env.CEDAR_TEST_TRACE === "on" ? "retain-on-failure" : "off",
+    screenshot: process.env.CI ? "only-on-failure" : "off",
+  },
 });

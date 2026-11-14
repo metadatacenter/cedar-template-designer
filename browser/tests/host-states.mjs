@@ -72,7 +72,9 @@ export const states = {
   opening: async page => {
     const opening = host(page, 'template', 'edit', true, {holdSignIn: true});
     void opening.catch(() => {});
-    await page.waitForFunction(() => typeof window.completeTestSignIn === 'function');
+    // host() starts navigation asynchronously; poll globals only after its document is attached.
+    await page.locator('#editor').waitFor({state: 'attached'});
+    await expect.poll(() => page.evaluate(() => typeof window.completeTestSignIn === 'function'), { timeout: 30_000 }).toBeTruthy();
     await expect(page.locator('#editor')).toBeHidden();
     return async () => {
       await page.evaluate(() => window.completeTestSignIn());
