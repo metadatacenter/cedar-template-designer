@@ -210,3 +210,35 @@ test('a create found holding an earlier attempt after a second lost answer keeps
   await expect.poll(() => page.evaluate(() => Object.values(sessionStorage).some(raw => raw.includes('Newer')))).toBe(true);
   expect(sent.map(body => [body['@id'], body['schema:name']])).toEqual([[id, 'Submitted'], [id, 'Newer']]);
 });
+
+// The journal of a create is written before its request is sent, so a lost answer can be settled after a
+// reload. When storage refuses that write, the request is still sent once, the page says the draft could not
+// be kept, and nothing outside the page holds the identity: leaving still asks first, and the lost answer is
+// settled from the open page, under the same identity.
+test('a create whose journal cannot be written settles a lost answer from the open page, under one identity', async ({page}) => {
+  const state = await host(page, 'template', 'create');
+  await edit(page, 'Submitted');
+  await expect(page.locator('#draft-storage-error')).toBeHidden();
+  await page.evaluate(() => { Storage.prototype.setItem = () => { throw new Error('Full'); }; });
+  const lost = await lose(page, state, {operation: 'create', committed: false});
+  try {
+    await page.locator('#save').click();
+    await expect(page.locator('#message')).toHaveText(text('en', 'Error.SaveUnconfirmed'));
+  } finally { await lost.stop(); }
+  expect(lost.sent).toHaveLength(1);
+  const [{id}] = lost.sent;
+  await expect(page.locator('#draft-storage-error')).toBeVisible();
+  await expect(page.locator('#check-save')).toBeVisible();
+  await expect(page.locator('#reload')).toBeHidden();
+  expect(await page.evaluate(() => {
+    const leaving = new Event('beforeunload', {cancelable: true});
+    window.dispatchEvent(leaving);
+    return leaving.defaultPrevented;
+  })).toBe(true);
+  await page.locator('#check-save').click();
+  await expect(page.locator('#message')).toHaveText(text('en', 'Message.ChangesKept'));
+  await page.locator('#save').click();
+  await expect(page.locator('#state')).toHaveText('Saved');
+  expect(state.writes).toHaveLength(1);
+  expect(state.writes[0]).toMatchObject({path: `/api/templates/${id.split('/').pop()}`, body: {'@id': id, 'schema:name': 'Submitted'}});
+});
