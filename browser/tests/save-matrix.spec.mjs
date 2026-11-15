@@ -244,6 +244,8 @@ test('a new version refused to anyone but the owner restores after a reload as o
   expect(await page.locator('#editor > *').evaluate(el=>el.currentArtifact['schema:name'])).toBe('Refused version');
   await expect(page.locator('#state')).toHaveText('Modified');
   await expect(page.locator('#save')).toBeEnabled();
+  // Every control is present to be hidden, so the check cannot pass by matching nothing.
+  await expect(page.locator(RECOVERY_CONTROLS)).toHaveCount(6);
   for(const control of await page.locator(RECOVERY_CONTROLS).all())await expect(control).toBeHidden();
   expect(state.writes).toHaveLength(1);
 });
