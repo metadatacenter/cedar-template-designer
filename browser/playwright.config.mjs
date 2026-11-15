@@ -1,27 +1,24 @@
-import { readFileSync } from "node:fs";
 import { defineConfig } from "@playwright/test";
 
+/** The variables that stage an editor from a standalone bundle of the developer's choosing. */
+const BUNDLE_OVERRIDES = ["CEDAR_CED_BUNDLE", "CEDAR_CEE_BUNDLE", "CEDAR_CETP_BUNDLE"];
+
 /**
- * Whether staging combined the three editors into the one shared script that
- * `shared-editors.spec.mjs` tests. Staging does so when every staged package provides
- * `integration.mjs`, and records the shared delivery in the manifest. Old registry pins and explicit
- * local bundle overrides take the standalone path, where that test has nothing to check, so it is
- * left out of the run rather than skipped. CI sets CEDAR_REQUIRE_SHARED_EDITORS, so a pin that loses
- * the shared path fails there instead of passing with the test left out.
+ * Whether to run `shared-editors.spec.mjs`, which tests the one shared script staging combines the three
+ * editors into. Staging serves standalone scripts instead when a bundle override names one, when an
+ * installed package lacks its integration manifest, or when the design tokens publish no fonts. Only an
+ * override is a choice, so only an override leaves the spec out, and the run says so. Any other
+ * standalone staging runs the spec, whose first test names the editors staging left standalone.
+ * CEDAR_REQUIRE_SHARED_EDITORS runs it in every case.
  */
-function sharedEditorsStaged() {
+function sharedEditorsRun() {
   if (process.env.CEDAR_REQUIRE_SHARED_EDITORS === "1") return true;
-  try {
-    const manifest = JSON.parse(
-      readFileSync(
-        new URL("../app/components/manifest.json", import.meta.url),
-        "utf8",
-      ),
-    );
-    return Object.values(manifest).some((component) => component?.delivery);
-  } catch {
-    return false;
-  }
+  const overrides = BUNDLE_OVERRIDES.filter((name) => process.env[name]);
+  if (!overrides.length) return true;
+  // Workers load this file too; the main process alone reports the choice.
+  if (!process.env.TEST_WORKER_INDEX)
+    console.log(`shared-editors.spec.mjs is left out: ${overrides.join(", ")} stages a standalone bundle.`);
+  return false;
 }
 
 export default defineConfig({
@@ -29,7 +26,7 @@ export default defineConfig({
     ? Number(process.env.CEDAR_TEST_WORKERS)
     : undefined,
   testDir: "./tests",
-  testIgnore: sharedEditorsStaged() ? [] : ["**/shared-editors.spec.mjs"],
+  testIgnore: sharedEditorsRun() ? [] : ["**/shared-editors.spec.mjs"],
   // Every functional/accessibility spec runs in all engines by default.
   projects: [
     { name: "", use: { browserName: "chromium" } },

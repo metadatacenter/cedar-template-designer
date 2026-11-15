@@ -2,13 +2,21 @@ import { readFileSync } from 'node:fs';
 import { test, expect } from '@playwright/test';
 import { host } from './host-fixture.mjs';
 
-// The config runs this file only where staging combined the editors into one shared script.
+// The config leaves this file out only when a bundle override stages a standalone editor.
 const app = new URL('../../app/', import.meta.url);
 const stored = () => {
   const artifact = JSON.parse(readFileSync(new URL('./fixtures/stored-template.json', import.meta.url), 'utf8'));
   artifact['@id'] = `https://repo.designer.test/templates/${artifact['@id'].split('/').pop()}`;
   return artifact;
 };
+
+// Staging records the shared delivery for each editor it combines. Any other staging fails here, naming the
+// editors it left standalone, rather than on a request count later.
+test('staging combined the three editors into one shared script', () => {
+  const manifest = JSON.parse(readFileSync(new URL('components/manifest.json', app), 'utf8'));
+  const names = ['cedar-embeddable-editor', 'cedar-embeddable-term-picker', 'cedar-embeddable-designer'];
+  expect(names.filter(name => manifest[name]?.delivery?.file !== 'cedar-editors.js'), 'editors staged standalone').toEqual([]);
+});
 
 test('one shared request renders real summaries, preview and editing without recovery controls', async ({ page }) => {
   await page.addInitScript(() => {
