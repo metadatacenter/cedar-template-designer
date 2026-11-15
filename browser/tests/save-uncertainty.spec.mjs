@@ -1,5 +1,5 @@
 import {test, expect} from '@playwright/test';
-import {host, edit, text, minted} from './host-fixture.mjs';
+import {host, edit, text, minted, forceSave} from './host-fixture.mjs';
 
 for (const operation of ['create', 'update', 'version'])
   for (const answer of ['lost response', 'missing identity'])
@@ -29,8 +29,9 @@ for (const operation of ['create', 'update', 'version'])
       // Whether the write was stored is settled by reading it, never by repeating it.
       await expect(page.locator('#check-save')).toBeVisible();
       await edit(page, 'Still here');
-      // Dispatch directly to verify the handler also refuses, independently of the disabled button.
-      await page.locator('#save').dispatchEvent('click');
+      // Click directly to verify the handler also refuses, independently of the disabled button.
+      const {before, after} = await forceSave(page);
+      expect(after).toEqual(before);
       expect(committed).toHaveLength(1);
       expect(committed[0]['schema:name']).toBe('Submitted');
       expect(await page.locator('#editor > *').evaluate(el => el.currentArtifact['schema:name'])).toBe('Still here');

@@ -153,3 +153,18 @@ export async function edit(page, name='Edited', issue=null) {
     designer.dispatchEvent(new CustomEvent('artifactChange'));
   },{name,issue});
 }
+/**
+ * Click Save past its disabled state and answer what the page shows just before and just after the click:
+ * the state, the message and whether the designer is inert. The handler decides within the click, and a
+ * save it starts says Saving and makes the designer inert before the click returns, long before any
+ * request it sends could arrive. Unchanged answers therefore show that the handler itself refused.
+ */
+export async function forceSave(page) {
+  return page.locator('#save').evaluate(button => {
+    const shown = () => [document.getElementById('state').textContent, document.getElementById('message').textContent,
+      document.querySelector('#editor > *')?.inert ?? null];
+    const before = shown();
+    button.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true, composed: true}));
+    return {before, after: shown()};
+  });
+}
