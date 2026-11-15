@@ -122,7 +122,7 @@ for(const {kind,mode,language,edited,outcome} of cases)
     expect(await designerName()).toBe(name);
     await expect(page.getByRole('heading',{name:'Workspace'})).toHaveCount(0);
     await expect(page).toHaveURL(new RegExp(`/${kind}s/${mode}${mode==='edit'?'/item':''}$`));
-    await expect(status).toHaveText(text(language,expected.reload?'State.ReloadRequired':edited?'State.Modified':'State.Unmodified'));
+    await expect(status).toHaveText(text(language,expected.check?'State.SaveUnconfirmed':expected.reload?'State.ReloadRequired':edited?'State.Modified':'State.Unmodified'));
     if(expected.findings){
       await expect(page.locator('#server-issues')).toBeVisible();
       await expect(page.locator('#server-issues-title')).toHaveText(text(language,expected.findings===1?'Message.ServerFindingsOne':'Message.ServerFindings',{count:expected.findings}));

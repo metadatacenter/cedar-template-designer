@@ -623,7 +623,7 @@ for (const later of [false, true]) test(`a create that committed although its an
   h.faults.push({ committed: new core.BackendError(0) });
   await h.save();
   assert.match(h.node('message').textContent, /^We could not confirm whether your changes were saved/);
-  assert.equal(h.node('state').textContent, 'Reload required');
+  assert.equal(h.node('state').textContent, 'Save status unconfirmed');
   assert.deepEqual(shown(h), ['check-save']);
   if (later) { h.designer.currentArtifact = { 'schema:name': 'Study, later' }; h.change(); }
   await h.check();

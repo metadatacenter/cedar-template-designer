@@ -119,7 +119,7 @@ function update() {
   ui.state.dataset.saveState = String(!state.saving && state.writable);
   ui.state.dataset.dirty = String(!state.saving && state.writable && dirty());
   // Until it is edited, an artifact is unmodified, whether read from the server or new; only a save made here is reported as saved.
-  ui.state.textContent = t(state.loadFailed ? 'State.LoadFailed' : !state.ready ? 'Page.Loading' : state.reloadRequired ? 'State.ReloadRequired' : state.saving ? 'State.Saving' : !state.writable ? 'State.ReadOnly' : dirty() ? 'State.Modified' : saved ? 'State.Saved' : 'State.Unmodified');
+  ui.state.textContent = t(state.loadFailed ? 'State.LoadFailed' : !state.ready ? 'Page.Loading' : state.canCheckSave ? 'State.SaveUnconfirmed' : state.reloadRequired ? 'State.ReloadRequired' : state.saving ? 'State.Saving' : !state.writable ? 'State.ReadOnly' : dirty() ? 'State.Modified' : saved ? 'State.Saved' : 'State.Unmodified');
   if (designer) {
     designer.readOnly = !state.writable || choiceWouldCoverOffer();
     designer.inert = !state.ready || state.loadFailed || state.saving || Boolean(offeredDraft);

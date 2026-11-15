@@ -23,6 +23,7 @@ for (const operation of ['create', 'update', 'version'])
       await edit(page, 'Newer');
       release();
       await expect(page.locator('#message')).toHaveText(text('en', 'Error.SaveUnconfirmed'));
+      await expect(page.locator('#state')).toHaveText(text('en', 'State.SaveUnconfirmed'));
       await expect(page.locator('#save')).toBeDisabled();
       if (operation === 'update') await expect(page.locator('#reload')).toBeVisible();
       else await expect(page.locator('#reload')).toBeHidden();

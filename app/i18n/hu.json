@@ -23,7 +23,8 @@
     "Unmodified": "Változatlan",
     "Saved": "Mentve",
     "LoadFailed": "Nem tölthető be",
-    "ReloadRequired": "Újratöltés szükséges"
+    "ReloadRequired": "Újratöltés szükséges",
+    "SaveUnconfirmed": "A mentés állapota nem megerősített"
   },
   "Message": {
     "ChangesKept": "Nincs mentve. A módosításai a tervezőben maradtak.",

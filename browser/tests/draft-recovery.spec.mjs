@@ -25,7 +25,7 @@ for (const kind of ['template', 'element', 'field']) {
       if (status) {
         server.failure = {status, json:{message:'Refused'}};
         await page.locator('#save').click();
-        await expect(page.locator('#state')).toHaveText(text('en','State.ReloadRequired'));
+        await expect(page.locator('#state')).toHaveText(text('en',status===503?'State.SaveUnconfirmed':'State.ReloadRequired'));
       }
       await expect(page.locator('#download-draft, #import-draft')).toHaveCount(0);
       const writesBeforeReload = server.writes.length;
@@ -53,7 +53,7 @@ test('an uncertain create stays guarded after reload and cannot be discarded int
   await expect(page.locator('#download-draft, #import-draft')).toHaveCount(0);
   await edit(page); server.failure='network';
   await page.locator('#save').click();
-  await expect(page.locator('#state')).toHaveText(text('en','State.ReloadRequired'));
+  await expect(page.locator('#state')).toHaveText(text('en','State.SaveUnconfirmed'));
   page.on('dialog',dialog=>dialog.accept()); await page.reload();
   await expect(page.locator('#draft-offer')).toBeVisible();
   await expect(page.locator('#check-save')).toBeHidden();
