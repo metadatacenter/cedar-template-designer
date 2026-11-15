@@ -337,10 +337,11 @@ export class DesignerCoordinator {
    * Settle an unsettled create or new version from reads of its identity (`created`, null when not
    * found) and, when that is absent for a version, of its source. Committed adopts what was stored as
    * the saved artifact, keeping the submitted projection as the baseline later edits are compared with.
-   * A create refused as occupied is 'adopted' instead: its identity is taken as the saved artifact, but
-   * an earlier attempt stored it, so nothing is a baseline for the designer's content. That content stays
-   * unsaved, and the artifact must be reloaded before another save, as a new artifact the designer has
-   * not adopted must be. Absent permits Save again under the same identity. Anything else changes nothing.
+   * A create refused as occupied, or whose identity holds what an earlier attempt sent rather than the
+   * last submission, is 'adopted' instead: its identity is taken as the saved artifact, but an earlier
+   * attempt stored it, so nothing is a baseline for the designer's content. That content stays unsaved,
+   * and the artifact must be reloaded before another save, as a new artifact the designer has not
+   * adopted must be. Absent permits Save again under the same identity. Anything else changes nothing.
    */
   settleCreation(check, { created = null, source, writable }) {
     if (!check?.current() || !this.uncertainCreation || !this.#creation) return 'obsolete';
@@ -348,8 +349,8 @@ export class DesignerCoordinator {
     const result = creationOutcome(creation, created, source);
     if (result === 'unresolved') return result;
     if (!writable) return 'readonly';
-    const adopted = result === 'committed' && creation.occupied === true;
-    if (result === 'committed') {
+    const adopted = result === 'earlier' || (result === 'committed' && creation.occupied === true);
+    if (result === 'committed' || result === 'earlier') {
       this.stored = JsonSourcePolicy.clone(created.data);
       // Without a baseline no retained draft can be rechecked into a save that would merge onto it.
       this.#projection = adopted ? undefined : JsonSourcePolicy.clone(creation.projection);

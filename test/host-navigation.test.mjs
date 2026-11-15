@@ -687,6 +687,37 @@ test('a create refused as occupied is checked, never taken for success or failur
   assert.equal(h.unload(), true);
 });
 
+test('a create found holding an earlier attempt after a second lost answer keeps the newer work', async t => {
+  const uuid = minting(t);
+  const h = await host(true, ['en-US'], false, null, true);
+  h.designer.currentArtifact = { 'schema:name': 'Study' };
+  h.faults.push({ refused: new core.BackendError(503) });
+  await h.save();
+  // The first write is still in flight when its identity is read, so the check finds nothing.
+  await h.check();
+  assert.equal(h.node('message').textContent, 'Not saved. Your changes remain in the designer.');
+  h.designer.currentArtifact = { 'schema:name': 'Study, extended' }; h.change();
+  // The first write then commits, and the answer to the repeat, which the server refuses, is lost too.
+  const earlier = { 'schema:name': 'Study', '@id': MINTED, 'pav:version': '0.0.1', 'bibo:status': 'bibo:draft', 'pav:createdOn': 'now' };
+  h.repository.set(UUID, { data: earlier, etag: '"7"' });
+  h.faults.push({ refused: new core.BackendError(0) });
+  await h.save();
+  assert.deepEqual(shown(h), ['check-save']);
+  const loads = h.designer.loads.length;
+  await h.check();
+  assert.equal(h.location.pathname, `/templates/edit/${UUID}`);
+  assert.equal(h.node('message').textContent, 'Saved as a new artifact. Further changes remain here; reload the saved artifact before saving again.');
+  assert.equal(h.node('state').textContent, 'Reload required');
+  assert.equal(h.designer.currentArtifact['schema:name'], 'Study, extended');
+  assert.equal(h.designer.loads.length, loads, 'what the earlier attempt stored is never loaded over the newer work');
+  assert.deepEqual(shown(h), ['reload']);
+  assert.equal(h.node('save').disabled, true);
+  assert.deepEqual(h.repository.get(UUID).data, earlier);
+  // The newer work is unsaved, so leaving the page still asks first.
+  assert.equal(h.unload(), true);
+  assert.equal(uuid.mock.callCount(), 1);
+});
+
 for (const [label, answer, message] of [
   ['refused for the session', new core.BackendError(401), 'Your session has expired. Sign in again before saving.'],
   ['refused', new core.BackendError(403), 'Save status could not be checked. Your edits have been kept. Check your connection and access, then try again.'],

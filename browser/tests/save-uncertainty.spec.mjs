@@ -170,3 +170,42 @@ test('a create journaled before identities were sent keeps its guard and offers 
   await expect(page.locator('#check-save')).toBeHidden();await expect(page.locator('#reload')).toBeHidden();
   expect(state.writes).toHaveLength(1);
 });
+
+// The identity a create sends is this page's own, but what it holds need not be the last attempt. Here the
+// first write is still in flight when the check reads its identity, so Save is offered again; the first write
+// commits once the repeat has been sent, and the answers to both are lost. The check then finds the first
+// attempt, which must not be loaded over the newer work or end its retention.
+test('a create found holding an earlier attempt after a second lost answer keeps the newer work and its draft', async ({page}) => {
+  const state = await host(page, 'template', 'create');
+  const sent = [];
+  const handler = async route => {
+    if (route.request().method() === 'GET') return route.fallback();
+    const body = route.request().postDataJSON();
+    sent.push(body);
+    if (sent.length === 2) state.stored.set(body['@id'].split('/').pop(), {json: sent[0], etag: '"created"'});
+    await route.abort('failed');
+  };
+  await page.route('**/api/templates/*', handler);
+  try {
+    await edit(page, 'Submitted');
+    await page.locator('#save').click();
+    await page.locator('#check-save').click();
+    await expect(page.locator('#message')).toHaveText(text('en', 'Message.ChangesKept'));
+    await edit(page, 'Newer');
+    await page.locator('#save').click();
+    await expect(page.locator('#message')).toHaveText(text('en', 'Error.SaveUnconfirmed'));
+    await expect(page.locator('#check-save')).toBeVisible();
+  } finally { await page.unroute('**/api/templates/*', handler); }
+  await page.locator('#check-save').click();
+  await expect(page.locator('#message')).toHaveText(text('en', 'Message.SavedNewIdentity'));
+  const id = sent[0]['@id'];
+  await expect(page).toHaveURL(new RegExp(`/templates/edit/${id.split('/').pop()}$`));
+  await expect(page.locator('#state')).toHaveText(text('en', 'State.ReloadRequired'));
+  expect(await designerName(page)).toBe('Newer');
+  await expect(page.locator('#save')).toBeDisabled();
+  await expect(page.locator('#reload')).toBeVisible();
+  await expect(page.locator('#check-save')).toBeHidden();
+  // The newer work stays retained for the reload the page asks for.
+  await expect.poll(() => page.evaluate(() => Object.values(sessionStorage).some(raw => raw.includes('Newer')))).toBe(true);
+  expect(sent.map(body => [body['@id'], body['schema:name']])).toEqual([[id, 'Submitted'], [id, 'Newer']]);
+});

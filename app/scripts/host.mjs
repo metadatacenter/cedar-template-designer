@@ -172,9 +172,10 @@ async function readIfPresent(url) {
 /**
  * Settle a create or new version whose answer was lost by reading the identity it was sent under, and
  * for an absent new version the template it was drawn from. Committed opens what was stored at its edit
- * address and keeps later edits as unsaved changes. A create refused as occupied moves to that address
- * too, keeping the designer's content, and needs a reload before another save. Absent permits Save again
- * under the same identity; anything else leaves Save blocked, and the check may be repeated.
+ * address and keeps later edits as unsaved changes. A create refused as occupied, or whose identity holds
+ * what an earlier attempt sent, moves to that address too, keeping the designer's content, and needs a
+ * reload before another save. Absent permits Save again under the same identity; anything else leaves
+ * Save blocked, and the check may be repeated.
  */
 async function settleCreation(check, creation) {
   const url = `${config.resourceRestAPI}/${route.collection}/${encodeURIComponent(resourcePathId(creation.id))}`;
