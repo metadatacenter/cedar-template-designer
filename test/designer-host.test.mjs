@@ -37,8 +37,6 @@ test('configure writes the endpoints and globals the host reads', async (t) => {
     workspaceFrontend: 'https://workspace.metadatacenter.orgx',
   });
   assert.equal(await readFile(join(base, 'app/config/version.js'), 'utf8'), [
-    'window.cedarVersion = "2.9.21-SNAPSHOT";',
-    'window.cedarVersionModifier = "";',
     `window.cedarSourceCommit = "${commit}";`,
     'window.cedarDevelopmentMode = false;',
     'window.cedarAuthUrl = "https://auth.metadatacenter.orgx";',

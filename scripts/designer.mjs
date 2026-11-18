@@ -31,8 +31,6 @@ export async function configure(base = root, env = process.env) {
       || (target === 'local' ? 'http://localhost:4201' : `https://workspace-next.${uiHost}`),
   }, null, 2));
   const globals = {
-    cedarVersion: env.CEDAR_VERSION,
-    cedarVersionModifier: env.CEDAR_VERSION_MODIFIER || '',
     cedarSourceCommit: commit,
     cedarDevelopmentMode: development,
     cedarAuthUrl: env.CEDAR_AUTH_URL || `https://auth.${uiHost}`,
