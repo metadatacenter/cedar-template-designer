@@ -47,6 +47,16 @@ function keepDraft(attempt) {
 function clearDraft() {
   try { draftStore?.clear(); offeredDraft = null; } catch { ui['draft-storage-error'].hidden = false; }
 }
+// Follow the address to the saved artifact without writing a snapshot. A confirmed write makes the
+// create journal obsolete, and a snapshot for an address whose artifact has not been read back
+// could not be restored; the next update writes or clears the new address's draft.
+function bindDraftStoreToAddress() {
+  const scope = draftScope(config.resourceRestAPI, auth.getParsedToken().sub,
+    { ...route, id: route.id ? resourcePathId(route.id) : '' }, folderId);
+  if (draftStore?.scope === scope) return;
+  try { draftStore?.clear(); } catch { ui['draft-storage-error'].hidden = false; }
+  draftStore = new DesignerDraftStore(scope);
+}
 function selectDraftStore() {
   const previous = draftStore;
   const scope = draftScope(config.resourceRestAPI, auth.getParsedToken().sub,
@@ -314,6 +324,9 @@ ui.save.addEventListener('click', async () => {
     const address = new URL(location.href);
     address.pathname = `/${route.kind}s/edit/${encodeURIComponent(resourcePathId(route.id))}`;
     window.history.replaceState(null, '', address.href);
+    // A reload from here on opens the saved address, so the draft follows it now rather than after
+    // the read-back below: a page that unloads in between must not leave a create draft behind.
+    if (newIdentity && state.matches(attempt, designer)) bindDraftStoreToAddress();
     if (newIdentity && state.matches(attempt, designer) && await reopen(attempt)) {
       selectDraftStore();
       message(state.reloadRequired ? t('Error.NoValidator') : '', state.reloadRequired);
