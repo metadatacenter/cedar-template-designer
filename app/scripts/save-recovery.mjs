@@ -56,8 +56,9 @@ export function sameWritten(stored, submitted) {
 }
 
 /**
- * What a new version stores of a submitted definition. The draft keeps the identity, version, status,
- * predecessor and creation provenance it was created with, and carries no DOI.
+ * What a create or a new version stores of a submitted definition. The stored artifact keeps the
+ * identity, version, status, predecessor and creation provenance the server gave it, and a new version
+ * carries no DOI.
  */
 function storedDefinition(submitted, draft) {
   const result = JsonSourcePolicy.clone(submitted);
@@ -75,8 +76,10 @@ function storedDefinition(submitted, draft) {
 /**
  * The outcome of a write that sent a new identity and whose answer was lost, judged from a read of that
  * identity and, for a new version, of the template it was drawn from. 'committed' means the identity holds
- * what was sent; 'absent' means nothing was committed and the write may be sent again under the same
- * identity; 'unresolved' covers everything else. A name never decides.
+ * what was sent. 'earlier' means a create's identity holds something other than what was last sent: the
+ * identity is this page's own, so an earlier attempt under it stored that, after a check had found it
+ * absent. 'absent' means nothing was committed and the write may be sent again under the same identity;
+ * 'unresolved' covers everything else. A name never decides.
  * @param creation {operation: 'create'|'version', id, submitted, source?, opened?}
  * @param created the identity's {data, etag}, or null when it reads as not found
  * @param source the source template's {data, etag}, read only for a version whose identity is absent
@@ -85,9 +88,9 @@ export function creationOutcome(creation, created, source) {
   const same = (a, b) => typeof a === 'string' && typeof b === 'string' && resourcePathId(a) === resourcePathId(b);
   if (created) {
     if (!created.data || typeof created.data !== 'object' || !same(created.data['@id'], creation.id)) return 'unresolved';
-    if (creation.operation === 'create') return 'committed';
-    return same(created.data['pav:previousVersion'], creation.source) &&
-      sameWritten(created.data, storedDefinition(creation.submitted, created.data)) ? 'committed' : 'unresolved';
+    const holds = sameWritten(created.data, storedDefinition(creation.submitted, created.data));
+    if (creation.operation === 'create') return holds ? 'committed' : 'earlier';
+    return same(created.data['pav:previousVersion'], creation.source) && holds ? 'committed' : 'unresolved';
   }
   if (creation.operation === 'create') return 'absent';
   // Still a draft, as the Designer judges whether a template may be edited, holding what was opened. A

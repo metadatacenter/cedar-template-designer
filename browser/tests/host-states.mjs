@@ -268,7 +268,7 @@ export const states = {
     await edit(page);
     state.failure = 'network';
     await page.locator('#save').click();
-    await expect(page.locator('#state')).toHaveText('Reload required');
+    await expect(page.locator('#state')).toHaveText(text('en', 'State.SaveUnconfirmed'));
     page.on('dialog', dialog => dialog.accept());
     await page.reload();
     await page.locator('#discard-draft').click();

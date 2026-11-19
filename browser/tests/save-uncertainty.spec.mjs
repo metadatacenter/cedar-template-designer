@@ -1,5 +1,5 @@
 import {test, expect} from '@playwright/test';
-import {host, edit, text, minted} from './host-fixture.mjs';
+import {host, edit, text, minted, forceSave} from './host-fixture.mjs';
 
 for (const operation of ['create', 'update', 'version'])
   for (const answer of ['lost response', 'missing identity'])
@@ -23,14 +23,16 @@ for (const operation of ['create', 'update', 'version'])
       await edit(page, 'Newer');
       release();
       await expect(page.locator('#message')).toHaveText(text('en', 'Error.SaveUnconfirmed'));
+      await expect(page.locator('#state')).toHaveText(text('en', 'State.SaveUnconfirmed'));
       await expect(page.locator('#save')).toBeDisabled();
       if (operation === 'update') await expect(page.locator('#reload')).toBeVisible();
       else await expect(page.locator('#reload')).toBeHidden();
       // Whether the write was stored is settled by reading it, never by repeating it.
       await expect(page.locator('#check-save')).toBeVisible();
       await edit(page, 'Still here');
-      // Dispatch directly to verify the handler also refuses, independently of the disabled button.
-      await page.locator('#save').dispatchEvent('click');
+      // Click directly to verify the handler also refuses, independently of the disabled button.
+      const {before, after} = await forceSave(page);
+      expect(after).toEqual(before);
       expect(committed).toHaveLength(1);
       expect(committed[0]['schema:name']).toBe('Submitted');
       expect(await page.locator('#editor > *').evaluate(el => el.currentArtifact['schema:name'])).toBe('Still here');
@@ -169,4 +171,75 @@ test('a create journaled before identities were sent keeps its guard and offers 
   await expect(page.locator('#save')).toBeDisabled();
   await expect(page.locator('#check-save')).toBeHidden();await expect(page.locator('#reload')).toBeHidden();
   expect(state.writes).toHaveLength(1);
+});
+
+// The identity a create sends is this page's own, but what it holds need not be the last attempt. Here the
+// first write is still in flight when the check reads its identity, so Save is offered again; the first write
+// commits once the repeat has been sent, and the answers to both are lost. The check then finds the first
+// attempt, which must not be loaded over the newer work or end its retention.
+test('a create found holding an earlier attempt after a second lost answer keeps the newer work and its draft', async ({page}) => {
+  const state = await host(page, 'template', 'create');
+  const sent = [];
+  const handler = async route => {
+    if (route.request().method() === 'GET') return route.fallback();
+    const body = route.request().postDataJSON();
+    sent.push(body);
+    if (sent.length === 2) state.stored.set(body['@id'].split('/').pop(), {json: sent[0], etag: '"created"'});
+    await route.abort('failed');
+  };
+  await page.route('**/api/templates/*', handler);
+  try {
+    await edit(page, 'Submitted');
+    await page.locator('#save').click();
+    await page.locator('#check-save').click();
+    await expect(page.locator('#message')).toHaveText(text('en', 'Message.ChangesKept'));
+    await edit(page, 'Newer');
+    await page.locator('#save').click();
+    await expect(page.locator('#message')).toHaveText(text('en', 'Error.SaveUnconfirmed'));
+    await expect(page.locator('#check-save')).toBeVisible();
+  } finally { await page.unroute('**/api/templates/*', handler); }
+  await page.locator('#check-save').click();
+  await expect(page.locator('#message')).toHaveText(text('en', 'Message.SavedNewIdentity'));
+  const id = sent[0]['@id'];
+  await expect(page).toHaveURL(new RegExp(`/templates/edit/${id.split('/').pop()}$`));
+  await expect(page.locator('#state')).toHaveText(text('en', 'State.ReloadRequired'));
+  expect(await designerName(page)).toBe('Newer');
+  await expect(page.locator('#save')).toBeDisabled();
+  await expect(page.locator('#reload')).toBeVisible();
+  await expect(page.locator('#check-save')).toBeHidden();
+  // The newer work stays retained for the reload the page asks for.
+  await expect.poll(() => page.evaluate(() => Object.values(sessionStorage).some(raw => raw.includes('Newer')))).toBe(true);
+  expect(sent.map(body => [body['@id'], body['schema:name']])).toEqual([[id, 'Submitted'], [id, 'Newer']]);
+});
+
+// The journal of a create is written before its request is sent, so a lost answer can be settled after a
+// reload. When storage refuses that write, the request is still sent once, the page says the draft could not
+// be kept, and nothing outside the page holds the identity: leaving still asks first, and the lost answer is
+// settled from the open page, under the same identity.
+test('a create whose journal cannot be written settles a lost answer from the open page, under one identity', async ({page}) => {
+  const state = await host(page, 'template', 'create');
+  await edit(page, 'Submitted');
+  await expect(page.locator('#draft-storage-error')).toBeHidden();
+  await page.evaluate(() => { Storage.prototype.setItem = () => { throw new Error('Full'); }; });
+  const lost = await lose(page, state, {operation: 'create', committed: false});
+  try {
+    await page.locator('#save').click();
+    await expect(page.locator('#message')).toHaveText(text('en', 'Error.SaveUnconfirmed'));
+  } finally { await lost.stop(); }
+  expect(lost.sent).toHaveLength(1);
+  const [{id}] = lost.sent;
+  await expect(page.locator('#draft-storage-error')).toBeVisible();
+  await expect(page.locator('#check-save')).toBeVisible();
+  await expect(page.locator('#reload')).toBeHidden();
+  expect(await page.evaluate(() => {
+    const leaving = new Event('beforeunload', {cancelable: true});
+    window.dispatchEvent(leaving);
+    return leaving.defaultPrevented;
+  })).toBe(true);
+  await page.locator('#check-save').click();
+  await expect(page.locator('#message')).toHaveText(text('en', 'Message.ChangesKept'));
+  await page.locator('#save').click();
+  await expect(page.locator('#state')).toHaveText('Saved');
+  expect(state.writes).toHaveLength(1);
+  expect(state.writes[0]).toMatchObject({path: `/api/templates/${id.split('/').pop()}`, body: {'@id': id, 'schema:name': 'Submitted'}});
 });

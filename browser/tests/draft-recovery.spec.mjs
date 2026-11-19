@@ -25,7 +25,7 @@ for (const kind of ['template', 'element', 'field']) {
       if (status) {
         server.failure = {status, json:{message:'Refused'}};
         await page.locator('#save').click();
-        await expect(page.locator('#state')).toHaveText(text('en','State.ReloadRequired'));
+        await expect(page.locator('#state')).toHaveText(text('en',status===503?'State.SaveUnconfirmed':'State.ReloadRequired'));
       }
       await expect(page.locator('#download-draft, #import-draft')).toHaveCount(0);
       const writesBeforeReload = server.writes.length;
@@ -53,7 +53,7 @@ test('an uncertain create stays guarded after reload and cannot be discarded int
   await expect(page.locator('#download-draft, #import-draft')).toHaveCount(0);
   await edit(page); server.failure='network';
   await page.locator('#save').click();
-  await expect(page.locator('#state')).toHaveText(text('en','State.ReloadRequired'));
+  await expect(page.locator('#state')).toHaveText(text('en','State.SaveUnconfirmed'));
   page.on('dialog',dialog=>dialog.accept()); await page.reload();
   await expect(page.locator('#draft-offer')).toBeVisible();
   await expect(page.locator('#check-save')).toBeHidden();
@@ -151,4 +151,26 @@ for (const choice of ['restore', 'discard']) test(`a new field's retained draft 
     await expect(page.locator('#draft-offer')).toBeHidden();
     await expect(page.locator('.chooser')).toBeVisible();
   }
+});
+test('a new artifact leaves no create draft once its address changes, even while it is read back',async({page})=>{
+  const server=await host(page,'template','create');const created=page.url();await edit(page,'Created and reopened');
+  let release,heldRead=false;const held=new Promise(resolve=>{release=resolve;});
+  await page.route('**/api/templates/*',async route=>{
+    const request=route.request();
+    if(request.method()==='GET'&&server.savedId&&request.url().endsWith('/'+server.savedId)&&!heldRead){heldRead=true;await held;}
+    return route.fallback().catch(()=>{});
+  });
+  await page.locator('#save').click();
+  await expect.poll(()=>heldRead).toBe(true);
+  await expect(page).toHaveURL(new RegExp(`templates/edit/${server.savedId}$`));
+  // A reload in this window opens the saved address; the create journal must not survive it.
+  const scopes=await page.evaluate(()=>Object.keys(sessionStorage).filter(key=>key.startsWith('cedar.designer.draft:'))
+    .map(key=>JSON.parse(key.slice('cedar.designer.draft:'.length))));
+  expect(scopes.filter(([, , , id])=>!id)).toEqual([]);
+  release();await expect(page.locator('#state')).toHaveText('Saved');
+  await page.reload();await expect(page.locator('#state')).toHaveText('Unmodified');
+  await expect(page.locator('#draft-offer')).toBeHidden();
+  await page.goto(created);await expect(page.locator('#state')).toHaveText('Unmodified');
+  await expect(page.locator('#draft-offer')).toBeHidden();
+  expect(server.writes).toHaveLength(1);
 });

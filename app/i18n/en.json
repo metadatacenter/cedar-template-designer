@@ -23,7 +23,8 @@
     "Unmodified": "Unmodified",
     "Saved": "Saved",
     "LoadFailed": "Unable to load",
-    "ReloadRequired": "Reload required"
+    "ReloadRequired": "Reload required",
+    "SaveUnconfirmed": "Save status unconfirmed"
   },
   "Message": {
     "ChangesKept": "Not saved. Your changes remain in the designer.",

@@ -47,6 +47,16 @@ function keepDraft(attempt) {
 function clearDraft() {
   try { draftStore?.clear(); offeredDraft = null; } catch { ui['draft-storage-error'].hidden = false; }
 }
+// Follow the address to the saved artifact without writing a snapshot. A confirmed write makes the
+// create journal obsolete, and a snapshot for an address whose artifact has not been read back
+// could not be restored; the next update writes or clears the new address's draft.
+function bindDraftStoreToAddress() {
+  const scope = draftScope(config.resourceRestAPI, auth.getParsedToken().sub,
+    { ...route, id: route.id ? resourcePathId(route.id) : '' }, folderId);
+  if (draftStore?.scope === scope) return;
+  try { draftStore?.clear(); } catch { ui['draft-storage-error'].hidden = false; }
+  draftStore = new DesignerDraftStore(scope);
+}
 function selectDraftStore() {
   const previous = draftStore;
   const scope = draftScope(config.resourceRestAPI, auth.getParsedToken().sub,
@@ -119,7 +129,7 @@ function update() {
   ui.state.dataset.saveState = String(!state.saving && state.writable);
   ui.state.dataset.dirty = String(!state.saving && state.writable && dirty());
   // Until it is edited, an artifact is unmodified, whether read from the server or new; only a save made here is reported as saved.
-  ui.state.textContent = t(state.loadFailed ? 'State.LoadFailed' : !state.ready ? 'Page.Loading' : state.reloadRequired ? 'State.ReloadRequired' : state.saving ? 'State.Saving' : !state.writable ? 'State.ReadOnly' : dirty() ? 'State.Modified' : saved ? 'State.Saved' : 'State.Unmodified');
+  ui.state.textContent = t(state.loadFailed ? 'State.LoadFailed' : !state.ready ? 'Page.Loading' : state.canCheckSave ? 'State.SaveUnconfirmed' : state.reloadRequired ? 'State.ReloadRequired' : state.saving ? 'State.Saving' : !state.writable ? 'State.ReadOnly' : dirty() ? 'State.Modified' : saved ? 'State.Saved' : 'State.Unmodified');
   if (designer) {
     designer.readOnly = !state.writable || choiceWouldCoverOffer();
     designer.inert = !state.ready || state.loadFailed || state.saving || Boolean(offeredDraft);
@@ -172,9 +182,10 @@ async function readIfPresent(url) {
 /**
  * Settle a create or new version whose answer was lost by reading the identity it was sent under, and
  * for an absent new version the template it was drawn from. Committed opens what was stored at its edit
- * address and keeps later edits as unsaved changes. A create refused as occupied moves to that address
- * too, keeping the designer's content, and needs a reload before another save. Absent permits Save again
- * under the same identity; anything else leaves Save blocked, and the check may be repeated.
+ * address and keeps later edits as unsaved changes. A create refused as occupied, or whose identity holds
+ * what an earlier attempt sent, moves to that address too, keeping the designer's content, and needs a
+ * reload before another save. Absent permits Save again under the same identity; anything else leaves
+ * Save blocked, and the check may be repeated.
  */
 async function settleCreation(check, creation) {
   const url = `${config.resourceRestAPI}/${route.collection}/${encodeURIComponent(resourcePathId(creation.id))}`;
@@ -313,6 +324,9 @@ ui.save.addEventListener('click', async () => {
     const address = new URL(location.href);
     address.pathname = `/${route.kind}s/edit/${encodeURIComponent(resourcePathId(route.id))}`;
     window.history.replaceState(null, '', address.href);
+    // A reload from here on opens the saved address, so the draft follows it now rather than after
+    // the read-back below: a page that unloads in between must not leave a create draft behind.
+    if (newIdentity && state.matches(attempt, designer)) bindDraftStoreToAddress();
     if (newIdentity && state.matches(attempt, designer) && await reopen(attempt)) {
       selectDraftStore();
       message(state.reloadRequired ? t('Error.NoValidator') : '', state.reloadRequired);

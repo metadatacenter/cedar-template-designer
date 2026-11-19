@@ -1,5 +1,5 @@
 import {test,expect} from '@playwright/test';
-import {host,edit,text} from './host-fixture.mjs';
+import {host,edit,text,forceSave} from './host-fixture.mjs';
 
 for(const kind of ['template','element','field'])for(const mode of ['create','edit'])for(const allowed of [false,true]) {
   test(`${kind} ${mode}: permission and unnamed initial state stay coordinated, allowed=${allowed}`,async({page})=>{
@@ -142,7 +142,9 @@ for (const kind of ['template', 'element', 'field']) test(`${kind} read-only hos
   const editor = page.locator('#editor > *');
   expect(await editor.evaluate(el => ({inert: el.inert, readOnly: el.readOnly}))).toEqual({inert:false, readOnly:true});
   await expect(page.locator('#save')).toBeDisabled();
-  await page.locator('#save').dispatchEvent('click');
+  // Clicked directly, the handler refuses as well, without starting a save.
+  const {before, after} = await forceSave(page);
+  expect(after).toEqual(before);
   expect(state.writes).toHaveLength(0);
 });
 

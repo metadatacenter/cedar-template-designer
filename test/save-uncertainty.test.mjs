@@ -2,6 +2,7 @@ import {acceptPayload, saveArtifact} from './helpers/validation.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {DesignerCoordinator, BackendError, useDeploymentApi} from '../app/scripts/host-core.mjs';
+import {creationOutcome} from '../app/scripts/save-recovery.mjs';
 
 // A create or a new version mints its identity on the base https://repo.test/.
 useDeploymentApi('https://resource.test');
@@ -173,4 +174,58 @@ test('a create sent without an identity, as before identities were sent, stays g
   assert.equal(state.uncertainCreation, true);
   assert.equal(state.canCheckSave, false);
   assert.equal(state.captureRecovery().creation, undefined);
+});
+
+// A create's identity is this page's own, so whatever it holds was sent from here, though not necessarily
+// by the last attempt. What the server assigns on a create reads as the submission; anything else does not.
+test('a create reads as committed only when its identity holds the last submission', () => {
+  const id = 'https://repo.test/templates/6a3d1f0e-2b4c-4d5e-8f60-718293a4b5c6';
+  const submitted = {'@id': id, 'schema:name': 'Study', 'pav:createdOn': null, 'pav:createdBy': null,
+    properties: {Child: {'@id': 'tmp-1760650000000-child', 'schema:name': 'Child'}}};
+  const stored = () => ({...structuredClone(submitted), 'pav:version': '0.0.1', 'bibo:status': 'bibo:draft',
+    'pav:createdOn': 'now', 'pav:createdBy': 'urn:user', 'pav:lastUpdatedOn': 'now', 'oslc:modifiedBy': 'urn:user',
+    properties: {Child: {'@id': 'https://repo.test/template-fields/9f8e7d6c-5b4a-4392-8170-6f5e4d3c2b1a', 'schema:name': 'Child',
+      'pav:createdOn': 'now', 'pav:createdBy': 'urn:user'}}});
+  const outcome = data => creationOutcome({operation: 'create', id, submitted}, {data, etag: '"1"'});
+  assert.equal(outcome(stored()), 'committed');
+  const renamed = stored(); renamed['schema:name'] = 'Study, earlier';
+  assert.equal(outcome(renamed), 'earlier');
+  const child = stored(); child.properties.Child['schema:name'] = 'Earlier child';
+  assert.equal(outcome(child), 'earlier');
+  assert.equal(outcome({...stored(), '@id': 'https://repo.test/templates/other'}), 'unresolved');
+});
+
+// A check that finds the identity absent while the first write is still in flight offers Save again. The
+// author adds to the work and saves; the server, which has since stored the first attempt, refuses the
+// repeat, and that answer is lost too. The identity then holds the first attempt, which must never be
+// taken for the newer work and loaded over it.
+test('a create whose identity holds an earlier attempt after a second lost answer is adopted, keeping the newer work', () => {
+  const state = new DesignerCoordinator(acceptPayload);
+  state.loaded({writable: true});
+  const id = 'https://repo.test/templates/6a3d1f0e-2b4c-4d5e-8f60-718293a4b5c6';
+  const designer = {currentArtifact: {'schema:name': 'First'}, isDirty: true, validationReport: {canSave: true, issues: []},
+    validate() { return this.validationReport; }};
+  const lose = () => {
+    const attempt = state.beginSave(designer);
+    attempt.write = {createsIdentity: true, operation: 'create', identity: state.identity(() => id),
+      body: {...designer.currentArtifact, '@id': state.identity(() => assert.fail('a second identity was minted'))}};
+    assert.equal(state.failed(new BackendError(0), attempt), true);
+    state.finish(attempt);
+  };
+  lose();
+  let check = state.beginCheck();
+  assert.equal(state.settleCreation(check, {created: null, writable: true}), 'absent');
+  state.finishCheck(check);
+  designer.currentArtifact = {'schema:name': 'Second, extended'};
+  lose();
+  check = state.beginCheck();
+  const earlier = {data: {'@id': id, 'schema:name': 'First', 'pav:version': '0.0.1', 'bibo:status': 'bibo:draft'}, etag: '"1"'};
+  assert.equal(state.settleCreation(check, {created: earlier, writable: true}), 'adopted');
+  state.finishCheck(check);
+  assert.deepEqual(state.stored, earlier.data);
+  assert.equal(state.etag, '"1"');
+  assert.equal(state.dirty(designer), true);
+  assert.equal(state.reloadRequired, true);
+  assert.equal(state.uncertainCreation, false);
+  assert.equal(state.report(designer).canSave, false);
 });
