@@ -83,7 +83,9 @@ jobs:
     name: Browser contracts (${{ matrix.browser }})
     needs: package
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    # WebKit ran past 15 minutes on hosted runners on 2026-11-19 and passed in 6 on a rerun;
+    # a limit that cancels a passing suite holds a release's development phase back.
+    timeout-minutes: 30
     env:
       CEDAR_TEST_WORKERS: '2'
       CEDAR_REQUIRE_SHARED_EDITORS: '1'
