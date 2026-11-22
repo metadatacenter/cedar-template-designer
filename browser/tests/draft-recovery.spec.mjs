@@ -33,8 +33,11 @@ for (const kind of ['template', 'element', 'field']) {
       await page.reload();
       await expect(page.locator('#draft-offer')).toBeVisible();
       await expect(page.locator('#save')).toBeDisabled();
+      // The designer is inert until the choice, so the editor itself is the keyboard's way to scroll it.
+      await expect(page.locator('#editor')).toHaveAttribute('tabindex', '0');
       await page.locator('#restore-draft').click();
       await expect(page.locator('#draft-offer')).toBeHidden();
+      await expect(page.locator('#editor')).not.toHaveAttribute('tabindex');
       expect(await page.locator('#editor > *').evaluate(el=>el.currentArtifact['schema:name'])).toBe('Retained author work');
       if (status) await expect(page.locator('#save')).toBeDisabled();
       else await expect(page.locator('#save')).toBeEnabled();

@@ -134,6 +134,11 @@ function update() {
     designer.readOnly = !state.writable || choiceWouldCoverOffer();
     designer.inert = !state.ready || state.loadFailed || state.saving || Boolean(offeredDraft);
   }
+  // While a retained draft waits for Restore or Discard, the designer is inert and nothing in the
+  // editor can take focus. The editor itself then takes a Tab stop, so the keyboard can scroll the
+  // work on show, which at a large text size runs past the screen, before choosing.
+  if (offeredDraft && designer) ui.editor.setAttribute('tabindex', '0');
+  else ui.editor.removeAttribute('tabindex');
   keepDraft();
 }
 window.addEventListener('pagehide', () => state.dispose());
