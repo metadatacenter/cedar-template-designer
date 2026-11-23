@@ -7,6 +7,7 @@ const version = encodeURIComponent(window.cedarCacheControl || 'local');
 // The production host is bundled; these imports share one translation/state instance.
 import { resourceSelector, resourcePathId, useDeploymentApi, mintIdentity, routeFor, workspaceReturn, canEdit, canCreate, createBackend, openingMessage, saveMessage, childSource, saveArtifact, DesignerCoordinator, waitForDesigner } from './host-core.mjs';
 import { DesignerDraftStore, draftScope, discardable } from './host-draft.mjs';
+import { DesignerPreferenceStore, preferenceScope } from './host-preferences.mjs';
 import { reusableSource, ReusableJournal } from './reusable-artifacts.mjs';
 import { t, counted, detectLanguage, setLanguage, localizeDocument } from './i18n.mjs';
 const language = setLanguage(detectLanguage(navigator.languages));
@@ -447,6 +448,14 @@ try {
         },
       }),
     };
+    // An author's preferences outlast the page in this browser, for this deployment and account. CED
+    // reads them before it renders, and sends none at startup or for this assignment. A designer
+    // without preferences, as the field designer and an earlier CED are, ignores the assignment and
+    // sends nothing.
+    const preferenceStore = new DesignerPreferenceStore(preferenceScope(config.resourceRestAPI, auth.getParsedToken().sub));
+    const preferences = preferenceStore.read();
+    if (preferences) designer.preferences = preferences;
+    designer.addEventListener('preferencesChange', event => preferenceStore.write(event.detail));
     // Connecting initializes Angular's public methods. Keep the editor inert until load and permissions succeed.
     designer.inert = true;
     ui.editor.hidden = true;

@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import * as core from '../app/scripts/host-core.mjs';
 import * as drafts from '../app/scripts/host-draft.mjs';
+import * as preferenceModule from '../app/scripts/host-preferences.mjs';
 import * as reusables from '../app/scripts/reusable-artifacts.mjs';
 import * as policy from '../app/scripts/json-policy.mjs';
 import * as i18n from '../app/scripts/i18n.mjs';
@@ -132,10 +133,11 @@ async function host(isDirty = true, languages = ['en-US'], existing = false, imp
     .replace(/^import \{iconSvg\} from [^;]+;/m, 'const iconSvg = () => "";')
     .replace(/^import \{([^}]+)\} from '\.\/host-core\.mjs';/m, 'const {$1} = core;')
     .replace(/^import \{([^}]+)\} from '\.\/host-draft\.mjs';/m, 'const {$1} = drafts;')
+    .replace(/^import \{([^}]+)\} from '\.\/host-preferences\.mjs';/m, 'const {$1} = preferenceModule;')
     .replace(/^import \{([^}]+)\} from '\.\/reusable-artifacts\.mjs';/m, 'const {$1} = reusables;')
     .replace(/^import \{([^}]+)\} from '\.\/i18n\.mjs';/m, 'const {$1} = i18n;');
   const run = new (Object.getPrototypeOf(async function() {}).constructor)(
-    'window', 'document', 'location', 'fetch', 'customElements', 'crypto', 'navigator', 'core', 'i18n', 'drafts', 'policy', 'reusables', source,
+    'window', 'document', 'location', 'fetch', 'customElements', 'crypto', 'navigator', 'core', 'i18n', 'drafts', 'policy', 'reusables', 'preferenceModule', source,
   );
   await run(window, document, location, fetch, { whenDefined: async () => {}, get: () => true },
     { randomUUID: () => 'session' }, { languages }, { ...core,
@@ -143,13 +145,13 @@ async function host(isDirty = true, languages = ['en-US'], existing = false, imp
       DesignerCoordinator: class extends core.DesignerCoordinator { constructor() { super(acceptPayload); } },
       createBackend: () => request,
       saveArtifact: realSave ? saveArtifact : options => impact ? options.confirmVersion(impact).then(confirmed => confirmed ? saved : null) : saved,
-    }, i18n, drafts, policy, reusables);
+    }, i18n, drafts, policy, reusables, preferenceModule);
   designer.started = true;
   assert.equal(node('save').disabled, false);
   // The e2e smokes match these English texts exactly.
   if (i18n.language === 'en') assert.equal(node('state').textContent, isDirty ? 'Modified' : 'Unmodified');
   const closeVersion = choice => { node('version-dialog').returnValue = choice; events.get('version-dialog:close')(); };
-  return { change: () => events.get('designer:dirtyChange')(), closeVersion, designer, document, unload, navigations, resolveSave, rejectSave,
+  return { change: () => events.get('designer:dirtyChange')(), announce: detail => events.get('designer:preferencesChange')({ detail }), closeVersion, designer, document, unload, navigations, resolveSave, rejectSave,
     save: () => events.get('save:click')(), back: () => events.get('back:click')(), check: () => events.get('check-save:click')(),
     recheck: () => events.get('recheck-access:click')(), node, location, window, requests, repository, impacts, faults };
 }
@@ -737,4 +739,53 @@ for (const [label, answer, message] of [
   await h.check();
   assert.equal(h.node('message').textContent, 'Not saved. Your changes remain in the designer.');
   assert.deepEqual(shown(h), []);
+});
+
+// An author's preferences belong to one deployment and account, and the browser keeps them. The
+// designer here records what the host assigns it, and a test announces a change as CED does.
+const PREFERENCES_KEY = `cedar.designer.preferences:${JSON.stringify(['https://resource.example', 'test-user'])}`;
+function browserStorage(t, entries = []) {
+  const stored = new Map(entries);
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  t.after(() => original ? Object.defineProperty(globalThis, 'localStorage', original) : delete globalThis.localStorage);
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true,
+    value: { getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value) } });
+  return stored;
+}
+
+test('the host supplies stored preferences to the designer and keeps each change it announces', async t => {
+  const chosen = { showElements: false, fieldSelectionStyle: 'sidebar', hiddenFieldTypes: ['email'] };
+  const stored = browserStorage(t, [[PREFERENCES_KEY, JSON.stringify(chosen)]]);
+
+  const h = await host();
+  assert.deepEqual(h.designer.preferences, chosen);
+
+  h.announce({ ...chosen, showElements: true });
+  assert.deepEqual(JSON.parse(stored.get(PREFERENCES_KEY)), { ...chosen, showElements: true });
+  assert.equal(stored.size, 1);
+  // A preference is no change to the document.
+  assert.equal(h.node('state').textContent, 'Modified');
+  assert.equal(h.designer.loads.length, 0);
+});
+
+test('the host assigns nothing when no preferences are stored, and still keeps a later change', async t => {
+  const stored = browserStorage(t);
+
+  const h = await host(false);
+  assert.equal('preferences' in h.designer, false);
+
+  h.announce({ showRequired: false });
+  assert.deepEqual(JSON.parse(stored.get(PREFERENCES_KEY)), { showRequired: false });
+  assert.equal(h.node('state').textContent, 'Unmodified');
+});
+
+test('the host opens and takes a change of preferences when the browser withholds storage', async t => {
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  t.after(() => original ? Object.defineProperty(globalThis, 'localStorage', original) : delete globalThis.localStorage);
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true, get() { throw new DOMException('Denied', 'SecurityError'); } });
+
+  const h = await host(false);
+  assert.equal('preferences' in h.designer, false);
+  assert.doesNotThrow(() => h.announce({ showRequired: false }));
+  assert.equal(h.node('save').disabled, false);
 });

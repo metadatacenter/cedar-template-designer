@@ -166,6 +166,14 @@ interrupted writes.
 If the browser cannot retain the draft, the host says so, and the author must keep
 the page open to avoid losing the changes.
 
+The author's CED preferences are kept in the browser's `localStorage`, scoped to the
+deployment and the signed-in account. They therefore outlast the tab and apply to every
+template and element that account opens in this browser. The host stores each value CED
+announces through `preferencesChange`, and assigns the stored value to `preferences`
+before it connects the designer. If the browser cannot keep them, the author works in
+CED's defaults and the host says nothing. A CED release without this interface ignores
+the assignment and announces nothing, and the field designer has no preferences.
+
 The host journals immediately before dispatching a write. A create is a PUT under
 an identity the host mints on the deployment's base, and a new version names the
 draft identity it asks for in `draft_id`. The journal keeps that identity and the
