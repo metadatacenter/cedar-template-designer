@@ -13,12 +13,12 @@ import {host, text, ORIGIN} from './host-fixture.mjs';
 const key = (base, user) => `cedar.designer.preferences:${JSON.stringify([base, user])}`;
 const KEY = key(`${ORIGIN}/api`, 'user');
 const CHOSEN = {
-  showRequired: false, showAllowMultiple: true, showDefaultValue: true, showElements: false,
+  showRequired: false, showAllowMultiple: true, showElements: false,
   hiddenFieldTypes: ['email'], fieldSelectionStyle: 'sidebar',
   presets: {
-    basic: {showRequired: true, showAllowMultiple: true, showDefaultValue: false, showElements: true, hiddenFieldTypes: []},
-    semantic: {showRequired: true, showAllowMultiple: true, showDefaultValue: true, showElements: false, hiddenFieldTypes: []},
-    modular: {showRequired: true, showAllowMultiple: true, showDefaultValue: true, showElements: true, hiddenFieldTypes: []},
+    basic: {showRequired: true, showAllowMultiple: true, showElements: true, hiddenFieldTypes: []},
+    semantic: {showRequired: true, showAllowMultiple: true, showElements: false, hiddenFieldTypes: []},
+    modular: {showRequired: true, showAllowMultiple: true, showElements: true, hiddenFieldTypes: []},
   },
 };
 const designer = page => page.locator('#editor > *');
