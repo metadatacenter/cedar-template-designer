@@ -50,7 +50,7 @@
   "dependencies": {
     "cedar-embeddable-designer": "npm:@org.metadatacenter/cedar-embeddable-designer@0.1.5-dev.20261124.939eb6c2",
     "cedar-embeddable-editor": "2.0.36",
-    "cedar-embeddable-term-picker": "npm:@org.metadatacenter/cedar-embeddable-term-picker@0.1.4-dev.20261123.1d1416fe",
+    "cedar-embeddable-term-picker": "npm:@org.metadatacenter/cedar-embeddable-term-picker@0.1.5-dev.20261124.8e405c9b",
     "cedar-model-typescript-library": "npm:@org.metadatacenter/cedar-model-typescript-library@1.0.30-dev.20261119.026a31c"
   },
   "engines": {
