@@ -36,6 +36,7 @@
     "ConfirmReload": "Elveti a nem mentett módosításokat, és újratölti az artefaktum legújabb változatát?",
     "ServerFindings": "Mentés ellenőrzése: {{count}} megállapítás",
     "ServerFindingsOne": "Mentés ellenőrzése: {{count}} megállapítás",
+    "ServerFindingsIncluded": "— a Tervező összesítésében is szerepel",
     "SavedWithChanges": "Mentve. További módosítások maradtak a tervezőben.",
     "SavedNewIdentity": "Új erőforrásként mentve. A további módosítások itt maradnak; újabb mentés előtt töltse be újra a mentett erőforrást.",
     "SavedReloadRequired": "Mentve. Újabb mentés előtt töltse újra a tervezőt.",
@@ -107,7 +108,7 @@
   },
   "Draft": {
     "StorageError": "A böngésző nem tudta megőrizni a piszkozatot. A módosítások megőrzéséhez tartsa nyitva ezt az oldalt.",
-    "Offer": "Ebben a lapban befejezetlen munka található. Mentés előtt állítsa vissza vagy vesse el.",
+    "Offer": "Ebben a lapban befejezetlen munka található. Szerkesztés vagy mentés előtt állítsa vissza vagy vesse el.",
     "Restore": "Piszkozat visszaállítása",
     "Discard": "Megőrzött piszkozat elvetése",
     "Restored": "A piszkozat visszaállítása sikerült.",

@@ -36,6 +36,7 @@
     "ConfirmReload": "Discard your unsaved changes and reload the latest artifact?",
     "ServerFindings": "Save validation: {{count}} findings",
     "ServerFindingsOne": "Save validation: {{count}} finding",
+    "ServerFindingsIncluded": "— included in the Designer summary",
     "SavedWithChanges": "Saved. Further changes remain in the designer.",
     "SavedNewIdentity": "Saved as a new artifact. Further changes remain here; reload the saved artifact before saving again.",
     "SavedReloadRequired": "Saved. Reload the designer before saving again.",
@@ -107,7 +108,7 @@
   },
   "Draft": {
     "StorageError": "This browser could not retain the draft. Keep this page open to avoid losing your changes.",
-    "Offer": "Unfinished work from this tab is available. Restore it or discard it before saving.",
+    "Offer": "Unfinished work from this tab is available. Restore it or discard it before editing or saving.",
     "Restore": "Restore draft",
     "Discard": "Discard retained draft",
     "Restored": "Your draft has been restored.",

@@ -38,14 +38,16 @@ header { flex-wrap: wrap; }
   right: 0;
   visibility: hidden;
 }
-#save-help[data-blocked=true]:hover #save-tooltip { visibility: visible; }
+@media (hover: hover) {
+  #save-help[data-blocked=true]:hover #save-tooltip { visibility: visible; }
+}
 /* Save and the dialog's confirmation take the secondary action's box, filled in the theme colour, and darken to its
    strong variant on hover, as every shared primary action does. */
 #save, #version-dialog button[value=confirm] { background: var(--cedar-color-primary); color: var(--cedar-color-on-primary); border-color: var(--cedar-color-primary); }
 #save:is(:hover, :active):not(:disabled), #version-dialog button[value=confirm]:is(:hover, :active):not(:disabled) { background: var(--cedar-color-primary-strong); border-color: var(--cedar-color-primary-strong); }
 button:disabled { opacity: var(--cedar-control-disabled-opacity); cursor: default; }
 #message:empty { display: none; }
-.finding-link { border: 0; padding: 0; background: transparent; color: inherit; font: inherit; text-align: start; text-decoration: underline; cursor: pointer; }
+.finding-link { display: block; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; text-align: start; text-decoration: underline; cursor: pointer; }
 /* The page never scrolls, so the header and the notices beneath it stay in view. The editor area takes the height
    they leave. The template designer scrolls within itself. The field designer grows with its field, and the editor
    area scrolls it. */
@@ -81,3 +83,6 @@ dialog form button[value=discard] { margin-inline-end: auto; }
 textarea {
   resize: none;
 }
+
+#notices > button { margin: 0 var(--cedar-space-4) var(--cedar-space-2); }
+.draft-actions { display: flex; flex-wrap: wrap; gap: var(--cedar-space-2); }

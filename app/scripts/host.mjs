@@ -95,6 +95,8 @@ function update() {
   }
   ui.save.disabled = !report.canSave || Boolean(offeredDraft);
   ui['draft-offer'].hidden = !offeredDraft;
+  if (offeredDraft) ui.editor.setAttribute('data-draft-pending', '');
+  else ui.editor.removeAttribute('data-draft-pending');
   ui['restore-draft'].disabled = state.saving || state.checking || !designer || (!state.ready && !state.loadFailed);
   ui['discard-draft'].disabled = state.saving || state.checking;
   ui.reload.hidden = !(state.loadFailed || state.reloadRequired) || state.uncertainCreation || unreadable || canRecheckOpeningAccess();
@@ -108,6 +110,11 @@ function update() {
   ui['recheck-access'].disabled = state.saving || state.checking;
   ui['server-issues'].hidden = !report.server.length;
   ui['server-issues-title'].textContent = counted('Message.ServerFindings', report.server.length);
+  const designerIssues = designer?.validationReport?.issues ?? [];
+  const includedInSummary = report.server.length && report.server.every(issue => designerIssues.some(finding =>
+    finding.source === 'host' && finding.shown && finding.location === (issue.location || '') &&
+    finding.message === issue.message && finding.severity === issue.severity));
+  if (includedInSummary) ui['server-issues-title'].textContent += ' ' + t('Message.ServerFindingsIncluded');
   ui['server-issues-list'].replaceChildren();
   for (const issue of report.server) {
     const row = document.createElement('li');
