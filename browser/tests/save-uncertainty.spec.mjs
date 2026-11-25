@@ -11,7 +11,8 @@ for (const operation of ['create', 'update', 'version'])
       const committed = [];
       await page.route(/\/api\/(templates(?:\/[^/?]+)?|command\/publish-create-draft-template\/item)(?:\?.*)?$/, async route => {
         if (route.request().method() === 'GET') return route.fallback();
-        committed.push(route.request().postDataJSON());
+        const sent = route.request().postDataJSON();
+        committed.push(operation === 'version' ? sent.template : sent);
         await pending;
         if (answer === 'lost response') await route.abort('failed');
         else await route.fulfill({json: {}});
@@ -57,11 +58,11 @@ test('an unavailable update assessment can be retried without discarding the dra
 // `lose` answers the write by storing it, when it committed, and then dropping the answer.
 async function lose(page, state, {operation, committed}) {
   const sent = [];
-  const pattern = operation === 'create' ? '**/api/templates/*' : '**/api/command/publish-create-draft-template/item?*';
+  const pattern = operation === 'create' ? '**/api/templates/*' : '**/api/command/publish-create-draft-template/item';
   const handler = async route => {
     if (route.request().method() === 'GET') return route.fallback();
-    const url = new URL(route.request().url()), body = route.request().postDataJSON();
-    const id = operation === 'create' ? body['@id'] : url.searchParams.get('draft_id');
+    const inputs = route.request().postDataJSON(), body = operation === 'create' ? inputs : inputs.template;
+    const id = operation === 'create' ? body['@id'] : inputs.draftId;
     sent.push({id, body, etag: route.request().headers()['if-match']});
     if (committed) {
       state.stored.set(id.split('/').pop(), {json: operation === 'create' ? body
@@ -127,7 +128,7 @@ for (const operation of ['create', 'version'])
     const [{id}] = lost.sent;
     expect(state.writes).toHaveLength(1);
     if (operation === 'create') expect(state.writes[0]).toMatchObject({path: `/api/templates/${id.split('/').pop()}`, body: {'@id': id}});
-    else expect(state.writes[0]).toMatchObject({path: '/api/command/publish-create-draft-template/item', query: {draft_id: id}, etag: '"opened"'});
+    else expect(state.writes[0]).toMatchObject({path: '/api/command/publish-create-draft-template/item', query: {}, draftId: id, etag: '"opened"'});
   });
 
 test('a create whose check is refused for the session offers Sign in again and keeps the identity through it', async ({page}) => {

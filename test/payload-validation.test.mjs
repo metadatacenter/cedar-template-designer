@@ -86,10 +86,13 @@ for (const operation of ['create', 'update', 'version', 'element', 'field']) tes
   const checked = calls.find(call => call.url.includes('/command/validate?')), written = calls.at(-1);
   assert.equal(checked.method, 'POST');
   assert.ok(checked.signal instanceof AbortSignal);
-  assert.deepEqual(checked.body, written.body);
-  assert.notEqual(checked.body, written.body);
-  assert.deepEqual(journal[0].body, written.body);
-  assert.equal(written.body['@id'], operation === 'create' ? 'https://repo.test/templates/new' : options.route.id);
+  // A new version sends the validated document inside the command's inputs.
+  const document = operation === 'version' ? written.body.template : written.body;
+  if (operation === 'version') assert.equal(written.body.draftId, 'https://repo.test/templates/new');
+  assert.deepEqual(checked.body, document);
+  assert.notEqual(checked.body, document);
+  assert.deepEqual(journal[0].body, document);
+  assert.equal(document['@id'], operation === 'create' ? 'https://repo.test/templates/new' : options.route.id);
 });
 
 for(const verdict of [null, {}, {canSave:true}, {canSave:true,errors:[],warnings:[{}]}, {canSave:false,errors:[],warnings:[]},

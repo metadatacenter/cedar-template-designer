@@ -85,7 +85,7 @@ async function host(isDirty = true, languages = ['en-US'], existing = false, imp
     return entry;
   };
   const request = async (url, { method = 'GET', body, etag } = {}) => {
-    requests.push({ method, url, ...(etag ? { etag } : {}) });
+    requests.push({ method, url, ...(etag ? { etag } : {}), ...(body?.draftId ? { draftId: body.draftId } : {}) });
     const address = new URL(url);
     const [, collection, id, rest] = address.pathname.split('/').map(decodeURIComponent);
     const current = id => {
@@ -107,12 +107,11 @@ async function host(isDirty = true, languages = ['en-US'], existing = false, imp
     if (method === 'POST' && id === 'check-update-template') return { data: impacts.shift() ?? { canBeUpdated: true } };
     if (method === 'POST' && id === 'publish-create-draft-template') {
       const source = current(rest);
-      const named = address.searchParams.get('draft_id');
-      const draftId = named ?? 'draft-template';
+      const draftId = body.draftId ?? 'draft-template';
       if (repository.has(core.resourcePathId(draftId))) throw new core.BackendError(412, { errorKey: 'nodeAlreadyPresent' });
       // Publishing the source gives it a new revision; the draft takes the next in the series.
       repository.set(rest, { data: { ...source, 'bibo:status': 'bibo:published' }, etag: '"published"' });
-      const draft = store(core.resourcePathId(draftId), { ...body, 'pav:version': '0.0.2', 'bibo:status': 'bibo:draft', 'pav:previousVersion': source['@id'] }, draftId);
+      const draft = store(core.resourcePathId(draftId), { ...body.template, 'pav:version': '0.0.2', 'bibo:status': 'bibo:draft', 'pav:previousVersion': source['@id'] }, draftId);
       return answer({ data: { '@id': draftId, resourceType: 'template' }, etag: draft.etag });
     }
     if (method === 'PUT') {
@@ -266,7 +265,7 @@ test('confirming a new version opens the new draft, and the next save updates th
   await h.save();
   assert.deepEqual(h.requests.slice(before), [
     { method: 'POST', url: 'https://resource.example/command/check-update-template/template-id' },
-    { method: 'POST', url: `https://resource.example/command/publish-create-draft-template/template-id?draft_id=${encodeURIComponent(MINTED)}`, etag: '"one"' },
+    { method: 'POST', url: 'https://resource.example/command/publish-create-draft-template/template-id', etag: '"one"', draftId: MINTED },
     { method: 'GET', url: `https://resource.example/templates/${UUID}` },
     { method: 'POST', url: `https://resource.example/command/check-update-template/${UUID}` },
     { method: 'PUT', url: `https://resource.example/templates/${UUID}`, etag: '"1"' },
@@ -531,7 +530,7 @@ for (const [label, refusal, message] of [
   assert.equal(successors(h).length, 1);
   assert.equal(successors(h)[0].data['@id'], MINTED);
   // Both attempts send the validator the template was opened with, and the one identity minted for the draft.
-  assert.deepEqual(versionWrites(h).map(({ url, etag }) => [new URL(url).searchParams.get('draft_id'), etag]), [[MINTED, '"one"'], [MINTED, '"one"']]);
+  assert.deepEqual(versionWrites(h).map(({ draftId, etag }) => [draftId, etag]), [[MINTED, '"one"'], [MINTED, '"one"']]);
 });
 
 // Only the template's owner may create a new version, and the server refuses anyone else with a 403
@@ -566,7 +565,7 @@ for (const [label, refusal, message] of [
   assert.equal(h.location.pathname, `/templates/edit/${UUID}`);
   assert.equal(h.node('state').textContent, 'Saved');
   assert.equal(successors(h).length, 1);
-  assert.deepEqual(versionWrites(h).map(({ url, etag }) => [new URL(url).searchParams.get('draft_id'), etag]), [[MINTED, '"one"'], [MINTED, '"one"']]);
+  assert.deepEqual(versionWrites(h).map(({ draftId, etag }) => [draftId, etag]), [[MINTED, '"one"'], [MINTED, '"one"']]);
 });
 
 test('a new version whose answer is lost sends nothing more until Check save status finds it absent', async t => {

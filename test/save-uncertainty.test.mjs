@@ -62,19 +62,20 @@ for (const operation of ['assessment', 'create', 'update', 'version'])
       if (operation === 'version') {
         const url = new URL(write.url);
         assert.equal(url.pathname, '/command/publish-create-draft-template/https%3A%2F%2Frepo.test%2Ftemplates%2Fitem');
-        assert.match(url.searchParams.get('draft_id'), V4);
+        assert.equal(url.search, '');
+        assert.match(write.options.body.draftId, V4);
         assert.equal(write.options.etag, '"opened"');
-        assert.equal(write.options.body['@id'], 'https://repo.test/templates/item');
+        assert.equal(write.options.body.template['@id'], 'https://repo.test/templates/item');
       }
       if (['create', 'version'].includes(operation)) {
-        const id = operation === 'create' ? write.options.body['@id'] : new URL(write.url).searchParams.get('draft_id');
+        const id = operation === 'create' ? write.options.body['@id'] : write.options.body.draftId;
         assert.equal(attempt.write.identity, id);
         // The identity is reused by the next attempt, whatever the outcome of this one.
         assert.equal(state.identity(() => assert.fail('a second identity was minted')), id);
         const journal = JSON.parse(JSON.stringify(state.captureRecovery()));
         assert.equal(journal.identity, id);
         assert.equal(journal.creation?.id, uncertain ? id : undefined);
-        if (uncertain) assert.deepEqual(journal.creation.submitted, write.options.body);
+        if (uncertain) assert.deepEqual(journal.creation.submitted, operation === 'version' ? write.options.body.template : write.options.body);
         if (uncertain && operation === 'version') {
           assert.equal(journal.creation.source, 'https://repo.test/templates/item');
           assert.equal(journal.creation.etag, '"opened"');

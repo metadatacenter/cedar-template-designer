@@ -70,11 +70,12 @@ test('accepted versioning sends the original validator and the new draft\'s iden
   await saveArtifact(h.options);
   const url = new URL(h.calls[1].url);
   assert.equal(url.origin + url.pathname, base + '/command/publish-create-draft-template/' + encodeURIComponent(route.id));
-  assert.deepEqual([...url.searchParams.keys()], ['draft_id']);
-  assert.match(url.searchParams.get('draft_id'), minted('templates'));
+  assert.deepEqual([...url.searchParams.keys()], []);
+  assert.deepEqual(Object.keys(h.calls[1].body), ['template', 'draftId']);
+  assert.match(h.calls[1].body.draftId, minted('templates'));
   assert.equal(h.calls[1].method, 'POST');
   assert.equal(h.calls[1].etag, '"v1"');
-  assert.equal(h.calls[1].body['@id'], route.id);
+  assert.equal(h.calls[1].body.template['@id'], route.id);
   assert.equal(h.calls.length, 2);
 });
 test('failed impact requests never fall through to writing', async () => {

@@ -237,9 +237,10 @@ export async function saveArtifact({ request, base, route, artifact, etag, folde
       throw new BackendError(502, {message: t('Error.InvalidValidation')});
     if (!report.canSave || report.errors.length)
       throw new BackendError(400, {message: t('Error.ValidationFailed'), validationReport: report});
-    options = {...options, body};
-    onWrite({ createsIdentity: operation !== 'update', operation, identity: id, body: JsonSourcePolicy.clone(options.body) });
-    return request(url, options);
+    const { envelope, ...sent } = options;
+    onWrite({ createsIdentity: operation !== 'update', operation, identity: id, body: JsonSourcePolicy.clone(body) });
+    // A command that takes the artifact among its inputs receives the validated document inside them.
+    return request(url, { ...sent, body: envelope ? envelope(body) : body });
   };
   current();
   if (!route.id) {
@@ -263,8 +264,8 @@ export async function saveArtifact({ request, base, route, artifact, etag, folde
       if (!await confirmVersion(impact)) return null;
       current();
       const draft = identity();
-      const query = draft ? `?${new URLSearchParams({ draft_id: draft })}` : '';
-      return write(`${base}/command/publish-create-draft-template/${encodedId}${query}`, { method: 'POST', body: artifact, etag }, 'version', draft);
+      const envelope = template => (draft ? { template, draftId: draft } : { template });
+      return write(`${base}/command/publish-create-draft-template/${encodedId}`, { method: 'POST', body: artifact, etag, envelope }, 'version', draft);
     }
   }
   return write(`${url}/${encodedId}`, { method: 'PUT', body: artifact, etag });

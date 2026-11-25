@@ -58,7 +58,9 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
         return route.fulfill({json:verdict});
       }
       if(route.request().method()!=='GET'){
-        const write={path,query:Object.fromEntries(url.searchParams),body:route.request().postDataJSON(),etag:route.request().headers()['if-match']};
+        // A new version sends the template among the command's inputs; the write records the template.
+        const sent=route.request().postDataJSON(),version=path.startsWith('/api/command/publish-create-draft-template/');
+        const write={path,query:Object.fromEntries(url.searchParams),body:version?sent.template:sent,...(version?{draftId:sent.draftId}:{}),etag:route.request().headers()['if-match']};
         state.writes.push(write);
         if(state.holdWrite)await state.holdWrite;
         if(state.failure==='network')return route.abort('failed');
