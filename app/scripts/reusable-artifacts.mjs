@@ -72,7 +72,7 @@ export function reusableSource(request, base, { context, journal, folder, open }
       const before = state.project(document), after = state.project(replacement);
       if (validationShape(before) === validationShape(after)) return { compatible: true, invalidatedInstances: 0 };
       if (state.route.kind !== 'template' || !state.route.id) return { compatible: null, invalidatedInstances: 0 };
-      const { data } = await request(`${base}/command/check-update-template/${encodeURIComponent(resourcePathId(state.route.id))}`,
+      const { data } = await request(`${base}/template-update-checks/${encodeURIComponent(resourcePathId(state.route.id))}`,
         { method: 'POST', body: storageArtifact(after), etag: state.etag, signal });
       // Only an explicit zero proves there are no existing instances to invalidate. A total count
       // is never relabelled as an invalidated count, nor can canBeUpdated prove universal compatibility.
@@ -135,8 +135,8 @@ export function reusableSource(request, base, { context, journal, folder, open }
         if (!sameWritten(stored.data, expected)) throw new Error(t('Error.ReusableUnconfirmed'));
         record.stored = stored.data; record.phase = publish ? 'publish' : 'complete'; persist(key, record);
         if (publish && stored.data['bibo:status'] !== 'bibo:published') {
-          try { await request(`${base}/command/publish-artifact`, { method: 'POST',
-            body: { '@id': record.id, newVersion: '0.0.1' }, etag: stored.etag }); }
+          try { await request(`${url}/publication`, { method: 'PATCH',
+            body: { newVersion: '0.0.1' }, etag: stored.etag }); }
           catch (error) {
             const latest = await read(url);
             if (latest?.data?.['bibo:status'] !== 'bibo:published') throw error;

@@ -3,7 +3,7 @@ import {host,edit,text} from './host-fixture.mjs';
 for(const operation of ['template assessment','template','element','field'])
   test(`${operation}: restore access without discarding the refused draft`,async({page})=>{
     const kind=operation==='template assessment'?'template':operation,state=await host(page,kind);
-    const url=operation==='template assessment'?'**/api/command/check-update-template/item':`**/api/${{template:'templates',element:'template-elements',field:'template-fields'}[kind]}/item`;
+    const url=operation==='template assessment'?'**/api/template-update-checks/item':`**/api/${{template:'templates',element:'template-elements',field:'template-fields'}[kind]}/item`;
     const refuse=route=>route.request().method()==='GET'?route.fallback():route.fulfill({status:403,json:{message:'Forbidden'}});
     await page.route(url,refuse);await edit(page,'Refused draft');await page.locator('#save').click();
     const check=page.getByRole('button',{name:'Recheck access',exact:true});await expect(check).toBeVisible();

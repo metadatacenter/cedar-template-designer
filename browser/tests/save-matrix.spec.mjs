@@ -95,7 +95,7 @@ for(const {kind,mode,language,edited,outcome} of cases)
       // A create puts the identity it minted. A new version names the draft identity it asks for.
       const created=mode==='create'?state.writes[0].body['@id']:undefined;
       expect(state.writes).toEqual([{
-        path:outcome==='saved'?`/api/${COLLECTIONS[kind]}/${mode==='edit'?'item':state.savedId}`:'/api/command/publish-create-draft-template/item',
+        path:outcome==='saved'?`/api/${COLLECTIONS[kind]}/${mode==='edit'?'item':state.savedId}`:'/api/template-drafts/item',
         query:mode==='create'?{folder_id:'home'}:{},
         ...(outcome==='saved'?{}:{draftId:expect.stringMatching(minted('templates'))}),
         body:expect.objectContaining({'schema:name':name,'@id':mode==='create'?expect.stringMatching(minted(COLLECTIONS[kind])):'item'}),
@@ -135,7 +135,7 @@ for(const {kind,mode,language,edited,outcome} of cases)
     if(expected.recheck)await expect(recheck).toBeVisible();else await expect(recheck).toBeHidden();
     // An expired session is refreshed and the write tried once more.
     expect(state.writes).toHaveLength(answer===401?2:1);
-    if(outcome in REFUSED_VERSION)expect(state.writes[0]).toEqual({path:'/api/command/publish-create-draft-template/item',
+    if(outcome in REFUSED_VERSION)expect(state.writes[0]).toEqual({path:'/api/template-drafts/item',
       query:{},draftId:expect.stringMatching(minted('templates')),body:expect.objectContaining({'schema:name':name,'@id':'item'}),etag:'"opened"'});
   });
 
@@ -158,8 +158,8 @@ test('a new version refused for validation is corrected and then created once, u
   await expect(page.locator('#state')).toHaveText('Saved');
   await expect(page).toHaveURL(/\/templates\/edit\/new-draft$/);
   expect(state.writes.map(write=>[write.path,write.etag,write.body['schema:name']])).toEqual([
-    ['/api/command/publish-create-draft-template/item','"opened"','Refused'],
-    ['/api/command/publish-create-draft-template/item','"opened"','Corrected'],
+    ['/api/template-drafts/item','"opened"','Refused'],
+    ['/api/template-drafts/item','"opened"','Corrected'],
   ]);
   expect(state.writes[1].draftId).toBe(state.writes[0].draftId);
 });
@@ -228,7 +228,7 @@ for(const [label,answer] of Object.entries(VERSIONING_REFUSALS)){
         await expect(recovery).toHaveCount(6);
         for(const control of await recovery.all())await expect(control).toBeHidden();
       }
-      expect(state.writes).toEqual([{path:'/api/command/publish-create-draft-template/item',
+      expect(state.writes).toEqual([{path:'/api/template-drafts/item',
         query:{},draftId:expect.stringMatching(minted('templates')),body:expect.objectContaining({'schema:name':'Refused version','@id':'item'}),etag:'"opened"'}]);
     });
 }

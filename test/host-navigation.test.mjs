@@ -92,7 +92,7 @@ async function host(isDirty = true, languages = ['en-US'], existing = false, imp
       if (repository.get(id)?.etag !== etag) throw new core.BackendError(412);
       return repository.get(id).data;
     };
-    const writing = method !== 'GET' && id !== 'check-update-template';
+    const writing = method !== 'GET' && collection !== 'template-update-checks';
     const fault = writing ? faults.shift() : undefined;
     if (fault?.refused) throw fault.refused;
     const answer = result => { if (fault?.committed) throw fault.committed; return result; };
@@ -104,13 +104,13 @@ async function host(isDirty = true, languages = ['en-US'], existing = false, imp
       const created = store(id, { ...body, 'pav:version': '0.0.1', 'bibo:status': 'bibo:draft', 'pav:createdOn': 'now' }, body['@id']);
       return answer({ data: structuredClone(created.data), etag: created.etag });
     }
-    if (method === 'POST' && id === 'check-update-template') return { data: impacts.shift() ?? { canBeUpdated: true } };
-    if (method === 'POST' && id === 'publish-create-draft-template') {
-      const source = current(rest);
+    if (method === 'POST' && collection === 'template-update-checks') return { data: impacts.shift() ?? { canBeUpdated: true } };
+    if (method === 'POST' && collection === 'template-drafts') {
+      const source = current(id);
       const draftId = body.draftId ?? 'draft-template';
       if (repository.has(core.resourcePathId(draftId))) throw new core.BackendError(412, { errorKey: 'nodeAlreadyPresent' });
       // Publishing the source gives it a new revision; the draft takes the next in the series.
-      repository.set(rest, { data: { ...source, 'bibo:status': 'bibo:published' }, etag: '"published"' });
+      repository.set(id, { data: { ...source, 'bibo:status': 'bibo:published' }, etag: '"published"' });
       const draft = store(core.resourcePathId(draftId), { ...body.template, 'pav:version': '0.0.2', 'bibo:status': 'bibo:draft', 'pav:previousVersion': source['@id'] }, draftId);
       return answer({ data: { '@id': draftId, resourceType: 'template' }, etag: draft.etag });
     }
@@ -201,9 +201,9 @@ test('saving an existing artifact keeps the open document, and the next save use
   assert.equal(h.node('state').textContent, 'Modified');
   await h.save();
   assert.deepEqual(h.requests.slice(before), [
-    { method: 'POST', url: 'https://resource.example/command/check-update-template/template-id' },
+    { method: 'POST', url: 'https://resource.example/template-update-checks/template-id' },
     { method: 'PUT', url: 'https://resource.example/templates/template-id', etag: '"one"' },
-    { method: 'POST', url: 'https://resource.example/command/check-update-template/template-id' },
+    { method: 'POST', url: 'https://resource.example/template-update-checks/template-id' },
     { method: 'PUT', url: 'https://resource.example/templates/template-id', etag: '"1"' },
   ]);
   assert.equal(h.repository.get('template-id').data['schema:name'], 'Study, second revision');
@@ -237,7 +237,7 @@ test('a second save after creating an artifact updates it with the ETag the crea
   assert.deepEqual(h.requests.slice(before), [
     { method: 'PUT', url: `https://resource.example/templates/${UUID}?folder_id=folder-id` },
     { method: 'GET', url: `https://resource.example/templates/${UUID}` },
-    { method: 'POST', url: `https://resource.example/command/check-update-template/${UUID}` },
+    { method: 'POST', url: `https://resource.example/template-update-checks/${UUID}` },
     { method: 'PUT', url: `https://resource.example/templates/${UUID}`, etag: '"1"' },
   ]);
   assert.equal(h.repository.get(UUID).data['@id'], MINTED);
@@ -264,10 +264,10 @@ test('confirming a new version opens the new draft, and the next save updates th
   h.change();
   await h.save();
   assert.deepEqual(h.requests.slice(before), [
-    { method: 'POST', url: 'https://resource.example/command/check-update-template/template-id' },
-    { method: 'POST', url: 'https://resource.example/command/publish-create-draft-template/template-id', etag: '"one"', draftId: MINTED },
+    { method: 'POST', url: 'https://resource.example/template-update-checks/template-id' },
+    { method: 'POST', url: 'https://resource.example/template-drafts/template-id', etag: '"one"', draftId: MINTED },
     { method: 'GET', url: `https://resource.example/templates/${UUID}` },
-    { method: 'POST', url: `https://resource.example/command/check-update-template/${UUID}` },
+    { method: 'POST', url: `https://resource.example/template-update-checks/${UUID}` },
     { method: 'PUT', url: `https://resource.example/templates/${UUID}`, etag: '"1"' },
   ]);
   assert.equal(h.repository.get(UUID).data['@id'], MINTED);
@@ -497,7 +497,7 @@ async function saveNewVersion(h) {
   await saving;
 }
 const successors = h => [...h.repository.values()].filter(entry => entry.data?.['pav:previousVersion'] === 'template-id');
-const versionWrites = h => h.requests.filter(request => request.url.includes('/publish-create-draft-template/'));
+const versionWrites = h => h.requests.filter(request => request.url.includes('/template-drafts/'));
 
 for (const [label, refusal, message] of [
   ['refused permission', new core.BackendError(403), 'You do not have permission to save this artifact.'],
@@ -610,7 +610,7 @@ for (const later of [false, true]) test(`a new version that committed although i
   const before = h.requests.length;
   await h.save();
   assert.deepEqual(h.requests.slice(before), [
-    { method: 'POST', url: `https://resource.example/command/check-update-template/${UUID}` },
+    { method: 'POST', url: `https://resource.example/template-update-checks/${UUID}` },
     { method: 'PUT', url: `https://resource.example/templates/${UUID}`, etag: '"1"' },
   ]);
   assert.equal(successors(h).length, 1);

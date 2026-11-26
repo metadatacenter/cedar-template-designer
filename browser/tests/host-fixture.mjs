@@ -49,8 +49,8 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
       if(path==='/api/users/user')return route.fulfill({json:{homeFolderId:'home'}});
       if(path.startsWith('/api/folders/'))return route.fulfill({json:{currentUserPermissions:{capabilities:state.allowed?['createInFolder']:[]}}});
       if(path.endsWith('/report'))return route.fulfill({json:{currentUserPermissions:{capabilities:state.allowed?['updateResource']:[]}}});
-      if(path.includes('/check-update-template/'))return route.fulfill({json:state.impact});
-      if(path==='/api/command/validate') {
+      if(path.includes('/template-update-checks/'))return route.fulfill({json:state.impact});
+      if(path.startsWith('/api/artifact-validations/')) {
         const body=route.request().postDataJSON();state.validations.push(body);
         if(state.holdValidation)await state.holdValidation;
         if(state.validationFailure)return route.fulfill(state.validationFailure);
@@ -59,7 +59,7 @@ export async function host(page, kind='template', mode='edit', allowed=true, ini
       }
       if(route.request().method()!=='GET'){
         // A new version sends the template among the command's inputs; the write records the template.
-        const sent=route.request().postDataJSON(),version=path.startsWith('/api/command/publish-create-draft-template/');
+        const sent=route.request().postDataJSON(),version=path.startsWith('/api/template-drafts/');
         const write={path,query:Object.fromEntries(url.searchParams),body:version?sent.template:sent,...(version?{draftId:sent.draftId}:{}),etag:route.request().headers()['if-match']};
         state.writes.push(write);
         if(state.holdWrite)await state.holdWrite;

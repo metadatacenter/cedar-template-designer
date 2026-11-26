@@ -9,7 +9,7 @@ for (const operation of ['create', 'update', 'version'])
       let release;
       const pending = new Promise(resolve => {release = resolve;});
       const committed = [];
-      await page.route(/\/api\/(templates(?:\/[^/?]+)?|command\/publish-create-draft-template\/item)(?:\?.*)?$/, async route => {
+      await page.route(/\/api\/(templates(?:\/[^/?]+)?|template-drafts\/item)(?:\?.*)?$/, async route => {
         if (route.request().method() === 'GET') return route.fallback();
         const sent = route.request().postDataJSON();
         committed.push(operation === 'version' ? sent.template : sent);
@@ -41,13 +41,13 @@ for (const operation of ['create', 'update', 'version'])
 
 test('an unavailable update assessment can be retried without discarding the draft', async ({page}) => {
   const state = await host(page);
-  await page.route('**/api/command/check-update-template/item', route => route.abort('failed'));
+  await page.route('**/api/template-update-checks/item', route => route.abort('failed'));
   await edit(page, 'Kept');
   await page.locator('#save').click();
   await expect(page.locator('#message')).toHaveText(text('en', 'Error.Unreachable'));
   await expect(page.locator('#save')).toBeEnabled();
   expect(state.writes).toHaveLength(0);
-  await page.unroute('**/api/command/check-update-template/item');
+  await page.unroute('**/api/template-update-checks/item');
   await page.locator('#save').click();
   await expect(page.locator('#state')).toHaveText('Saved');
   expect(state.writes).toHaveLength(1);
@@ -58,7 +58,7 @@ test('an unavailable update assessment can be retried without discarding the dra
 // `lose` answers the write by storing it, when it committed, and then dropping the answer.
 async function lose(page, state, {operation, committed}) {
   const sent = [];
-  const pattern = operation === 'create' ? '**/api/templates/*' : '**/api/command/publish-create-draft-template/item';
+  const pattern = operation === 'create' ? '**/api/templates/*' : '**/api/template-drafts/item';
   const handler = async route => {
     if (route.request().method() === 'GET') return route.fallback();
     const inputs = route.request().postDataJSON(), body = operation === 'create' ? inputs : inputs.template;
@@ -128,7 +128,7 @@ for (const operation of ['create', 'version'])
     const [{id}] = lost.sent;
     expect(state.writes).toHaveLength(1);
     if (operation === 'create') expect(state.writes[0]).toMatchObject({path: `/api/templates/${id.split('/').pop()}`, body: {'@id': id}});
-    else expect(state.writes[0]).toMatchObject({path: '/api/command/publish-create-draft-template/item', query: {}, draftId: id, etag: '"opened"'});
+    else expect(state.writes[0]).toMatchObject({path: '/api/template-drafts/item', query: {}, draftId: id, etag: '"opened"'});
   });
 
 test('a create whose check is refused for the session offers Sign in again and keeps the identity through it', async ({page}) => {

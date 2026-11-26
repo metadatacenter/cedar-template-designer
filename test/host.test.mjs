@@ -55,7 +55,7 @@ test('permissions fail closed and published artifacts stay locked', () => {
 test('template save checks impact and sends the original representation ETag', async () => {
   const h = harness([{ data: { canBeUpdated: true } }, { data: artifact }]);
   await saveArtifact(h.options);
-  assert.equal(h.calls[0].url, base + '/command/check-update-template/' + encodeURIComponent(route.id));
+  assert.equal(h.calls[0].url, base + '/template-update-checks/' + encodeURIComponent(route.id));
   assert.equal(h.calls[1].method, 'PUT');
   assert.equal(h.calls[1].etag, '"v1"');
   assert.deepEqual(h.calls[1].body, artifact);
@@ -69,7 +69,7 @@ test('accepted versioning sends the original validator and the new draft\'s iden
   const h = harness([{ data: { canBeUpdated: false } }, { data: artifact }]);
   await saveArtifact(h.options);
   const url = new URL(h.calls[1].url);
-  assert.equal(url.origin + url.pathname, base + '/command/publish-create-draft-template/' + encodeURIComponent(route.id));
+  assert.equal(url.origin + url.pathname, base + '/template-drafts/' + encodeURIComponent(route.id));
   assert.deepEqual([...url.searchParams.keys()], []);
   assert.deepEqual(Object.keys(h.calls[1].body), ['template', 'draftId']);
   assert.match(h.calls[1].body.draftId, minted('templates'));

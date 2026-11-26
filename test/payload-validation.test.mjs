@@ -77,13 +77,13 @@ for (const operation of ['create', 'update', 'version', 'element', 'field']) tes
   if(operation !== 'create') options.route = {kind: ['element','field'].includes(operation)?operation:'template', collection: operation === 'element'?'template-elements':operation === 'field'?'template-fields':'templates', id: 'https://repo.test/templates/item'};
   options.request = async (url, request) => {
     calls.push({url, ...request});
-    if(url.includes('/check-update-template/'))return {data: {canBeUpdated: operation !== 'version'}};
-    if(url.includes('/command/validate?')) {assert.equal(journal.length, 0); return accepted();}
+    if(url.includes('/template-update-checks/'))return {data: {canBeUpdated: operation !== 'version'}};
+    if(url.includes('/artifact-validations/')) {assert.equal(journal.length, 0); return accepted();}
     assert.equal(journal.length, 1);
     return {data: request.body};
   };
   await saveArtifact(options);
-  const checked = calls.find(call => call.url.includes('/command/validate?')), written = calls.at(-1);
+  const checked = calls.find(call => call.url.includes('/artifact-validations/')), written = calls.at(-1);
   assert.equal(checked.method, 'POST');
   assert.ok(checked.signal instanceof AbortSignal);
   // A new version sends the validated document inside the command's inputs.
@@ -100,7 +100,7 @@ for(const verdict of [null, {}, {canSave:true}, {canSave:true,errors:[],warnings
   test(`incomplete or contradictory backend verdict cannot write: ${JSON.stringify(verdict)}`, async () => {
     let writes=0, recorded=0;
     await assert.rejects(saveArtifact({...create, onWrite:()=>recorded++, request:async url=>{
-      if(!url.includes('/command/validate?')) writes++;
+      if(!url.includes('/artifact-validations/')) writes++;
       return {data:verdict};
     }}), BackendError);
     assert.equal(writes,0);assert.equal(recorded,0);
@@ -120,14 +120,14 @@ test('unavailable preflight is a retryable read failure, never an uncertain crea
 test('a late positive verdict cannot authorize an edited snapshot', async () => {
   let current=true, writes=0, recorded=0;
   await assert.rejects(saveArtifact({...create,stillCurrent:()=>current,onWrite:()=>recorded++,request:async url=>{
-    if(url.includes('/command/validate?')){current=false;return accepted();}writes++;return {data:{}};
+    if(url.includes('/artifact-validations/')){current=false;return accepted();}writes++;return {data:{}};
   }}), /document changed/);
   assert.equal(writes,0);assert.equal(recorded,0);
 });
 
 test('unknown semantic verification remains advisory when the server allows storage', async () => {
   let written;
-  await saveArtifact({...create,request:async(url,options)=>url.includes('/command/validate?')?
+  await saveArtifact({...create,request:async(url,options)=>url.includes('/artifact-validations/')?
     {data:{canSave:true,isValid:false,errors:[],warnings:[{message:'Membership not checked'}]}}:(written=options.body,{data:options.body})});
   assert.ok(written);
 });
@@ -136,7 +136,7 @@ test('a timed-out preflight aborts without recording or sending a write', async 
   context.mock.timers.enable({apis:['setTimeout']});
   let recorded=0, writes=0, signal;
   const saving=saveArtifact({...create,onWrite:()=>recorded++,request:(url,options)=>{
-    if(!url.includes('/command/validate?')){writes++;return Promise.resolve({data:{}});}
+    if(!url.includes('/artifact-validations/')){writes++;return Promise.resolve({data:{}});}
     signal=options.signal;
     return new Promise((_resolve,reject)=>signal.addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError')),{once:true}));
   }});
@@ -163,7 +163,7 @@ test('the validation deadline also settles a transport that ignores cancellation
   let resolve, writes=0, recorded=0;
   const pending=new Promise(ready=>resolve=ready);
   const saving=saveArtifact({...create,onWrite:()=>recorded++,request:url=>{
-    if(url.includes('/command/validate?'))return pending;
+    if(url.includes('/artifact-validations/'))return pending;
     writes++;return Promise.resolve({data:{}});
   }});
   const refused=assert.rejects(saving,error=>error.status===504);

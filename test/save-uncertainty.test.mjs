@@ -30,7 +30,7 @@ for (const operation of ['assessment', 'create', 'update', 'version'])
         onWrite: write => {attempt.write = write;}, confirmVersion: async () => true,
         request: async (url, options) => {
           calls.push({url, options});
-          if (url.includes('/check-update-template/') && operation !== 'assessment')
+          if (url.includes('/template-update-checks/') && operation !== 'assessment')
             return {data: {canBeUpdated: operation !== 'version'}};
           // Model an edit arriving while the save or assessment is pending.
           designer.currentArtifact = {'schema:name': 'Newer'};
@@ -61,7 +61,7 @@ for (const operation of ['assessment', 'create', 'update', 'version'])
       }
       if (operation === 'version') {
         const url = new URL(write.url);
-        assert.equal(url.pathname, '/command/publish-create-draft-template/https%3A%2F%2Frepo.test%2Ftemplates%2Fitem');
+        assert.equal(url.pathname, '/template-drafts/https%3A%2F%2Frepo.test%2Ftemplates%2Fitem');
         assert.equal(url.search, '');
         assert.match(write.options.body.draftId, V4);
         assert.equal(write.options.etag, '"opened"');
@@ -96,7 +96,7 @@ for (const errorKey of ['nodeAlreadyPresent', 'artifactHasMovedOn', undefined])
       route: {kind: 'template', collection: 'templates', id: 'https://repo.test/templates/item'}, artifact: designer.currentArtifact,
       etag: state.etag, base: 'https://resource.test', confirmVersion: async () => true,
       identity: () => state.identity(() => `https://repo.test/templates/${crypto.randomUUID()}`), onWrite: write => {attempt.write = write;},
-      request: async url => { if (url.includes('/check-update-template/')) return {data: {canBeUpdated: false}}; throw error; },
+      request: async url => { if (url.includes('/template-update-checks/')) return {data: {canBeUpdated: false}}; throw error; },
     }), failure => failure === error);
     const occupied = errorKey === 'nodeAlreadyPresent';
     assert.equal(state.failed(error, attempt), occupied);
@@ -126,9 +126,9 @@ for (const [status, errorKey] of VERSIONING_REFUSALS)
       route: {kind: 'template', collection: 'templates', id: opened['@id']}, artifact: designer.currentArtifact,
       etag: state.etag, base: 'https://resource.test', confirmVersion: async () => true,
       identity: () => state.identity(() => `https://repo.test/templates/${crypto.randomUUID()}`), onWrite: write => {attempt.write = write;},
-      request: async url => { calls.push(url); if (url.includes('/check-update-template/')) return {data: {canBeUpdated: false}}; throw error; },
+      request: async url => { calls.push(url); if (url.includes('/template-update-checks/')) return {data: {canBeUpdated: false}}; throw error; },
     }), failure => failure === error);
-    assert.match(calls.at(-1), /\/command\/publish-create-draft-template\//);
+    assert.match(calls.at(-1), /\/template-drafts\//);
     assert.equal(error.message, ownerOnly ? "Only the template's owner can create a new version. Your edits have been kept."
       : accessRefused ? 'You do not have permission to save this artifact.' : 'Request failed (400). Your edits have been kept.');
     assert.equal(state.failed(error, attempt), false);

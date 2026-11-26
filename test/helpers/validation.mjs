@@ -6,6 +6,6 @@ import { saveArtifact as save } from '../../app/scripts/host-core.mjs';
 export const acceptPayload = () => ({canSave: true, findings: []});
 export const accepted = () => ({data: {canSave: true, isValid: true, errors: [], warnings: []}});
 export function saveArtifact(options) {
-  return save({...options, request: (url, request) => url.includes('/command/validate?')
+  return save({...options, request: (url, request) => url.includes('/artifact-validations/')
     ? Promise.resolve(accepted()) : options.request(url, request)});
 }

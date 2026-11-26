@@ -16,9 +16,12 @@ function harness({ fault, count = 0 } = {}) {
   const request = async (url, options = {}) => {
     calls.push({url, ...structuredClone({...options, signal: undefined})});
     if (url.includes('/folders/')) return {data: {currentUserPermissions: {capabilities: ['createInFolder']}}};
-    if (url.includes('/check-update-template/')) return {data: {canBeUpdated: count === 0, numberOfInstances: count}};
-    if (url.endsWith('/publish-artifact')) {
-      const id = options.body['@id']; const entry = stored.get(id);
+    if (url.includes('/template-update-checks/')) return {data: {canBeUpdated: count === 0, numberOfInstances: count}};
+    if (url.endsWith('/publication')) {
+      assert.equal(options.method, 'PATCH');
+      assert.deepEqual(options.body, {newVersion: '0.0.1'});
+      const id = [...stored.keys()].find(id => url.includes(id.split('/').at(-1)));
+      const entry = stored.get(id);
       entry.data['bibo:status'] = 'bibo:published'; entry.etag = '"2"';
       if (fault === 'publish') { fault = undefined; throw new BackendError(0); }
       return structuredClone(entry);
@@ -64,7 +67,7 @@ test(`${type} ${publish ? 'publication' : 'draft'} survives ${fault || 'normal'}
   assert.deepEqual(await reopened.save(input, {type, publish, signal: signal()}), result);
   assert.equal(h.stored.size, 1);
   assert.equal(h.calls.filter(call => call.method === 'PUT').length, 1);
-  assert.equal(h.calls.filter(call => call.url.endsWith('/publish-artifact')).length, publish ? 1 : 0);
+  assert.equal(h.calls.filter(call => call.url.endsWith('/publication')).length, publish ? 1 : 0);
 });
 test('journal failure stops dispatch and cancellation before dispatch writes nothing', async () => {
   const h = harness(); h.options.journal = {read: () => ({}), write: () => { throw new Error('storage full'); }};

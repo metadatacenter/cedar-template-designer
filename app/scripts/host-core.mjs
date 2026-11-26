@@ -223,7 +223,7 @@ export async function saveArtifact({ request, base, route, artifact, etag, folde
     });
     let report;
     try {
-      ({data: report} = await Promise.race([request(`${base}/command/validate?resource_type=${route.kind}`, {
+      ({data: report} = await Promise.race([request(`${base}/artifact-validations/${route.kind}`, {
         method: 'POST', body: JsonSourcePolicy.clone(body), signal: controller.signal,
       }), deadline]));
     } catch (error) {
@@ -255,7 +255,7 @@ export async function saveArtifact({ request, base, route, artifact, etag, folde
   artifact['@id'] = route.id; // Resolved from the loaded document, never from a short browser address.
   const encodedId = encodeURIComponent(resourcePathId(route.id));
   if (route.kind === 'template') {
-    const { data: impact } = await request(`${base}/command/check-update-template/${encodedId}`, { method: 'POST', body: artifact });
+    const { data: impact } = await request(`${base}/template-update-checks/${encodedId}`, { method: 'POST', body: artifact });
     current();
     if (!impact || typeof impact.canBeUpdated !== 'boolean' ||
         (impact.numberOfInstances != null && (!Number.isSafeInteger(impact.numberOfInstances) || impact.numberOfInstances < 0)) ||
@@ -265,7 +265,7 @@ export async function saveArtifact({ request, base, route, artifact, etag, folde
       current();
       const draft = identity();
       const envelope = template => (draft ? { template, draftId: draft } : { template });
-      return write(`${base}/command/publish-create-draft-template/${encodedId}`, { method: 'POST', body: artifact, etag, envelope }, 'version', draft);
+      return write(`${base}/template-drafts/${encodedId}`, { method: 'POST', body: artifact, etag, envelope }, 'version', draft);
     }
   }
   return write(`${url}/${encodedId}`, { method: 'PUT', body: artifact, etag });
