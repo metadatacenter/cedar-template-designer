@@ -135,9 +135,9 @@ jobs:
   performance:
     name: Designer and equivalent CEF performance
     needs: package
-    uses: metadatacenter/cedar-development/.github/workflows/frontend-performance-paired.yml@bdf9048953bf08c934d9a53faa55ce686897f0e4
+    uses: metadatacenter/cedar-development/.github/workflows/frontend-performance-paired.yml@c9f3921b5a8202678d72e006a5dc19ddc0422048
     with:
       component: designer
       baseline-ref: ${{ github.event.pull_request.base.sha || github.event.before }}
       candidate-artifact: designer-performance-app
-      harness-ref: bdf9048953bf08c934d9a53faa55ce686897f0e4
+      harness-ref: c9f3921b5a8202678d72e006a5dc19ddc0422048
